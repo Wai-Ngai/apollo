@@ -33,7 +33,9 @@ struct AnchorPoint {
   common::PathPoint path_point;
   double lateral_bound = 0.0;
   double longitudinal_bound = 0.0;
+  
   // enforce smoother to strictly follow this reference point
+  // 是否是强约束，如果是强约束需要满足裕度限制，首尾两个点都要满足，中间点不用。
   bool enforced = false;
 };
 
@@ -45,8 +47,7 @@ class ReferenceLineSmoother {
   /**
    * Smoothing constraints
    */
-  virtual void SetAnchorPoints(
-      const std::vector<AnchorPoint>& achor_points) = 0;
+  virtual void SetAnchorPoints(const std::vector<AnchorPoint>& achor_points) = 0;
 
   /**
    * Smooth a given reference line

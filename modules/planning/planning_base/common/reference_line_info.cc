@@ -61,6 +61,7 @@ ReferenceLineInfo::ReferenceLineInfo(const common::VehicleState& vehicle_state,
 
 bool ReferenceLineInfo::Init(const std::vector<const Obstacle*>& obstacles,
                              double target_speed) {
+  // 检查无人车是否在参考线上
   const auto& param = VehicleConfigHelper::GetConfig().vehicle_param();
   // stitching point
   const auto& path_point = adc_planning_point_.path_point();
@@ -90,6 +91,8 @@ bool ReferenceLineInfo::Init(const std::vector<const Obstacle*>& obstacles,
           << " is not on reference line:[0, " << reference_line_.Length()
           << "]";
   }
+
+  // 检查无人车是否离参考线过远
   static constexpr double kOutOfReferenceLineL = 14.0;  // in meters
   if (adc_sl_boundary_.start_l() > kOutOfReferenceLineL ||
       adc_sl_boundary_.end_l() < -kOutOfReferenceLineL) {
@@ -99,6 +102,8 @@ bool ReferenceLineInfo::Init(const std::vector<const Obstacle*>& obstacles,
     return false;
   }
   is_on_reference_line_ = reference_line_.IsOnLane(adc_sl_boundary_);
+
+  // 将障碍物信息加入到ReferenceLineInfo类中
   if (!AddObstacles(obstacles)) {
     AERROR << "Failed to add obstacles to reference line";
     return false;
@@ -375,12 +380,15 @@ Obstacle* ReferenceLineInfo::AddObstacle(const Obstacle* obstacle) {
     AERROR << "The provided obstacle is empty";
     return nullptr;
   }
+
+  // 封装成PathObstacle并加入PathDecision
   auto* mutable_obstacle = path_decision_.AddObstacle(*obstacle);
   if (!mutable_obstacle) {
     AERROR << "failed to add obstacle " << obstacle->Id();
     return nullptr;
   }
 
+  // 计算障碍物框的start_s, end_s, start_l和end_l
   SLBoundary perception_sl;
   if (!reference_line_.GetSLBoundary(obstacle->PerceptionPolygon(),
                                      &perception_sl)) {
@@ -395,16 +403,20 @@ Obstacle* ReferenceLineInfo::AddObstacle(const Obstacle* obstacle) {
     ADEBUG << "obstacle [" << obstacle->Id() << "] is NOT lane blocking.";
   }
 
+  // 计算障碍物是否对无人车行驶有影响：无光障碍物满足以下条件：
+  //    1. 障碍物在ReferenceLine以外，忽略
+  //    2. 车辆和障碍物都在车道上，但是障碍物在无人车后面，忽略
   if (IsIrrelevantObstacle(*mutable_obstacle)) {
     ObjectDecisionType ignore;
     ignore.mutable_ignore();
-    path_decision_.AddLateralDecision("reference_line_filter", obstacle->Id(),
-                                      ignore);
-    path_decision_.AddLongitudinalDecision("reference_line_filter",
-                                           obstacle->Id(), ignore);
+
+    path_decision_.AddLateralDecision("reference_line_filter", obstacle->Id(), ignore);
+    path_decision_.AddLongitudinalDecision("reference_line_filter", obstacle->Id(), ignore);
+
     ADEBUG << "NO build reference line st boundary. id:" << obstacle->Id();
   } else {
     ADEBUG << "build reference line st boundary. id:" << obstacle->Id();
+    // 构建障碍物在参考线上的边界框
     mutable_obstacle->BuildReferenceLineStBoundary(reference_line_,
                                                    adc_sl_boundary_.start_s());
 

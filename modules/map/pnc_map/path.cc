@@ -54,7 +54,7 @@ bool FindLaneSegment(const MapPathPoint& p1, const MapPathPoint& p2,
       if (nullptr == wp2.lane) {
         continue;
       }
-      if (wp1.lane->id().id() == wp2.lane->id().id() && wp1.s < wp2.s) {
+      if (wp1.lane->id().id() == wp2.lane->id().id() && wp1.s < wp2.s) {  // 判断是两个点p1,p2是否在同一个lane中
         *lane_segment = LaneSegment(wp1.lane, wp1.s, wp2.s);
         return true;
       }
@@ -137,18 +137,21 @@ LaneWaypoint LeftNeighborWaypoint(const LaneWaypoint& waypoint) {
 
 void LaneSegment::Join(std::vector<LaneSegment>* segments) {
   static constexpr double kSegmentDelta = 0.5;
-  std::size_t k = 0;
-  std::size_t i = 0;
+  std::size_t k = 0; // k表示合并后段的数量，初始化0，合并一次加1
+  std::size_t i = 0; // i表示原始段集合中的索引，初始化0，访问过程不能超过段的最大索引
+
   while (i < segments->size()) {
     std::size_t j = i;
+    // 查找车道id相同的连续的段，最终一个合并的大段，索引从i到j的j-i+1个段
+    // LaneSegment 1-6合并；LaneSegment 7-10合并
     while (j + 1 < segments->size() &&
            segments->at(i).lane == segments->at(j + 1).lane) {
       ++j;
     }
-    auto& segment_k = segments->at(k);
+    auto& segment_k = segments->at(k);                 // 生成新的段, 并且修改起始累积距离，结束累积距离
     segment_k.lane = segments->at(i).lane;
-    segment_k.start_s = segments->at(i).start_s;
-    segment_k.end_s = segments->at(j).end_s;
+    segment_k.start_s = segments->at(i).start_s;       // 合并后的段，起始累积距离为首段的start_s
+    segment_k.end_s = segments->at(j).end_s;           // 合并后的段，结束累计距离为末段的end_s
     if (segment_k.start_s < kSegmentDelta) {
       segment_k.start_s = 0.0;
     }
@@ -240,16 +243,17 @@ std::vector<MapPathPoint> MapPathPoint::GetPointsFromLane(LaneInfoConstPtr lane,
 
 void MapPathPoint::RemoveDuplicates(std::vector<MapPathPoint>* points) {
   static constexpr double kDuplicatedPointsEpsilon = 1e-7;
-  static constexpr double limit =
-      kDuplicatedPointsEpsilon * kDuplicatedPointsEpsilon;
+  static constexpr double limit = kDuplicatedPointsEpsilon * kDuplicatedPointsEpsilon;
+
   CHECK_NOTNULL(points);
+
   int count = 0;
   for (size_t i = 0; i < points->size(); ++i) {
     if (count == 0 ||
         (*points)[i].DistanceSquareTo((*points)[count - 1]) > limit) {
-      (*points)[count++] = (*points)[i];
-    } else {
-      (*points)[count - 1].add_lane_waypoints((*points)[i].lane_waypoints());
+      (*points)[count++] = (*points)[i]; // 保存当前点
+    } else { // 当两个点之间的距离非常近的时候，才需要去重
+      (*points)[count - 1].add_lane_waypoints((*points)[i].lane_waypoints());  // 将当前点的信息赋值给前一个点
     }
   }
   points->resize(count);
@@ -369,23 +373,26 @@ void Path::InitPoints() {
   segments_.reserve(num_points_);
   unit_directions_.clear();
   unit_directions_.reserve(num_points_);
+
+  // heading的计算
   double s = 0.0;
   for (int i = 0; i < num_points_; ++i) {
     accumulated_s_.push_back(s);
+
     Vec2d heading;
-    if (i + 1 >= num_points_) {
+    if (i + 1 >= num_points_) {  // 最后2个点，用前面的点进行差值
       heading = path_points_[i] - path_points_[i - 1];
       heading.Normalize();
     } else {
-      segments_.emplace_back(path_points_[i], path_points_[i + 1]);
-      heading = path_points_[i + 1] - path_points_[i];
+      segments_.emplace_back(path_points_[i], path_points_[i + 1]);  // MapPathPoint两两生成一个LaneSegment2d
+      heading = path_points_[i + 1] - path_points_[i];               // LaneSegment2d的方向，段终点-段起点
       float heading_length = heading.Length();
       // TODO(All): use heading.length when all adjacent lanes are guarantee to
       // be connected.
       s += heading_length;
       // Normalize "heading".
       if (heading_length > 0.0) {
-        heading /= heading_length;
+        heading /= heading_length;          // 方向正则，长度归一
       }
     }
     unit_directions_.push_back(heading);
@@ -399,16 +406,20 @@ void Path::InitPoints() {
   CHECK_EQ(segments_.size(), static_cast<size_t>(num_segments_));
 }
 
+// 重构LaneSegment
 void Path::InitLaneSegments() {
   if (lane_segments_.empty()) {
     for (int i = 0; i + 1 < num_points_; ++i) {
       LaneSegment lane_segment;
-      if (FindLaneSegment(path_points_[i], path_points_[i + 1],
-                          &lane_segment)) {
+
+      // FindLaneSegment是查询首尾两个点是否在同一个段中，如上图的紫色和蓝色交接两个点，不能组成一个段(因为lane_id不一致)。
+      if (FindLaneSegment(path_points_[i], path_points_[i + 1], &lane_segment)) {
         lane_segments_.push_back(lane_segment);
       }
     }
   }
+
+  // 相同车道的相邻段合并
   LaneSegment::Join(&lane_segments_);
   if (lane_segments_.empty()) {
     return;
@@ -454,26 +465,33 @@ void Path::InitWidth() {
   const LaneWaypoint* cur_waypoint = nullptr;
   bool is_reach_to_end = false;
   int path_point_index = 0;
+
   for (int i = 0; i < num_sample_points_; ++i) {
     // Find the segment at the position of "sample_s".
     while (segment_end_s < sample_s && !is_reach_to_end) {
       const auto& cur_point = path_points_[path_point_index];
       cur_waypoint = &(cur_point.lane_waypoints()[0]);
+
       CHECK_NOTNULL(cur_waypoint->lane);
+
       segment_start_s = accumulated_s_[path_point_index];
       segment_end_s = segment_start_s + segments_[path_point_index].length();
+
       if (++path_point_index >= num_points_) {
         is_reach_to_end = true;
       }
     }
     // Find the width of the way point at the position of "sample_s".
     waypoint_s = cur_waypoint->s + sample_s - segment_start_s;
+
     cur_waypoint->lane->GetWidth(waypoint_s, &left_width, &right_width);
     lane_left_width_.push_back(left_width - cur_waypoint->l);
     lane_right_width_.push_back(right_width + cur_waypoint->l);
+
     cur_waypoint->lane->GetRoadWidth(waypoint_s, &left_width, &right_width);
     road_left_width_.push_back(left_width - cur_waypoint->l);
     road_right_width_.push_back(right_width + cur_waypoint->l);
+    
     sample_s += kSampleDistance;
   }
   // Check the width array size.
@@ -485,18 +503,21 @@ void Path::InitWidth() {
   CHECK_EQ(road_right_width_.size(), num_sample_points);
 }
 
+// 计算每个采样点的上界MapPathPoint
 void Path::InitPointIndex() {
   last_point_index_.clear();
   last_point_index_.reserve(num_sample_points_);
   double s = 0.0;
   int last_index = 0;
+
+ // num_sample_points_ = length_ / kSampleDistance + 1
   for (int i = 0; i < num_sample_points_; ++i) {
-    while (last_index + 1 < num_points_ &&
-           accumulated_s_[last_index + 1] <= s) {
+     // 向后遍历，得到采样点(对应累积距离为s)的上界MapPathPoint
+    while (last_index + 1 < num_points_ && accumulated_s_[last_index + 1] <= s) {
       ++last_index;
     }
     last_point_index_.push_back(last_index);
-    s += kSampleDistance;
+    s += kSampleDistance;  // 下一个采样点的累积距离，加上0.25
   }
   CHECK_EQ(last_point_index_.size(), static_cast<size_t>(num_sample_points_));
 }
@@ -506,17 +527,22 @@ void Path::GetAllOverlaps(GetOverlapFromLaneFunc GetOverlaps_from_lane,
   if (overlaps == nullptr) {
     return;
   }
+
+  // Step 1. 计算所有的覆盖，保存到overlaps_by_id
   overlaps->clear();
-  std::unordered_map<std::string, std::vector<std::pair<double, double>>>
-      overlaps_by_id;
+  std::unordered_map<std::string, std::vector<std::pair<double, double>>> overlaps_by_id;
   double s = 0.0;
+
+  // 循环1. 对每个LaneSegment分别做覆盖检测
   for (const auto& lane_segment : lane_segments_) {
     if (lane_segment.lane == nullptr) {
       continue;
     }
+
+    // 循环2. 每个LaneSegment中有多个覆盖区域，分别做检测
     for (const auto& overlap : GetOverlaps_from_lane(*(lane_segment.lane))) {
-      const auto& overlap_info =
-          overlap->GetObjectOverlapInfo(lane_segment.lane->id());
+
+      const auto& overlap_info = overlap->GetObjectOverlapInfo(lane_segment.lane->id());
       if (overlap_info == nullptr) {
         continue;
       }
@@ -524,13 +550,16 @@ void Path::GetAllOverlaps(GetOverlapFromLaneFunc GetOverlaps_from_lane,
       const auto& lane_overlap_info = overlap_info->lane_overlap_info();
       if (lane_overlap_info.start_s() <= lane_segment.end_s &&
           lane_overlap_info.end_s() >= lane_segment.start_s) {
+         // 这里adjusted_start_s和adjusted_end_s相对于第一个LaneSegment的start_s来计算的
         const double ref_s = s - lane_segment.start_s;
-        const double adjusted_start_s =
-            std::max(lane_overlap_info.start_s(), lane_segment.start_s) + ref_s;
-        const double adjusted_end_s =
-            std::min(lane_overlap_info.end_s(), lane_segment.end_s) + ref_s;
+        const double adjusted_start_s = std::max(lane_overlap_info.start_s(), lane_segment.start_s) + ref_s;
+        const double adjusted_end_s = std::min(lane_overlap_info.end_s(), lane_segment.end_s) + ref_s;
+
+        // 循环3. 每个覆盖区域有多类物体，循环访问
         for (const auto& object : overlap->overlap().object()) {
           if (object.id().id() != lane_segment.lane->id().id()) {
+
+            // overlaps_by_id详细记录了每个物体占据的道路段，哪里开始到哪里结束
             overlaps_by_id[object.id().id()].emplace_back(adjusted_start_s,
                                                           adjusted_end_s);
           }
@@ -539,6 +568,9 @@ void Path::GetAllOverlaps(GetOverlapFromLaneFunc GetOverlaps_from_lane,
     }
     s += lane_segment.end_s - lane_segment.start_s;
   }
+
+  // Step 2. 覆盖合并，保存到函数参数overlaps中
+  // E.G. overlaps_by_id的人行横道中两块区域可能可以相连
   for (auto& overlaps_one_object : overlaps_by_id) {
     const std::string& object_id = overlaps_one_object.first;
     auto& segments = overlaps_one_object.second;
@@ -546,15 +578,17 @@ void Path::GetAllOverlaps(GetOverlapFromLaneFunc GetOverlaps_from_lane,
 
     const double kMinOverlapDistanceGap = 1.5;  // in meters.
     for (const auto& segment : segments) {
+      // 检查两个覆盖物体id相同(类型一样)，end_s和start_s在一定阈值之内，就直接合并成一块、
       if (!overlaps->empty() && overlaps->back().object_id == object_id &&
           segment.first - overlaps->back().end_s <= kMinOverlapDistanceGap) {
-        overlaps->back().end_s =
-            std::max(overlaps->back().end_s, segment.second);
+
+        overlaps->back().end_s = std::max(overlaps->back().end_s, segment.second);
       } else {
         overlaps->emplace_back(object_id, segment.first, segment.second);
       }
     }
   }
+  // 覆盖物体根据离主车距离由近及远排序
   std::sort(overlaps->begin(), overlaps->end(),
             [](const PathOverlap& overlap1, const PathOverlap& overlap2) {
               return overlap1.start_s < overlap2.start_s;
@@ -572,30 +606,32 @@ const PathOverlap* Path::NextLaneOverlap(double s) const {
   }
 }
 
+// 覆盖区域设置
 void Path::InitOverlaps() {
+  // 最后一步就是对RouteSegment产生的路径上的覆盖区域，如交叉口车道、停车区域、人行横道等区域加入到这条路径中，方便后续做决策。
   GetAllOverlaps(std::bind(&LaneInfo::cross_lanes, _1), &lane_overlaps_);
   GetAllOverlaps(std::bind(&LaneInfo::signals, _1), &signal_overlaps_);
   GetAllOverlaps(std::bind(&LaneInfo::yield_signs, _1), &yield_sign_overlaps_);
   GetAllOverlaps(std::bind(&LaneInfo::stop_signs, _1), &stop_sign_overlaps_);
   GetAllOverlaps(std::bind(&LaneInfo::crosswalks, _1), &crosswalk_overlaps_);
   GetAllOverlaps(std::bind(&LaneInfo::junctions, _1), &junction_overlaps_);
-  GetAllOverlaps(std::bind(&LaneInfo::pnc_junctions, _1),
-                 &pnc_junction_overlaps_);
+  GetAllOverlaps(std::bind(&LaneInfo::pnc_junctions, _1), &pnc_junction_overlaps_);
   GetAllOverlaps(std::bind(&LaneInfo::clear_areas, _1), &clear_area_overlaps_);
   GetAllOverlaps(std::bind(&LaneInfo::speed_bumps, _1), &speed_bump_overlaps_);
-  GetAllOverlaps(std::bind(&LaneInfo::parking_spaces, _1),
-                 &parking_space_overlaps_);
+  GetAllOverlaps(std::bind(&LaneInfo::parking_spaces, _1), &parking_space_overlaps_);
 }
 
+// 插值平滑
 MapPathPoint Path::GetSmoothPoint(const InterpolatedIndex& index) const {
   CHECK_GE(index.id, 0);
   CHECK_LT(index.id, num_points_);
 
-  const MapPathPoint& ref_point = path_points_[index.id];
+  const MapPathPoint& ref_point = path_points_[index.id];               // 采样点下界point
   if (std::abs(index.offset) > kMathEpsilon) {
-    const Vec2d delta = unit_directions_[index.id] * index.offset;
+    const Vec2d delta = unit_directions_[index.id] * index.offset;      // 插值平滑的位移
     MapPathPoint point({ref_point.x() + delta.x(), ref_point.y() + delta.y()},
-                       ref_point.heading());
+                       ref_point.heading());   //采样点坐标
+    // 采样点LaneWaypoint设置
     if (index.id < num_segments_ && !ref_point.lane_waypoints().empty()) {
       const LaneSegment& lane_segment = lane_segments_to_next_point_[index.id];
       auto ref_lane_waypoint = ref_point.lane_waypoints()[0];
@@ -621,6 +657,7 @@ MapPathPoint Path::GetSmoothPoint(const InterpolatedIndex& index) const {
 }
 
 MapPathPoint Path::GetSmoothPoint(double s) const {
+  // 计算采样点下界
   return GetSmoothPoint(GetIndexFromS(s));
 }
 
@@ -634,6 +671,7 @@ double Path::GetSFromIndex(const InterpolatedIndex& index) const {
   return accumulated_s_[index.id] + index.offset;
 }
 
+// 计算采样点下界
 InterpolatedIndex Path::GetIndexFromS(double s) const {
   if (s <= 0.0) {
     return {0, 0.0};
@@ -642,15 +680,19 @@ InterpolatedIndex Path::GetIndexFromS(double s) const {
   if (s >= length_) {
     return {num_points_ - 1, 0.0};
   }
+
+  // 可以计算大致的采样点坐标
   const int sample_id = static_cast<int>(s / kSampleDistance);
   if (sample_id >= num_sample_points_) {
     return {num_points_ - 1, 0.0};
   }
   const int next_sample_id = sample_id + 1;
-  int low = last_point_index_[sample_id];
-  int high = (next_sample_id < num_sample_points_
+  int low = last_point_index_[sample_id];  // 计算理论下界
+  int high = (next_sample_id < num_sample_points_ //  计算理论上界
                   ? std::min(num_points_, last_point_index_[next_sample_id] + 1)
                   : num_points_);
+  
+  // 二分法计算真实下界以及与下届的累计距离差
   while (low + 1 < high) {
     const int mid = (low + high) >> 1;
     if (accumulated_s_[mid] <= s) {

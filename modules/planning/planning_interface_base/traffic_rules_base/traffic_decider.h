@@ -47,14 +47,19 @@ namespace planning {
 class TrafficDecider {
  public:
   TrafficDecider() = default;
+
   bool Init(const std::shared_ptr<DependencyInjector> &injector);
+
   virtual ~TrafficDecider() = default;
+
   apollo::common::Status Execute(Frame *frame,
                                  ReferenceLineInfo *reference_line_info);
 
  private:
   bool init_ = false;
+  
   void BuildPlanningTarget(ReferenceLineInfo *reference_line_info);
+
   std::vector<std::shared_ptr<TrafficRule>> rule_list_;
   TrafficRulesPipeline rule_pipeline_;
 };

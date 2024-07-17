@@ -64,9 +64,9 @@ class LatticePlanner : public PlannerWithReferenceLine {
    * @param reference_line_info The computed reference line.
    * @return OK if planning succeeds; error otherwise.
    */
-  common::Status PlanOnReferenceLine(
-      const common::TrajectoryPoint& planning_init_point, Frame* frame,
-      ReferenceLineInfo* reference_line_info) override;
+  common::Status PlanOnReferenceLine(const common::TrajectoryPoint& planning_init_point, 
+                                     Frame* frame,
+                                     ReferenceLineInfo* reference_line_info) override;
 };
 
 CYBER_PLUGIN_MANAGER_REGISTER_PLUGIN(apollo::planning::LatticePlanner,

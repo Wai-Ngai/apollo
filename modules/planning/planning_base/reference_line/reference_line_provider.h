@@ -62,10 +62,9 @@ class ReferenceLineProvider {
  public:
   ReferenceLineProvider() = default;
 
-  ReferenceLineProvider(
-      const common::VehicleStateProvider* vehicle_state_provider,
-      const ReferenceLineConfig* reference_line_config,
-      const std::shared_ptr<relative_map::MapMsg>& relative_map = nullptr);
+  ReferenceLineProvider(const common::VehicleStateProvider* vehicle_state_provider,
+                        const ReferenceLineConfig* reference_line_config,
+                        const std::shared_ptr<relative_map::MapMsg>& relative_map = nullptr);
 
   /**
    * @brief Default destructor.
@@ -81,12 +80,14 @@ class ReferenceLineProvider {
 
   void UpdateVehicleState(const common::VehicleState& vehicle_state);
 
+  // 启动多线程
   bool Start();
 
   void Stop();
 
   void Reset();
 
+  // 提供给外部的接口：获取计算好的参考线
   bool GetReferenceLines(std::list<ReferenceLine>* reference_lines,
                          std::list<hdmap::RouteSegments>* segments);
 
@@ -96,16 +97,14 @@ class ReferenceLineProvider {
 
   bool UpdatedReferenceLine() { return is_reference_line_updated_.load(); }
 
-  void GetEndLaneWayPoint(
-      std::shared_ptr<routing::LaneWaypoint>& end_point) const;
+  void GetEndLaneWayPoint(std::shared_ptr<routing::LaneWaypoint>& end_point) const;
 
   hdmap::LaneInfoConstPtr GetLaneById(const hdmap::Id& id) const;
 
  private:
   /**
    * @brief Use LaneFollowMap to create reference line and the corresponding
-   * segments based on routing and current position. This is a thread safe
-   * function.
+   * segments based on routing and current position. This is a thread safe function.
    * @return true if !reference_lines.empty() && reference_lines.size() ==
    *                 segments.size();
    **/
@@ -113,13 +112,13 @@ class ReferenceLineProvider {
                            std::list<hdmap::RouteSegments>* segments);
 
   /**
-   * @brief store the computed reference line. This function can avoid
-   * unnecessary copy if the reference lines are the same.
+   * @brief store the computed reference line. 
+   * This function can avoid unnecessary copy if the reference lines are the same.
    */
-  void UpdateReferenceLine(
-      const std::list<ReferenceLine>& reference_lines,
-      const std::list<hdmap::RouteSegments>& route_segments);
+  void UpdateReferenceLine(const std::list<ReferenceLine>& reference_lines,
+                           const std::list<hdmap::RouteSegments>& route_segments);
 
+  // 多线程回调函数，循环计算
   void GenerateThread();
   void IsValidReferenceLine();
   void PrioritizeChangeLane(std::list<hdmap::RouteSegments>* route_segments);
@@ -129,14 +128,16 @@ class ReferenceLineProvider {
 
   bool IsReferenceLineSmoothValid(const ReferenceLine& raw,
                                   const ReferenceLine& smoothed) const;
-
+ 
+  // 调用具体的平滑算法进行参考线平滑
   bool SmoothReferenceLine(const ReferenceLine& raw_reference_line,
                            ReferenceLine* reference_line);
-
+  // 平滑前置被强制锁定的reference_line，即上一帧重复的点无需再重复平滑了
   bool SmoothPrefixedReferenceLine(const ReferenceLine& prefix_ref,
                                    const ReferenceLine& raw_ref,
                                    ReferenceLine* reference_line);
 
+  // 路径点采样与轨迹点矫正
   void GetAnchorPoints(const ReferenceLine& reference_line,
                        std::vector<AnchorPoint>* anchor_points) const;
 
@@ -151,35 +152,36 @@ class ReferenceLineProvider {
                            hdmap::RouteSegments* segments,
                            ReferenceLine* reference_line);
 
+  // 采样点的坐标计算与轨迹点坐标矫正
   AnchorPoint GetAnchorPoint(const ReferenceLine& reference_line,
                              double s) const;
 
-  bool GetReferenceLinesFromRelativeMap(
-      std::list<ReferenceLine>* reference_lines,
-      std::list<hdmap::RouteSegments>* segments);
+  bool GetReferenceLinesFromRelativeMap(std::list<ReferenceLine>* reference_lines,
+                                        std::list<hdmap::RouteSegments>* segments);
 
   /**
    * @brief This function get adc lane info from navigation path and map
    * by vehicle state.
    */
-  bool GetNearestWayPointFromNavigationPath(
-      const common::VehicleState& state,
-      const std::unordered_set<std::string>& navigation_lane_ids,
-      hdmap::LaneWaypoint* waypoint);
+  bool GetNearestWayPointFromNavigationPath(const common::VehicleState& state,
+                                            const std::unordered_set<std::string>& navigation_lane_ids,
+                                            hdmap::LaneWaypoint* waypoint);
 
+  // 主要针对U型弯等曲率过大的弯道，收缩至角度与当前路点航向角的差在5/6 PI之内
   bool Shrink(const common::SLPoint& sl, ReferenceLine* ref,
               hdmap::RouteSegments* segments);
 
  private:
   bool is_initialized_ = false;
+
+  //当前线程是否停止
   std::atomic<bool> is_stop_{false};
 
   std::unique_ptr<ReferenceLineSmoother> smoother_;
   ReferenceLineSmootherConfig smoother_config_;
 
   std::mutex pnc_map_mutex_;
-  // The loaded pnc map plugin which can create referene line from
-  // PlanningCommand.
+  // The loaded pnc map plugin which can create referene line from PlanningCommand.
   std::vector<std::shared_ptr<planning::PncMapBase>> pnc_map_list_;
   std::shared_ptr<planning::PncMapBase> current_pnc_map_;
 
@@ -195,8 +197,8 @@ class ReferenceLineProvider {
   bool is_new_command_ = false;
 
   std::mutex reference_lines_mutex_;
-  std::list<ReferenceLine> reference_lines_;
-  std::list<hdmap::RouteSegments> route_segments_;
+  std::list<ReferenceLine> reference_lines_;       // 存储多条候选参考线
+  std::list<hdmap::RouteSegments> route_segments_; // 存储多条路由片段
   double last_calculation_time_ = 0.0;
 
   std::queue<std::list<ReferenceLine>> reference_line_history_;

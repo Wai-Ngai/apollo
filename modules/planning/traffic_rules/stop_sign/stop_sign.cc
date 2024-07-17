@@ -57,12 +57,10 @@ void StopSign::MakeDecisions(Frame* const frame,
     return;
   }
 
-  const auto& stop_sign_status =
-      injector_->planning_context()->planning_status().stop_sign();
+  const auto& stop_sign_status = injector_->planning_context()->planning_status().stop_sign();
   const double adc_back_edge_s = reference_line_info->AdcSlBoundary().start_s();
 
-  const std::vector<PathOverlap>& stop_sign_overlaps =
-      reference_line_info->reference_line().map_path().stop_sign_overlaps();
+  const std::vector<PathOverlap>& stop_sign_overlaps = reference_line_info->reference_line().map_path().stop_sign_overlaps();
   for (const auto& stop_sign_overlap : stop_sign_overlaps) {
     if (stop_sign_overlap.end_s <= adc_back_edge_s) {
       continue;
@@ -76,15 +74,14 @@ void StopSign::MakeDecisions(Frame* const frame,
     // build stop decision
     ADEBUG << "BuildStopDecision: stop_sign[" << stop_sign_overlap.object_id
            << "] start_s[" << stop_sign_overlap.start_s << "]";
-    const std::string virtual_obstacle_id =
-        STOP_SIGN_VO_ID_PREFIX + stop_sign_overlap.object_id;
-    const std::vector<std::string> wait_for_obstacle_ids(
-        stop_sign_status.wait_for_obstacle_id().begin(),
-        stop_sign_status.wait_for_obstacle_id().end());
-    util::BuildStopDecision(
-        virtual_obstacle_id, stop_sign_overlap.start_s, config_.stop_distance(),
-        StopReasonCode::STOP_REASON_STOP_SIGN, wait_for_obstacle_ids, Getname(),
-        frame, reference_line_info);
+    const std::string virtual_obstacle_id = STOP_SIGN_VO_ID_PREFIX + stop_sign_overlap.object_id;
+
+    const std::vector<std::string> wait_for_obstacle_ids(stop_sign_status.wait_for_obstacle_id().begin(),
+                                                         stop_sign_status.wait_for_obstacle_id().end());
+                                                         
+    util::BuildStopDecision(virtual_obstacle_id, stop_sign_overlap.start_s, config_.stop_distance(),
+                            StopReasonCode::STOP_REASON_STOP_SIGN, wait_for_obstacle_ids, Getname(),
+                            frame, reference_line_info);
   }
 }
 

@@ -34,6 +34,9 @@
 namespace apollo {
 namespace hdmap {
 
+// RouteSegments可以理解为routing中的passage信息，也是由多段LaneSegment组成，
+// 在pnc_map中会将routing结果的passage信息转换为RouteSegments，说明两者其实可以看做同一东西。
+
 /**
  * @brief class RouteSegments
  *
@@ -53,6 +56,7 @@ class RouteSegments : public std::vector<LaneSegment> {
   RouteSegments() = default;
 
   /**
+   * 车辆接下来要采取的动作。可能是直行，左变道，或者右变道。
    * Get the next change lane action need to take by the vehicle, if the vehicle
    * is on this RouteSegments.
    * --- If the vehicle does not need to change lane, then change_lane_type ==
@@ -81,12 +85,14 @@ class RouteSegments : public std::vector<LaneSegment> {
   /**
    * Whether the passage region that generate this route segment can lead to
    * another passage region in route.
+   * 当前通路是否可以接续到Routing结果的另外一个通路上。
    */
   bool CanExit() const;
   void SetCanExit(bool can_exit);
 
   /**
    * Project a point to this route segment.
+   * 将一个点投影到当前通路上。返回SLPoint和LaneWaypoint。
    * @param point_enu a map point, or point, which is a Vec2d point
    * @param s return the longitudinal s relative to the route segment.
    * @param l return the lateral distance relative to the route segment.
@@ -122,6 +128,7 @@ class RouteSegments : public std::vector<LaneSegment> {
   void SetRouteEndWaypoint(const LaneWaypoint &waypoint);
 
   /** Stitch current route segments with the other route segment.
+   * 缝合另外一个RouteSegments。即：去除两个RouteSegments间重合的多余部分，然后连接起来。
    * Example 1
    * this:   |--------A-----x-----B------|
    * other:                 |-----B------x--------C-------|
@@ -140,6 +147,7 @@ class RouteSegments : public std::vector<LaneSegment> {
    */
   bool Stitch(const RouteSegments &other);
 
+  // 缩短到指定范围
   bool Shrink(const common::math::Vec2d &point, const double look_backward,
               const double look_forward);
 
@@ -149,9 +157,11 @@ class RouteSegments : public std::vector<LaneSegment> {
   bool Shrink(const double s, const LaneWaypoint &waypoint,
               const double look_backward, const double look_forward);
 
+  // 车辆是否在当前RouteSegments上
   bool IsOnSegment() const;
   void SetIsOnSegment(bool on_segment);
 
+  // 当前RouteSegments是否是车辆的临近RouteSegments
   bool IsNeighborSegment() const;
   void SetIsNeighborSegment(bool is_neighbor);
 

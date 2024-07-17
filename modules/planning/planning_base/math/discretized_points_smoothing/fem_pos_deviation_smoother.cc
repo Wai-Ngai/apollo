@@ -30,31 +30,31 @@
 
 namespace apollo {
 namespace planning {
-FemPosDeviationSmoother::FemPosDeviationSmoother(
-    const FemPosDeviationSmootherConfig& config)
+FemPosDeviationSmoother::FemPosDeviationSmoother(const FemPosDeviationSmootherConfig& config)
     : config_(config) {}
 
-bool FemPosDeviationSmoother::Solve(
-    const std::vector<std::pair<double, double>>& raw_point2d,
-    const std::vector<double>& bounds, std::vector<double>* opt_x,
-    std::vector<double>* opt_y,
-    std::vector<std::vector<common::math::Vec2d>> point_box) {
-  if (config_.apply_curvature_constraint()) {
+bool FemPosDeviationSmoother::Solve(const std::vector<std::pair<double, double>>& raw_point2d,
+                                    const std::vector<double>& bounds, 
+                                    std::vector<double>* opt_x,
+                                    std::vector<double>* opt_y,
+                                    std::vector<std::vector<common::math::Vec2d>> point_box) {
+ 
+  if (config_.apply_curvature_constraint()) {                  // 考虑参考线的曲率约束
     if (config_.use_sqp()) {
-      return SqpWithOsqp(raw_point2d, bounds, opt_x, opt_y);
+      return SqpWithOsqp(raw_point2d, bounds, opt_x, opt_y);   // 线性化后使用osqp求解器来用SQP方法求解
     } else {
-      return NlpWithIpopt(raw_point2d, bounds, opt_x, opt_y);
+      return NlpWithIpopt(raw_point2d, bounds, opt_x, opt_y);  // 使用ipopt非线性求解器求解（内点法）
     }
   } else {
-    return QpWithOsqp(raw_point2d, bounds, opt_x, opt_y);
+    return QpWithOsqp(raw_point2d, bounds, opt_x, opt_y);  // 默认，使用OSQP求解二次规划问题
   }
   return true;
 }
 
-bool FemPosDeviationSmoother::QpWithOsqp(
-    const std::vector<std::pair<double, double>>& raw_point2d,
-    const std::vector<double>& bounds, std::vector<double>* opt_x,
-    std::vector<double>* opt_y) {
+bool FemPosDeviationSmoother::QpWithOsqp(const std::vector<std::pair<double, double>>& raw_point2d,
+                                         const std::vector<double>& bounds, 
+                                         std::vector<double>* opt_x,
+                                         std::vector<double>* opt_y) {
   if (opt_x == nullptr || opt_y == nullptr) {
     AERROR << "opt_x or opt_y is nullptr";
     return false;
@@ -62,11 +62,11 @@ bool FemPosDeviationSmoother::QpWithOsqp(
 
   FemPosDeviationOsqpInterface solver;
 
-  solver.set_weight_fem_pos_deviation(config_.weight_fem_pos_deviation());
-  solver.set_weight_path_length(config_.weight_path_length());
-  solver.set_weight_ref_deviation(config_.weight_ref_deviation());
+  solver.set_weight_fem_pos_deviation(config_.weight_fem_pos_deviation());  // 
+  solver.set_weight_path_length(config_.weight_path_length());              // 长度代价权重
+  solver.set_weight_ref_deviation(config_.weight_ref_deviation());          // 相对原始点偏离代价权重
 
-  solver.set_max_iter(config_.max_iter());
+  solver.set_max_iter(config_.max_iter());      // 最大迭代次数500
   solver.set_time_limit(config_.time_limit());
   solver.set_verbose(config_.verbose());
   solver.set_scaled_termination(config_.scaled_termination());
@@ -84,10 +84,10 @@ bool FemPosDeviationSmoother::QpWithOsqp(
   return true;
 }
 
-bool FemPosDeviationSmoother::SqpWithOsqp(
-    const std::vector<std::pair<double, double>>& raw_point2d,
-    const std::vector<double>& bounds, std::vector<double>* opt_x,
-    std::vector<double>* opt_y) {
+bool FemPosDeviationSmoother::SqpWithOsqp(const std::vector<std::pair<double, double>>& raw_point2d,
+                                          const std::vector<double>& bounds, 
+                                          std::vector<double>* opt_x,
+                                          std::vector<double>* opt_y) {
   if (opt_x == nullptr || opt_y == nullptr) {
     AERROR << "opt_x or opt_y is nullptr";
     return false;
@@ -98,8 +98,7 @@ bool FemPosDeviationSmoother::SqpWithOsqp(
   solver.set_weight_fem_pos_deviation(config_.weight_fem_pos_deviation());
   solver.set_weight_path_length(config_.weight_path_length());
   solver.set_weight_ref_deviation(config_.weight_ref_deviation());
-  solver.set_weight_curvature_constraint_slack_var(
-      config_.weight_curvature_constraint_slack_var());
+  solver.set_weight_curvature_constraint_slack_var(config_.weight_curvature_constraint_slack_var());  // 曲率约束松弛因子 权重
 
   solver.set_curvature_constraint(config_.curvature_constraint());
 
@@ -133,10 +132,10 @@ bool FemPosDeviationSmoother::SqpWithOsqp(
   return true;
 }
 
-bool FemPosDeviationSmoother::NlpWithIpopt(
-    const std::vector<std::pair<double, double>>& raw_point2d,
-    const std::vector<double>& bounds, std::vector<double>* opt_x,
-    std::vector<double>* opt_y) {
+bool FemPosDeviationSmoother::NlpWithIpopt(const std::vector<std::pair<double, double>>& raw_point2d,
+                                           const std::vector<double>& bounds, 
+                                           std::vector<double>* opt_x,
+                                           std::vector<double>* opt_y) {
   if (opt_x == nullptr || opt_y == nullptr) {
     AERROR << "opt_x or opt_y is nullptr";
     return false;

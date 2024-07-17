@@ -30,14 +30,14 @@
 namespace apollo {
 namespace planning {
 
+// 曲率约束线性化后使用osqp求解器来用SQP方法求解
 class FemPosDeviationSqpOsqpInterface {
  public:
   FemPosDeviationSqpOsqpInterface() = default;
 
   virtual ~FemPosDeviationSqpOsqpInterface() = default;
 
-  void set_ref_points(
-      const std::vector<std::pair<double, double>>& ref_points) {
+  void set_ref_points(const std::vector<std::pair<double, double>>& ref_points) {
     ref_points_ = ref_points;
   }
 
@@ -57,10 +57,8 @@ class FemPosDeviationSqpOsqpInterface {
     weight_ref_deviation_ = weight_ref_deviation;
   }
 
-  void set_weight_curvature_constraint_slack_var(
-      const double weight_curvature_constraint_slack_var) {
-    weight_curvature_constraint_slack_var_ =
-        weight_curvature_constraint_slack_var;
+  void set_weight_curvature_constraint_slack_var(const double weight_curvature_constraint_slack_var) {
+    weight_curvature_constraint_slack_var_ = weight_curvature_constraint_slack_var;
   }
 
   void set_curvature_constraint(const double curvature_constraint) {
@@ -104,14 +102,13 @@ class FemPosDeviationSqpOsqpInterface {
 
   void CalculateOffset(std::vector<c_float>* q);
 
-  std::vector<double> CalculateLinearizedFemPosParams(
-      const std::vector<std::pair<double, double>>& points, const size_t index);
+  std::vector<double> CalculateLinearizedFemPosParams(const std::vector<std::pair<double, double>>& points, 
+                                                      const size_t index);
 
-  void CalculateAffineConstraint(
-      const std::vector<std::pair<double, double>>& points,
-      std::vector<c_float>* A_data, std::vector<c_int>* A_indices,
-      std::vector<c_int>* A_indptr, std::vector<c_float>* lower_bounds,
-      std::vector<c_float>* upper_bounds);
+  void CalculateAffineConstraint(const std::vector<std::pair<double, double>>& points,
+                                 std::vector<c_float>* A_data, std::vector<c_int>* A_indices,
+                                 std::vector<c_int>* A_indptr, std::vector<c_float>* lower_bounds,
+                                 std::vector<c_float>* upper_bounds);
 
   void SetPrimalWarmStart(const std::vector<std::pair<double, double>>& points,
                           std::vector<c_float>* primal_warm_start);
@@ -119,8 +116,7 @@ class FemPosDeviationSqpOsqpInterface {
   bool OptimizeWithOsqp(const std::vector<c_float>& primal_warm_start,
                         OSQPWorkspace** work);
 
-  double CalculateConstraintViolation(
-      const std::vector<std::pair<double, double>>& points);
+  double CalculateConstraintViolation(const std::vector<std::pair<double, double>>& points);
 
  private:
   // Init states and constraints

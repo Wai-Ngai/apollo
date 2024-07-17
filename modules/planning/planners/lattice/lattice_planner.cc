@@ -54,8 +54,7 @@ using apollo::cyber::Clock;
 
 namespace {
 
-std::vector<PathPoint> ToDiscretizedReferenceLine(
-    const std::vector<ReferencePoint>& ref_points) {
+std::vector<PathPoint> ToDiscretizedReferenceLine(const std::vector<ReferencePoint>& ref_points) {
   double s = 0.0;
   std::vector<PathPoint> path_points;
   for (const auto& ref_point : ref_points) {
@@ -97,15 +96,14 @@ Status LatticePlanner::Plan(const TrajectoryPoint& planning_start_point,
                             ADCTrajectory* ptr_computed_trajectory) {
   size_t success_line_count = 0;
   size_t index = 0;
-  for (auto& reference_line_info : *frame->mutable_reference_line_info()) {
+  for (auto& reference_line_info : *frame->mutable_reference_line_info()) { //遍历参考线。进行分别规划
     if (index != 0) {
       reference_line_info.SetPriorityCost(
           FLAGS_cost_non_priority_reference_line);
     } else {
       reference_line_info.SetPriorityCost(0.0);
     }
-    auto status =
-        PlanOnReferenceLine(planning_start_point, frame, &reference_line_info);
+    auto status = PlanOnReferenceLine(planning_start_point, frame, &reference_line_info); //每条参考线进行规划
 
     if (status != Status::OK()) {
       if (reference_line_info.IsChangeLanePath()) {
@@ -127,9 +125,9 @@ Status LatticePlanner::Plan(const TrajectoryPoint& planning_start_point,
                 "Failed to plan on any reference line.");
 }
 
-Status LatticePlanner::PlanOnReferenceLine(
-    const TrajectoryPoint& planning_init_point, Frame* frame,
-    ReferenceLineInfo* reference_line_info) {
+Status LatticePlanner::PlanOnReferenceLine(const TrajectoryPoint& planning_init_point, 
+                                           Frame* frame,
+                                           ReferenceLineInfo* reference_line_info) {
   static size_t num_planning_cycles = 0;
   static size_t num_planning_succeeded_cycles = 0;
 
@@ -185,6 +183,9 @@ Status LatticePlanner::PlanOnReferenceLine(
   current_time = Clock::NowInSeconds();
 
   // 5. generate 1d trajectory bundle for longitudinal and lateral respectively.
+   // 5、生成轨迹簇，横向采样d{0.0, -0.5, 0.5},s{10.0, 20.0, 40.0, 80.0};
+  // 纵向s不固定，采用四次多项式进行求解，包括巡航、跟车、超车等决策
+  // 横向采用五次多项式进行求解
   Trajectory1dGenerator trajectory1d_generator(
       init_s, init_d, ptr_path_time_graph, ptr_prediction_querier);
   std::vector<std::shared_ptr<Curve1d>> lon_trajectory1d_bundle;

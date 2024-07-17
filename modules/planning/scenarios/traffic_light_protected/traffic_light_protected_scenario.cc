@@ -53,8 +53,8 @@ bool TrafficLightProtectedScenario::Init(
   return true;
 }
 
-bool TrafficLightProtectedScenario::IsTransferable(
-    const Scenario* const other_scenario, const Frame& frame) {
+bool TrafficLightProtectedScenario::IsTransferable(const Scenario* const other_scenario, 
+                                                   const Frame& frame) {
   if (!frame.local_view().planning_command->has_lane_follow_command()) {
     return false;
   }
@@ -62,31 +62,31 @@ bool TrafficLightProtectedScenario::IsTransferable(
     return false;
   }
   const auto& reference_line_info = frame.reference_line_info().front();
-  const auto& first_encountered_overlaps =
-      reference_line_info.FirstEncounteredOverlaps();
+  const auto& first_encountered_overlaps = reference_line_info.FirstEncounteredOverlaps();
   hdmap::PathOverlap* traffic_sign_overlap = nullptr;
+  // 路径重叠区域查找，并获取交通信号灯的重叠区域（traffic_sign_overlap）
   for (const auto& overlap : first_encountered_overlaps) {
     if (overlap.first == ReferenceLineInfo::STOP_SIGN ||
         overlap.first == ReferenceLineInfo::YIELD_SIGN) {
       return false;
-    } else if (overlap.first == ReferenceLineInfo::SIGNAL) {
+    } else if (overlap.first == ReferenceLineInfo::SIGNAL) {   // 车辆前方参考线上的第一个overlap是交通灯类型的overlap
       traffic_sign_overlap = const_cast<hdmap::PathOverlap*>(&overlap.second);
       break;
     }
   }
-  if (traffic_sign_overlap == nullptr) {
+  if (traffic_sign_overlap == nullptr) { // 未找到交通灯信号
     return false;
   }
-  const std::vector<hdmap::PathOverlap>& traffic_light_overlaps =
-      reference_line_info.reference_line().map_path().signal_overlaps();
-  const double start_check_distance =
-      context_.scenario_config.start_traffic_light_scenario_distance();
+
+  const std::vector<hdmap::PathOverlap>& traffic_light_overlaps = reference_line_info.reference_line().map_path().signal_overlaps();
+  // 计算与交通灯的距离
+  const double start_check_distance = context_.scenario_config.start_traffic_light_scenario_distance();
   const double adc_front_edge_s = reference_line_info.AdcSlBoundary().end_s();
   // find all the traffic light belong to
   // the same group as first encountered traffic light
   std::vector<hdmap::PathOverlap> next_traffic_lights;
   static constexpr double kTrafficLightGroupingMaxDist = 2.0;  // unit: m
-  for (const auto& overlap : traffic_light_overlaps) {
+  for (const auto& overlap : traffic_light_overlaps) { // 查看前方交通灯的颜色
     const double dist = overlap.start_s - traffic_sign_overlap->start_s;
     if (fabs(dist) <= kTrafficLightGroupingMaxDist) {
       next_traffic_lights.push_back(overlap);

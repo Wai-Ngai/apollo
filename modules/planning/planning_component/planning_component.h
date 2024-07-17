@@ -40,9 +40,9 @@
 namespace apollo {
 namespace planning {
 
-class PlanningComponent final
-    : public cyber::Component<prediction::PredictionObstacles, canbus::Chassis,
-                              localization::LocalizationEstimate> {
+class PlanningComponent final : public cyber::Component<prediction::PredictionObstacles, 
+                                                        canbus::Chassis,
+                                                        localization::LocalizationEstimate> {
  public:
   PlanningComponent() = default;
 
@@ -51,23 +51,18 @@ class PlanningComponent final
  public:
   bool Init() override;
 
-  bool Proc(const std::shared_ptr<prediction::PredictionObstacles>&
-                prediction_obstacles,
+  bool Proc(const std::shared_ptr<prediction::PredictionObstacles>& prediction_obstacles,
             const std::shared_ptr<canbus::Chassis>& chassis,
-            const std::shared_ptr<localization::LocalizationEstimate>&
-                localization_estimate) override;
+            const std::shared_ptr<localization::LocalizationEstimate>& localization_estimate) override;
 
  private:
   void CheckRerouting();
   bool CheckInput();
 
  private:
-  std::shared_ptr<cyber::Reader<perception::TrafficLightDetection>>
-      traffic_light_reader_;
-  std::shared_ptr<
-      apollo::cyber::Client<apollo::external_command::LaneFollowCommand,
-                            apollo::external_command::CommandStatus>>
-      rerouting_client_;
+  std::shared_ptr<cyber::Reader<perception::TrafficLightDetection>> traffic_light_reader_;
+  std::shared_ptr<apollo::cyber::Client<apollo::external_command::LaneFollowCommand,
+                                        apollo::external_command::CommandStatus>> rerouting_client_;
   std::shared_ptr<cyber::Reader<planning::PadMessage>> pad_msg_reader_;
   std::shared_ptr<cyber::Reader<relative_map::MapMsg>> relative_map_reader_;
   std::shared_ptr<cyber::Reader<storytelling::Stories>> story_telling_reader_;
@@ -75,10 +70,8 @@ class PlanningComponent final
 
   std::shared_ptr<cyber::Writer<ADCTrajectory>> planning_writer_;
   std::shared_ptr<cyber::Writer<routing::RoutingRequest>> rerouting_writer_;
-  std::shared_ptr<cyber::Writer<PlanningLearningData>>
-      planning_learning_data_writer_;
-  std::shared_ptr<cyber::Writer<external_command::CommandStatus>>
-      command_status_writer_;
+  std::shared_ptr<cyber::Writer<PlanningLearningData>> planning_learning_data_writer_;
+  std::shared_ptr<cyber::Writer<external_command::CommandStatus>> command_status_writer_;
 
   std::mutex mutex_;
   perception::TrafficLightDetection traffic_light_;

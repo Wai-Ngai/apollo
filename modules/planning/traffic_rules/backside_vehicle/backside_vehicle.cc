@@ -42,70 +42,59 @@ bool BacksideVehicle::Init(
   return TrafficRule::LoadConfig<BacksideVehicleConfig>(&config_);
 }
 
-void BacksideVehicle::MakeLaneKeepingObstacleDecision(
-    const SLBoundary& adc_sl_boundary, PathDecision* path_decision,
-    const VehicleState& vehicle_state) {
+void BacksideVehicle::MakeLaneKeepingObstacleDecision(const SLBoundary& adc_sl_boundary, 
+                                                      PathDecision* path_decision,
+                                                      const VehicleState& vehicle_state) {
+  // 从这里可以看到，对于后车的处理主要是忽略
   ObjectDecisionType ignore;
   ignore.mutable_ignore();
-  const double adc_length_s =
-      adc_sl_boundary.end_s() - adc_sl_boundary.start_s();
-  for (const auto* obstacle : path_decision->obstacles().Items()) {
-    if (obstacle->PerceptionSLBoundary().end_s() >= adc_sl_boundary.start_s()) {
+  const double adc_length_s = adc_sl_boundary.end_s() - adc_sl_boundary.start_s(); // 计算"车长"
+  for (const auto* obstacle : path_decision->obstacles().Items()) {  // 对于每个与参考线有重叠的障碍物进行规则设置
+
+    if (obstacle->PerceptionSLBoundary().end_s() >= adc_sl_boundary.start_s()) { // 前车在这里不做考虑，由前车情况处理FRONT_VEHICLE来完成
       // don't ignore such vehicles.
       continue;
     }
 
     if (obstacle->IsCautionLevelObstacle() &&
-          obstacle->PerceptionSLBoundary().start_s() >=
-              adc_sl_boundary.start_s()) {
+        obstacle->PerceptionSLBoundary().start_s() >= adc_sl_boundary.start_s()) {
       // don't ignore such vehicles.
       continue;
     }
 
-    if (obstacle->reference_line_st_boundary().IsEmpty()) {
-      path_decision->AddLongitudinalDecision("backside_vehicle/no-st-region",
-                                             obstacle->Id(), ignore);
-      path_decision->AddLateralDecision("backside_vehicle/no-st-region",
-                                        obstacle->Id(), ignore);
+    if (obstacle->reference_line_st_boundary().IsEmpty()) { // 参考线上没有障碍物运动轨迹，直接忽略
+      path_decision->AddLongitudinalDecision("backside_vehicle/no-st-region", obstacle->Id(), ignore);
+      path_decision->AddLateralDecision("backside_vehicle/no-st-region", obstacle->Id(), ignore);
       continue;
     }
     // Ignore the car comes from back of ADC
-    if (obstacle->reference_line_st_boundary().min_s() < -adc_length_s) {
-      path_decision->AddLongitudinalDecision("backside_vehicle/st-min-s < adc",
-                                             obstacle->Id(), ignore);
-      path_decision->AddLateralDecision("backside_vehicle/st-min-s < adc",
-                                        obstacle->Id(), ignore);
+    if (obstacle->reference_line_st_boundary().min_s() < -adc_length_s) { // 忽略从无人车后面来的车辆
+      path_decision->AddLongitudinalDecision("backside_vehicle/st-min-s < adc", obstacle->Id(), ignore);
+      path_decision->AddLateralDecision("backside_vehicle/st-min-s < adc", obstacle->Id(), ignore);
       continue;
     }
 
     const double lane_boundary = config_.backside_lane_width();
-    if (obstacle->PerceptionSLBoundary().start_s() < adc_sl_boundary.end_s()) {
+    if (obstacle->PerceptionSLBoundary().start_s() < adc_sl_boundary.end_s()) { // 忽略后面不会超车的车辆
       if (obstacle->PerceptionSLBoundary().start_l() > lane_boundary ||
           obstacle->PerceptionSLBoundary().end_l() < -lane_boundary) {
         continue;
       }
-      path_decision->AddLongitudinalDecision("backside_vehicle/sl < adc.end_s",
-                                             obstacle->Id(), ignore);
-      path_decision->AddLateralDecision("backside_vehicle/sl < adc.end_s",
-                                        obstacle->Id(), ignore);
+      path_decision->AddLongitudinalDecision("backside_vehicle/sl < adc.end_s", obstacle->Id(), ignore);
+      path_decision->AddLateralDecision("backside_vehicle/sl < adc.end_s", obstacle->Id(), ignore);
       continue;
     }
 
     if (PredictionLineOverlapEgo(*obstacle, vehicle_state)) {
       ADEBUG << "Prediction Line Overlap Ego Obstacle " << obstacle->Id();
-      path_decision->AddLongitudinalDecision("backside_vehicle/"
-                                              "prediction line overlap ego",
-                                              obstacle->Id(), ignore);
-      path_decision->AddLateralDecision("backside_vehicle/"
-                                        "prediction line overlap ego",
-                                        obstacle->Id(), ignore);
+      path_decision->AddLongitudinalDecision("backside_vehicle prediction line overlap ego", obstacle->Id(), ignore);
+      path_decision->AddLateralDecision("backside_vehicle prediction line overlap ego", obstacle->Id(), ignore);
       continue;
     }
   }
 }
 
-Status BacksideVehicle::ApplyRule(
-    Frame* const, ReferenceLineInfo* const reference_line_info) {
+Status BacksideVehicle::ApplyRule(Frame* const, ReferenceLineInfo* const reference_line_info) {
   auto* path_decision = reference_line_info->path_decision();
   const auto& adc_sl_boundary = reference_line_info->AdcSlBoundary();
   const VehicleState& vehicle_state = reference_line_info->vehicle_state();

@@ -70,18 +70,16 @@ class PlanningBase {
   /**
    * @brief Plan the trajectory given current vehicle state
    */
-  virtual apollo::common::Status Plan(
-      const double current_time_stamp,
-      const std::vector<common::TrajectoryPoint>& stitching_trajectory,
-      ADCTrajectory* const trajectory) = 0;
+  virtual apollo::common::Status Plan(const double current_time_stamp,
+                                      const std::vector<common::TrajectoryPoint>& stitching_trajectory,
+                                      ADCTrajectory* const trajectory) = 0;
 
   /**
    * @brief Check if vehicle reaches the end point of the RoutingRequest.
    *
    * @return True if vehicle reaches the end point.
    */
-  bool IsPlanningFinished(
-      const ADCTrajectory::TrajectoryType& current_trajectory_type) const;
+  bool IsPlanningFinished(const ADCTrajectory::TrajectoryType& current_trajectory_type) const;
 
  protected:
   virtual void FillPlanningPb(const double timestamp,

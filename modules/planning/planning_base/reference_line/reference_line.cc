@@ -48,8 +48,8 @@ using apollo::common::math::Vec2d;
 using apollo::common::util::DistanceXY;
 using apollo::hdmap::InterpolatedIndex;
 
-ReferenceLine::ReferenceLine(
-    const std::vector<ReferencePoint>& reference_points)
+// 1.通过一组参考点生成，reference_points_直接拷贝赋值了，然后再用reference_points生成hdmap::MapPathPoint
+ReferenceLine::ReferenceLine(const std::vector<ReferencePoint>& reference_points)
     : reference_points_(reference_points),
       map_path_(std::move(std::vector<hdmap::MapPathPoint>(
           reference_points.begin(), reference_points.end()))) {
@@ -57,6 +57,7 @@ ReferenceLine::ReferenceLine(
            reference_points_.size());
 }
 
+// 2.通过地图路径生成参考线。遍历路径中的点，然后取lane_waypoints中的第一个点，保存到参考线数组中
 ReferenceLine::ReferenceLine(const MapPath& hdmap_path)
     : map_path_(hdmap_path) {
   for (const auto& point : hdmap_path.path_points()) {
@@ -69,11 +70,14 @@ ReferenceLine::ReferenceLine(const MapPath& hdmap_path)
            reference_points_.size());
 }
 
+// 每次拼接的时候，会尽可能多的采用自身的参考线
 bool ReferenceLine::Stitch(const ReferenceLine& other) {
   if (other.reference_points().empty()) {
     AWARN << "The other reference line is empty.";
     return true;
   }
+
+   // 1. 找到起点的交点
   auto first_point = reference_points_.front();
   common::SLPoint first_sl;
   if (!other.XYToSL(first_point, &first_sl)) {
@@ -82,6 +86,7 @@ bool ReferenceLine::Stitch(const ReferenceLine& other) {
   }
   bool first_join = first_sl.s() > 0 && first_sl.s() < other.Length();
 
+  // 2. 找到终点的交点
   auto last_point = reference_points_.back();
   common::SLPoint last_sl;
   if (!other.XYToSL(last_point, &last_sl)) {
@@ -90,28 +95,30 @@ bool ReferenceLine::Stitch(const ReferenceLine& other) {
   }
   bool last_join = last_sl.s() > 0 && last_sl.s() < other.Length();
 
+  // 3. 如果起点和终点都没有交点，则退出
   if (!first_join && !last_join) {
     AERROR << "These reference lines are not connected.";
     return false;
   }
 
+  // 累积s值
   const auto& accumulated_s = other.map_path().accumulated_s();
   const auto& other_points = other.reference_points();
   auto lower = accumulated_s.begin();
   static constexpr double kStitchingError = 1e-1;
   if (first_join) {
-    if (first_sl.l() > kStitchingError) {
+    if (first_sl.l() > kStitchingError) { // 4. 如果横向偏移大于0.1m，则退出
       AERROR << "lateral stitching error on first join of reference line too "
                 "big, stitching fails";
       return false;
     }
-    lower = std::lower_bound(accumulated_s.begin(), accumulated_s.end(),
-                             first_sl.s());
+    lower = std::lower_bound(accumulated_s.begin(), accumulated_s.end(), first_sl.s());
+    // 4.1 因为this的起点在other之后，插入other的起点到this的起点
     size_t start_i = std::distance(accumulated_s.begin(), lower);
-    reference_points_.insert(reference_points_.begin(), other_points.begin(),
-                             other_points.begin() + start_i);
+    reference_points_.insert(reference_points_.begin(), other_points.begin(), other_points.begin() + start_i);
   }
   if (last_join) {
+    // 5.2 因为this的终点小于other的终点，把other终点拼接到参考线的终点
     if (last_sl.l() > kStitchingError) {
       AERROR << "lateral stitching error on first join of reference line too "
                 "big, stitching fails";

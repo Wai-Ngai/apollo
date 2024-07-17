@@ -217,12 +217,15 @@ bool LaneFollowPath::OptimizePath(
         init_sl_state_, end_state, ref_l, weight_ref_l, path_boundary,
         ddl_bounds, jerk_bound, config, &opt_l, &opt_dl, &opt_ddl);
     if (res_opt) {
-      auto frenet_frame_path = PathOptimizerUtil::ToPiecewiseJerkPath(
-          opt_l, opt_dl, opt_ddl, path_boundary.delta_s(),
-          path_boundary.start_s());
+
+      auto frenet_frame_path = PathOptimizerUtil::ToPiecewiseJerkPath(opt_l, opt_dl, opt_ddl, 
+                                                                      path_boundary.delta_s(),
+                                                                      path_boundary.start_s());
+      
       PathData path_data;
       path_data.SetReferenceLine(&reference_line);
       path_data.SetFrenetPath(std::move(frenet_frame_path));
+
       if (FLAGS_use_front_axe_center_in_path_planning) {
         auto discretized_path = DiscretizedPath(
             PathOptimizerUtil::ConvertPathPointRefFromFrontAxeToRearAxe(

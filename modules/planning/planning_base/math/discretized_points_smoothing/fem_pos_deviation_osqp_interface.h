@@ -34,8 +34,7 @@ class FemPosDeviationOsqpInterface {
 
   virtual ~FemPosDeviationOsqpInterface() = default;
 
-  void set_ref_points(
-      const std::vector<std::pair<double, double>>& ref_points) {
+  void set_ref_points(const std::vector<std::pair<double, double>>& ref_points) {
     ref_points_ = ref_points;
   }
 
@@ -88,14 +87,13 @@ class FemPosDeviationOsqpInterface {
 
   void SetPrimalWarmStart(std::vector<c_float>* primal_warm_start);
 
-  bool OptimizeWithOsqp(
-      const size_t kernel_dim, const size_t num_affine_constraint,
-      std::vector<c_float>* P_data, std::vector<c_int>* P_indices,
-      std::vector<c_int>* P_indptr, std::vector<c_float>* A_data,
-      std::vector<c_int>* A_indices, std::vector<c_int>* A_indptr,
-      std::vector<c_float>* lower_bounds, std::vector<c_float>* upper_bounds,
-      std::vector<c_float>* q, std::vector<c_float>* primal_warm_start,
-      OSQPData* data, OSQPWorkspace** work, OSQPSettings* settings);
+  bool OptimizeWithOsqp(const size_t kernel_dim, const size_t num_affine_constraint,
+                        std::vector<c_float>* P_data, std::vector<c_int>* P_indices,
+                        std::vector<c_int>* P_indptr, std::vector<c_float>* A_data,
+                        std::vector<c_int>* A_indices, std::vector<c_int>* A_indptr,
+                        std::vector<c_float>* lower_bounds, std::vector<c_float>* upper_bounds,
+                        std::vector<c_float>* q, std::vector<c_float>* primal_warm_start,
+                        OSQPData* data, OSQPWorkspace** work, OSQPSettings* settings);
 
  private:
   // Reference points and deviation bounds

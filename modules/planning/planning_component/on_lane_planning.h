@@ -55,16 +55,14 @@ class OnLanePlanning : public PlanningBase {
   common::Status Init(const PlanningConfig& config) override;
 
   /**
-   * @brief main logic of the planning module, runs periodically triggered by
-   * timer.
+   * @brief main logic of the planning module, runs periodically triggered by timer.
    */
   void RunOnce(const LocalView& local_view,
                ADCTrajectory* const ptr_trajectory_pb) override;
 
-  common::Status Plan(
-      const double current_time_stamp,
-      const std::vector<common::TrajectoryPoint>& stitching_trajectory,
-      ADCTrajectory* const trajectory) override;
+  common::Status Plan(const double current_time_stamp,
+                      const std::vector<common::TrajectoryPoint>& stitching_trajectory,
+                      ADCTrajectory* const trajectory) override;
 
  private:
   common::Status InitFrame(const uint32_t sequence_num,

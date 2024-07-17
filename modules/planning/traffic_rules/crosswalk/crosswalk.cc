@@ -50,10 +50,10 @@ using apollo::hdmap::CrosswalkInfoConstPtr;
 using apollo::hdmap::HDMapUtil;
 using apollo::hdmap::PathOverlap;
 using apollo::perception::PerceptionObstacle;
-using CrosswalkToStop =
-    std::vector<std::pair<const hdmap::PathOverlap*, std::vector<std::string>>>;
-using CrosswalkStopTimer =
-    std::unordered_map<std::string, std::unordered_map<std::string, double>>;
+
+using CrosswalkToStop = std::vector<std::pair<const hdmap::PathOverlap*, std::vector<std::string>>>;
+using CrosswalkStopTimer = std::unordered_map<std::string, std::unordered_map<std::string, double>>;
+
 
 bool Crosswalk::Init(const std::string& name,
                      const std::shared_ptr<DependencyInjector>& injector) {
@@ -69,11 +69,13 @@ Status Crosswalk::ApplyRule(Frame* const frame,
   CHECK_NOTNULL(frame);
   CHECK_NOTNULL(reference_line_info);
 
+  // 检查是否存在人行横道区域
   if (!FindCrosswalks(reference_line_info)) {
     injector_->planning_context()->mutable_planning_status()->clear_crosswalk();
     return Status::OK();
   }
 
+  // 为每个障碍物做标记，障碍物存在时，无人车应该停车还是直接驶过
   MakeDecisions(frame, reference_line_info);
   return Status::OK();
 }
@@ -101,9 +103,9 @@ void Crosswalk::MakeDecisions(Frame* const frame,
   crosswalk_stop_timer.emplace(mutable_crosswalk_status->crosswalk_id(),
                                stop_times);
 
-  const auto& finished_crosswalks =
-      mutable_crosswalk_status->finished_crosswalk();
+  const auto& finished_crosswalks = mutable_crosswalk_status->finished_crosswalk();
 
+  // 1. 检查在每个人行横道区域内，是否存在障碍物需要无人车停车让行
   const auto& reference_line = reference_line_info->reference_line();
   for (auto crosswalk_overlap : crosswalk_overlaps_) {
     auto crosswalk_ptr = HDMapUtil::BaseMap().GetCrosswalkById(
@@ -111,8 +113,7 @@ void Crosswalk::MakeDecisions(Frame* const frame,
     std::string crosswalk_id = crosswalk_ptr->id().id();
 
     // skip crosswalk if master vehicle body already passes the stop line
-    if (adc_front_edge_s - crosswalk_overlap->end_s >
-        config_.min_pass_s_distance()) {
+    if (adc_front_edge_s - crosswalk_overlap->end_s > config_.min_pass_s_distance()) {  // 车头驶过人行横道一定距离，min_pass_s_distance：1.0
       if (mutable_crosswalk_status->has_crosswalk_id() &&
           mutable_crosswalk_status->crosswalk_id() == crosswalk_id) {
         mutable_crosswalk_status->clear_crosswalk_id();
@@ -137,9 +138,9 @@ void Crosswalk::MakeDecisions(Frame* const frame,
 
     std::vector<std::string> pedestrians;
     for (const auto* obstacle : path_decision->obstacles().Items()) {
-      const double stop_deceleration = util::GetADCStopDeceleration(
-          injector_->vehicle_state(), adc_front_edge_s,
-          crosswalk_overlap->start_s);
+      const double stop_deceleration = util::GetADCStopDeceleration(injector_->vehicle_state(), 
+                                                                    adc_front_edge_s,
+                                                                    crosswalk_overlap->start_s);
 
       bool stop = CheckStopForObstacle(reference_line_info, crosswalk_ptr,
                                        *obstacle, stop_deceleration);
@@ -151,11 +152,9 @@ void Crosswalk::MakeDecisions(Frame* const frame,
           PerceptionObstacle_Type_Name(obstacle_type);
 
       // update stop timestamp on static pedestrian for watch timer
-      const bool is_on_lane =
-          reference_line.IsOnLane(obstacle->PerceptionSLBoundary());
+      const bool is_on_lane = reference_line.IsOnLane(obstacle->PerceptionSLBoundary());
       if (stop && !is_on_lane &&
-          crosswalk_overlap->start_s - adc_front_edge_s <=
-              config_.start_watch_timer_distance()) {
+          crosswalk_overlap->start_s - adc_front_edge_s <= config_.start_watch_timer_distance()) {
         // check on stop timer for static pedestrians/bicycles
         // if NOT on_lane ahead of adc
         const double kMaxStopSpeed = 0.3;
@@ -198,20 +197,22 @@ void Crosswalk::MakeDecisions(Frame* const frame,
     }
   }
 
+  // 2. 对那些影响无人车行驶的障碍物构建虚拟墙障碍物类以及设置停车标签
   double min_s = std::numeric_limits<double>::max();
   hdmap::PathOverlap* firsts_crosswalk_to_stop = nullptr;
   for (auto crosswalk_to_stop : crosswalks_to_stop) {
     // build stop decision
     const auto* crosswalk_overlap = crosswalk_to_stop.first;
+
     ADEBUG << "BuildStopDecision: crosswalk[" << crosswalk_overlap->object_id
            << "] start_s[" << crosswalk_overlap->start_s << "]";
-    std::string virtual_obstacle_id =
-        CROSSWALK_VO_ID_PREFIX + crosswalk_overlap->object_id;
-    util::BuildStopDecision(
-        virtual_obstacle_id, crosswalk_overlap->start_s,
-        config_.stop_distance(), StopReasonCode::STOP_REASON_CROSSWALK,
-        crosswalk_to_stop.second, Getname(), frame, reference_line_info);
 
+    std::string virtual_obstacle_id = CROSSWALK_VO_ID_PREFIX + crosswalk_overlap->object_id;
+
+    util::BuildStopDecision(virtual_obstacle_id, crosswalk_overlap->start_s,
+                            config_.stop_distance(), StopReasonCode::STOP_REASON_CROSSWALK,
+                            crosswalk_to_stop.second, Getname(), frame, reference_line_info);
+                            
     if (crosswalk_to_stop.first->start_s < min_s) {
       firsts_crosswalk_to_stop =
           const_cast<PathOverlap*>(crosswalk_to_stop.first);
@@ -250,18 +251,18 @@ bool Crosswalk::FindCrosswalks(ReferenceLineInfo* const reference_line_info) {
   CHECK_NOTNULL(reference_line_info);
 
   crosswalk_overlaps_.clear();
-  const std::vector<hdmap::PathOverlap>& crosswalk_overlaps =
-      reference_line_info->reference_line().map_path().crosswalk_overlaps();
+  const std::vector<hdmap::PathOverlap>& crosswalk_overlaps = reference_line_info->reference_line().map_path().crosswalk_overlaps();
+  
   for (const hdmap::PathOverlap& crosswalk_overlap : crosswalk_overlaps) {
     crosswalk_overlaps_.push_back(&crosswalk_overlap);
   }
   return crosswalk_overlaps_.size() > 0;
 }
 
-bool Crosswalk::CheckStopForObstacle(
-    ReferenceLineInfo* const reference_line_info,
-    const CrosswalkInfoConstPtr crosswalk_ptr, const Obstacle& obstacle,
-    const double stop_deceleration) {
+bool Crosswalk::CheckStopForObstacle(ReferenceLineInfo* const reference_line_info,
+                                     const CrosswalkInfoConstPtr crosswalk_ptr, 
+                                     const Obstacle& obstacle,
+                                     const double stop_deceleration) {
   CHECK_NOTNULL(reference_line_info);
 
   std::string crosswalk_id = crosswalk_ptr->id().id();
@@ -318,18 +319,20 @@ bool Crosswalk::CheckStopForObstacle(
          << is_on_road << "] is_path_cross[" << is_path_cross << "]";
 
   bool stop = false;
-  if (obstacle_l_distance >= config_.stop_loose_l_distance()) {
+  if (obstacle_l_distance >= config_.stop_loose_l_distance()) {  // stop_loose_l_distance: 5.0m
     // (1) when obstacle_l_distance is big enough(>= loose_l_distance),
     //     STOP only if paths crosses
+    // 如果横向距离大于疏松距离。如果轨迹相交，那么需要停车；反之直接驶过(此时轨迹相交无所谓，因为横向距离比较远)
     if (is_path_cross) {
       stop = true;
       ADEBUG << "need_stop(>=l2): obstacle_id[" << obstacle_id << "] type["
              << obstacle_type_name << "] crosswalk_id[" << crosswalk_id << "]";
     }
-  } else if (obstacle_l_distance <= config_.stop_strict_l_distance()) {
+  } else if (obstacle_l_distance <= config_.stop_strict_l_distance()) {// stop_strick_l_distance: 4.0m
     if (is_on_road) {
       // (2) when l_distance <= strict_l_distance + on_road
       //     always STOP
+      // 如果横向距离小于紧凑距离。如果障碍物在参考线或者轨迹相交，那么需要停车；反之直接驶过
       if (obstacle_sl_point.s() > adc_end_edge_s) {
         stop = true;
         ADEBUG << "need_stop(<=l1): obstacle_id[" << obstacle_id << "] type["
@@ -368,7 +371,7 @@ bool Crosswalk::CheckStopForObstacle(
         }
       }
     }
-  } else {
+  } else { // - 如果横向距离在紧凑距离和疏松距离之间，直接停车
     // (4) when l_distance is between loose_l and strict_l
     //     use history decision of this crosswalk to smooth unsteadiness
 
@@ -384,7 +387,7 @@ bool Crosswalk::CheckStopForObstacle(
 
   // check stop_deceleration
   if (stop) {
-    if (stop_deceleration >= config_.max_stop_deceleration()) {
+    if (stop_deceleration >= config_.max_stop_deceleration()) { // 最后可以计算无人车的加速度(是否来的及减速，若无人车速度很快减速不了，那么干脆直接驶过)
       if (obstacle_l_distance > config_.stop_strict_l_distance()) {
         // SKIP when stop_deceleration is too big but safe to ignore
         stop = false;

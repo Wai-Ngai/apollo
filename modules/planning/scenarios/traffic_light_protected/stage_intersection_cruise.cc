@@ -37,9 +37,10 @@ StageResult TrafficLightProtectedStageIntersectionCruise::Process(
 
   bool stage_done = CheckDone(*frame, injector_->planning_context(), true);
 
-  if (stage_done) {
+  if (stage_done) { // 如果通过交叉路口，本Stage完成。恢复到默认场景LANE_FOLLOW
     return FinishStage();
   }
+  // 否则，进入本Stage的Running
   return result.SetStageStatus(StageStatusType::RUNNING);
 }
 

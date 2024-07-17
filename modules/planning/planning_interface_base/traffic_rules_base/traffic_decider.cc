@@ -61,18 +61,16 @@ bool TrafficDecider::Init(const std::shared_ptr<DependencyInjector> &injector) {
   return true;
 }
 
-void TrafficDecider::BuildPlanningTarget(
-    ReferenceLineInfo *reference_line_info) {
+void TrafficDecider::BuildPlanningTarget(ReferenceLineInfo *reference_line_info) {
   double min_s = std::numeric_limits<double>::infinity();
   StopPoint stop_point;
-  for (const auto *obstacle :
-       reference_line_info->path_decision()->obstacles().Items()) {
+
+  for (const auto *obstacle : reference_line_info->path_decision()->obstacles().Items()) {
     if (obstacle->IsVirtual() && obstacle->HasLongitudinalDecision() &&
         obstacle->LongitudinalDecision().has_stop() &&
         obstacle->PerceptionSLBoundary().start_s() < min_s) {
       min_s = obstacle->PerceptionSLBoundary().start_s();
-      const auto &stop_code =
-          obstacle->LongitudinalDecision().stop().reason_code();
+      const auto &stop_code = obstacle->LongitudinalDecision().stop().reason_code();
       if (stop_code == StopReasonCode::STOP_REASON_DESTINATION ||
           stop_code == StopReasonCode::STOP_REASON_CROSSWALK ||
           stop_code == StopReasonCode::STOP_REASON_STOP_SIGN ||
@@ -113,7 +111,7 @@ Status TrafficDecider::Execute(Frame *frame,
       continue;
     }
     rule->Reset();
-    rule->ApplyRule(frame, reference_line_info);
+    rule->ApplyRule(frame, reference_line_info);    // 对于每条参考线进行障碍物的决策。
     ADEBUG << "Applied rule " << rule->Getname();
   }
 

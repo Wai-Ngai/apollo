@@ -39,8 +39,7 @@ namespace planning {
 /**
  * @class Planner
  * @brief Planner is a base class for specific planners.
- *        It contains a pure virtual function Plan which must be implemented in
- * derived class.
+ *        It contains a pure virtual function Plan which must be implemented in derived class.
  */
 class Planner {
  public:
@@ -51,9 +50,8 @@ class Planner {
 
   virtual std::string Name() = 0;
 
-  virtual apollo::common::Status Init(
-      const std::shared_ptr<DependencyInjector>& injector,
-      const std::string& config_path = "") {
+  virtual apollo::common::Status Init(const std::shared_ptr<DependencyInjector>& injector,
+                                      const std::string& config_path = "") {
     injector_ = injector;
     return common::Status::OK();
   }
@@ -64,9 +62,9 @@ class Planner {
    * @param frame Current planning frame.
    * @return OK if planning succeeds; error otherwise.
    */
-  virtual apollo::common::Status Plan(
-      const common::TrajectoryPoint& planning_init_point, Frame* frame,
-      ADCTrajectory* ptr_computed_trajectory) = 0;
+  virtual apollo::common::Status Plan(const common::TrajectoryPoint& planning_init_point, 
+                                      Frame* frame,
+                                      ADCTrajectory* ptr_computed_trajectory) = 0;
 
   virtual void Stop() = 0;
 
@@ -79,6 +77,7 @@ class Planner {
   std::shared_ptr<DependencyInjector> injector_ = nullptr;
 };
 
+
 template <typename T>
 bool Planner::LoadConfig(const std::string& custom_config_path, T* config) {
   std::string config_path = custom_config_path;
@@ -86,11 +85,9 @@ bool Planner::LoadConfig(const std::string& custom_config_path, T* config) {
   if ("" == config_path) {
     int status;
     // Get the name of this class.
-    std::string class_name =
-        abi::__cxa_demangle(typeid(*this).name(), 0, 0, &status);
+    std::string class_name = abi::__cxa_demangle(typeid(*this).name(), 0, 0, &status);
     config_path = apollo::cyber::plugin_manager::PluginManager::Instance()
-                      ->GetPluginConfPath<Planner>(
-                          class_name, "conf/planner_config.pb.txt");
+                  ->GetPluginConfPath<Planner>(class_name, "conf/planner_config.pb.txt");
   }
   return apollo::cyber::common::LoadConfig<T>(config_path, config);
 }
@@ -109,9 +106,9 @@ class PlannerWithReferenceLine : public Planner {
    * @param reference_line_info The computed reference line.
    * @return OK if planning succeeds; error otherwise.
    */
-  virtual apollo::common::Status PlanOnReferenceLine(
-      const common::TrajectoryPoint& planning_init_point, Frame* frame,
-      ReferenceLineInfo* reference_line_info) {
+  virtual apollo::common::Status PlanOnReferenceLine(const common::TrajectoryPoint& planning_init_point, 
+                                                     Frame* frame,
+                                                     ReferenceLineInfo* reference_line_info) {
     CHECK_NOTNULL(frame);
     return apollo::common::Status::OK();
   }

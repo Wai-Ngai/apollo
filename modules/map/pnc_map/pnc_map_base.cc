@@ -25,19 +25,14 @@
 namespace apollo {
 namespace planning {
 
-DEFINE_double(
-    look_backward_distance, 50,
-    "look backward this distance when creating reference line from routing");
-
+DEFINE_double(look_backward_distance, 50,
+              "look backward this distance when creating reference line from routing");
 DEFINE_double(look_forward_short_distance, 180,
-              "short look forward this distance when creating reference line "
-              "from routing when ADC is slow");
-DEFINE_double(
-    look_forward_long_distance, 250,
-    "look forward this distance when creating reference line from routing");
+              "short look forward this distance when creating reference line from routing when ADC is slow");
+DEFINE_double(look_forward_long_distance, 250,
+              "look forward this distance when creating reference line from routing");
 
-bool PncMapBase::UpdatePlanningCommand(
-    const planning::PlanningCommand &command) {
+bool PncMapBase::UpdatePlanningCommand(const planning::PlanningCommand &command) {
   if (!IsValid(command)) {
     AERROR << "Input command is not valid!" << command.DebugString();
     return false;
@@ -47,21 +42,20 @@ bool PncMapBase::UpdatePlanningCommand(
 }
 
 double PncMapBase::LookForwardDistance(const double velocity) {
-  auto forward_distance = velocity * FLAGS_look_forward_time_sec;
+ 
+  auto forward_distance = velocity * FLAGS_look_forward_time_sec;  // s = v * 8
 
-  return forward_distance > FLAGS_look_forward_short_distance
-             ? FLAGS_look_forward_long_distance
-             : FLAGS_look_forward_short_distance;
+  return forward_distance > FLAGS_look_forward_short_distance      // 180m
+                          ? FLAGS_look_forward_long_distance       // 250m
+                          : FLAGS_look_forward_short_distance;     // 180m
 }
 
-bool PncMapBase::IsNewPlanningCommand(
-    const planning::PlanningCommand &command) const {
+bool PncMapBase::IsNewPlanningCommand(const planning::PlanningCommand &command) const {
   return IsNewPlanningCommand(last_command_, command);
 }
 
-bool PncMapBase::IsNewPlanningCommand(
-    const planning::PlanningCommand &prev_command,
-    const planning::PlanningCommand &new_command) {
+bool PncMapBase::IsNewPlanningCommand(const planning::PlanningCommand &prev_command,
+                                      const planning::PlanningCommand &new_command) {
   if (!new_command.is_motion_command()) {
     return false;
   }

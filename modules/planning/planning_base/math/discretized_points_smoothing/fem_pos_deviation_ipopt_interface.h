@@ -39,6 +39,7 @@
 namespace apollo {
 namespace planning {
 
+// 使用ipopt非线性求解器求解（内点法）
 class FemPosDeviationIpoptInterface : public Ipopt::TNLP {
  public:
   FemPosDeviationIpoptInterface(std::vector<std::pair<double, double>> points,
@@ -58,10 +59,8 @@ class FemPosDeviationIpoptInterface : public Ipopt::TNLP {
     weight_ref_deviation_ = weight_ref_deviation;
   }
 
-  void set_weight_curvature_constraint_slack_var(
-      const double weight_curvature_constraint_slack_var) {
-    weight_curvature_constraint_slack_var_ =
-        weight_curvature_constraint_slack_var;
+  void set_weight_curvature_constraint_slack_var(const double weight_curvature_constraint_slack_var) {
+    weight_curvature_constraint_slack_var_ = weight_curvature_constraint_slack_var;
   }
 
   void set_curvature_constraint(const double curvature_constraint) {
@@ -170,8 +169,7 @@ class FemPosDeviationIpoptInterface : public Ipopt::TNLP {
   /**@name Methods to block default compiler methods.
    */
   FemPosDeviationIpoptInterface(const FemPosDeviationIpoptInterface&);
-  FemPosDeviationIpoptInterface& operator=(
-      const FemPosDeviationIpoptInterface&);
+  FemPosDeviationIpoptInterface& operator=(const FemPosDeviationIpoptInterface&);
 
   std::vector<double> obj_lam_;
 

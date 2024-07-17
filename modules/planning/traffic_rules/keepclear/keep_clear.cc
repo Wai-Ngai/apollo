@@ -54,8 +54,7 @@ Status KeepClear::ApplyRule(Frame* const frame,
     const std::vector<PathOverlap>& keep_clear_overlaps =
         reference_line_info->reference_line().map_path().clear_area_overlaps();
     for (const auto& keep_clear_overlap : keep_clear_overlaps) {
-      const auto obstacle_id =
-          KEEP_CLEAR_VO_ID_PREFIX + keep_clear_overlap.object_id;
+      const auto obstacle_id = KEEP_CLEAR_VO_ID_PREFIX + keep_clear_overlap.object_id;
 
       if (BuildKeepClearObstacle(frame, reference_line_info, obstacle_id,
                                  keep_clear_overlap.start_s,
@@ -184,9 +183,9 @@ bool KeepClear::BuildKeepClearObstacle(
   CHECK_NOTNULL(frame);
   CHECK_NOTNULL(reference_line_info);
 
-  // check
+  // check 1. 检查无人车是否已经驶入禁停区或者交叉路口，是则可直接忽略。
   const double adc_front_edge_s = reference_line_info->AdcSlBoundary().end_s();
-  if (adc_front_edge_s - keep_clear_start_s > config_.min_pass_s_distance()) {
+  if (adc_front_edge_s - keep_clear_start_s > config_.min_pass_s_distance()) { // min_pass_s_distance：2.0m
     ADEBUG << "adc inside keep_clear zone[" << virtual_obstacle_id << "] s["
            << keep_clear_start_s << ", " << keep_clear_end_s
            << "] adc_front_edge_s[" << adc_front_edge_s
@@ -196,10 +195,11 @@ bool KeepClear::BuildKeepClearObstacle(
 
   ADEBUG << "keep clear obstacle: [" << keep_clear_start_s << ", "
          << keep_clear_end_s << "]";
+
   // create virtual static obstacle
-  auto* obstacle =
-      frame->CreateStaticObstacle(reference_line_info, virtual_obstacle_id,
-                                  keep_clear_start_s, keep_clear_end_s);
+  // 2. 创建新的禁停区障碍物，并且打上标签为不能停车
+  auto* obstacle = frame->CreateStaticObstacle(reference_line_info, virtual_obstacle_id,
+                                               keep_clear_start_s, keep_clear_end_s);
   if (!obstacle) {
     AERROR << "Failed to create obstacle [" << virtual_obstacle_id << "]";
     return false;
@@ -209,8 +209,7 @@ bool KeepClear::BuildKeepClearObstacle(
     AERROR << "Failed to create path_obstacle: " << virtual_obstacle_id;
     return false;
   }
-  path_obstacle->SetReferenceLineStBoundaryType(
-      STBoundary::BoundaryType::KEEP_CLEAR);
+  path_obstacle->SetReferenceLineStBoundaryType(STBoundary::BoundaryType::KEEP_CLEAR);
 
   return true;
 }

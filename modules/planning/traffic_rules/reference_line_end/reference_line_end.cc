@@ -31,9 +31,8 @@ namespace planning {
 
 using apollo::common::Status;
 
-bool ReferenceLineEnd::Init(
-    const std::string& name,
-    const std::shared_ptr<DependencyInjector>& injector) {
+bool ReferenceLineEnd::Init(const std::string& name,
+                            const std::shared_ptr<DependencyInjector>& injector) {
   if (!TrafficRule::Init(name, injector)) {
     return false;
   }
@@ -41,8 +40,8 @@ bool ReferenceLineEnd::Init(
   return TrafficRule::LoadConfig<ReferenceLineEndConfig>(&config_);
 }
 
-Status ReferenceLineEnd::ApplyRule(
-    Frame* frame, ReferenceLineInfo* const reference_line_info) {
+Status ReferenceLineEnd::ApplyRule(Frame* frame, 
+                                   ReferenceLineInfo* const reference_line_info) {
   const auto& reference_line = reference_line_info->reference_line();
 
   ADEBUG << "ReferenceLineEnd length[" << reference_line.Length() << "]";
@@ -50,31 +49,27 @@ Status ReferenceLineEnd::ApplyRule(
     ADEBUG << "   lane[" << segment.lane->lane().id().id() << "]";
   }
   // check
-  double remain_s =
-      reference_line.Length() - reference_line_info->AdcSlBoundary().end_s();
+  // 检查参考线剩余的长度，足够则可忽略这个情况，min_reference_line_remain_length：50m
+  double remain_s = reference_line.Length() - reference_line_info->AdcSlBoundary().end_s();
   if (remain_s > config_.min_reference_line_remain_length()) {
     return Status::OK();
   }
 
   // create a virtual stop wall at the end of reference line to stop the adc
-  std::string virtual_obstacle_id =
-      REF_LINE_END_VO_ID_PREFIX + reference_line_info->Lanes().Id();
-  double obstacle_start_s =
-      reference_line.Length() - 2 * FLAGS_virtual_stop_wall_length;
-  auto* obstacle = frame->CreateStopObstacle(
-      reference_line_info, virtual_obstacle_id, obstacle_start_s);
+  std::string virtual_obstacle_id = REF_LINE_END_VO_ID_PREFIX + reference_line_info->Lanes().Id();
+  double obstacle_start_s = reference_line.Length() - 2 * FLAGS_virtual_stop_wall_length; // 在参考线终点前，创建停止墙障碍物
+  auto* obstacle = frame->CreateStopObstacle(reference_line_info, virtual_obstacle_id, obstacle_start_s);
   if (!obstacle) {
     return Status(common::PLANNING_ERROR,
                   "Failed to create reference line end obstacle");
   }
   Obstacle* stop_wall = reference_line_info->AddObstacle(obstacle);
   if (!stop_wall) {
-    return Status(
-        common::PLANNING_ERROR,
-        "Failed to create path obstacle for reference line end obstacle");
+    return Status(common::PLANNING_ERROR,
+                  "Failed to create path obstacle for reference line end obstacle");
   }
 
-  // build stop decision
+  // build stop decision 设置障碍物停止标签
   const double stop_line_s = obstacle_start_s - config_.stop_distance();
   auto stop_point = reference_line.GetReferencePoint(stop_line_s);
 

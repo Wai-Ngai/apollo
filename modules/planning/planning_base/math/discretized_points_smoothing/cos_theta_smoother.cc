@@ -27,24 +27,24 @@ namespace planning {
 CosThetaSmoother::CosThetaSmoother(const CosThetaSmootherConfig& config)
     : config_(config) {}
 
-bool CosThetaSmoother::Solve(
-    const std::vector<std::pair<double, double>>& raw_point2d,
-    const std::vector<double>& bounds, std::vector<double>* opt_x,
-    std::vector<double>* opt_y) {
+bool CosThetaSmoother::Solve(const std::vector<std::pair<double, double>>& raw_point2d,
+                             const std::vector<double>& bounds, 
+                             std::vector<double>* opt_x,
+                             std::vector<double>* opt_y) {
+
   const double weight_cos_included_angle = config_.weight_cos_included_angle();
   const double weight_anchor_points = config_.weight_anchor_points();
   const double weight_length = config_.weight_length();
+
   const size_t print_level = config_.print_level();
   const size_t max_num_of_iterations = config_.max_num_of_iterations();
-  const size_t acceptable_num_of_iterations =
-      config_.acceptable_num_of_iterations();
+  const size_t acceptable_num_of_iterations = config_.acceptable_num_of_iterations();
+
   const double tol = config_.tol();
   const double acceptable_tol = config_.acceptable_tol();
-  const bool use_automatic_differentiation =
-      config_.ipopt_use_automatic_differentiation();
+  const bool use_automatic_differentiation = config_.ipopt_use_automatic_differentiation();
 
-  CosThetaIpoptInterface* smoother =
-      new CosThetaIpoptInterface(raw_point2d, bounds);
+  CosThetaIpoptInterface* smoother = new CosThetaIpoptInterface(raw_point2d, bounds);
 
   smoother->set_weight_cos_included_angle(weight_cos_included_angle);
   smoother->set_weight_anchor_points(weight_anchor_points);
@@ -57,10 +57,8 @@ bool CosThetaSmoother::Solve(
   Ipopt::SmartPtr<Ipopt::IpoptApplication> app = IpoptApplicationFactory();
 
   app->Options()->SetIntegerValue("print_level", static_cast<int>(print_level));
-  app->Options()->SetIntegerValue("max_iter",
-                                  static_cast<int>(max_num_of_iterations));
-  app->Options()->SetIntegerValue(
-      "acceptable_iter", static_cast<int>(acceptable_num_of_iterations));
+  app->Options()->SetIntegerValue("max_iter", static_cast<int>(max_num_of_iterations));
+  app->Options()->SetIntegerValue("acceptable_iter", static_cast<int>(acceptable_num_of_iterations));
   app->Options()->SetNumericValue("tol", tol);
   app->Options()->SetNumericValue("acceptable_tol", acceptable_tol);
 

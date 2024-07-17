@@ -34,7 +34,8 @@ class ReferencePoint : public hdmap::MapPathPoint {
  public:
   ReferencePoint() = default;
 
-  ReferencePoint(const MapPathPoint& map_path_point, const double kappa,
+  ReferencePoint(const MapPathPoint& map_path_point, 
+                 const double kappa,
                  const double dkappa);
 
   common::PathPoint ToPathPoint(double s) const;

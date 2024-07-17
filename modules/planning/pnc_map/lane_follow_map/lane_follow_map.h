@@ -46,35 +46,36 @@ class LaneFollowMap : public PncMapBase {
 
   bool CanProcess(const planning::PlanningCommand &command) const override;
 
+  // 1.更新路由信息:每当有新的routing结果时，都需要用最新的RoutingResponse对PncMap里的数据进行更新
   bool UpdatePlanningCommand(const planning::PlanningCommand &command) override;
+
   /**
+   * 2.短期路径段查询
    * @brief use heuristic forward length and backward length
    */
-  bool GetRouteSegments(
-      const common::VehicleState &vehicle_state,
-      std::list<apollo::hdmap::RouteSegments> *const route_segments) override;
+  bool GetRouteSegments(const common::VehicleState &vehicle_state,
+                        std::list<apollo::hdmap::RouteSegments> *const route_segments) override;
 
-  bool ExtendSegments(
-      const apollo::hdmap::RouteSegments &segments, double start_s,
-      double end_s,
-      apollo::hdmap::RouteSegments *const truncated_segments) const override;
+  bool ExtendSegments(const apollo::hdmap::RouteSegments &segments,
+                      double start_s, double end_s,
+                      apollo::hdmap::RouteSegments *const truncated_segments) const override;
 
   std::vector<routing::LaneWaypoint> FutureRouteWaypoints() const override;
+
   /**
    * @brief Get the end point of PlanningCommand.
    * @param end_point The end point of PlanningCommand.
    */
-  void GetEndLaneWayPoint(
-      std::shared_ptr<routing::LaneWaypoint> &end_point) const override;
+  void GetEndLaneWayPoint(std::shared_ptr<routing::LaneWaypoint> &end_point) const override;
+
   /**
    * @brief Get the Lane with the given id.
    * @param id The id of the lane.
    */
   hdmap::LaneInfoConstPtr GetLaneById(const hdmap::Id &id) const override;
 
-  bool GetNearestPointFromRouting(
-      const common::VehicleState &state,
-      apollo::hdmap::LaneWaypoint *waypoint) const override;
+  bool GetNearestPointFromRouting(const common::VehicleState &state,
+                                  apollo::hdmap::LaneWaypoint *waypoint) const override;
 
  private:
   /**
@@ -84,17 +85,19 @@ class LaneFollowMap : public PncMapBase {
    */
   bool IsValid(const planning::PlanningCommand &command) const override;
 
-  bool GetRouteSegments(
-      const common::VehicleState &vehicle_state, const double backward_length,
-      const double forward_length,
-      std::list<apollo::hdmap::RouteSegments> *const route_segments);
+  bool GetRouteSegments(const common::VehicleState &vehicle_state, 
+                        const double backward_length,
+                        const double forward_length,
+                        std::list<apollo::hdmap::RouteSegments> *const route_segments);
 
   bool ExtendSegments(const apollo::hdmap::RouteSegments &segments,
                       const common::PointENU &point, double look_forward,
                       double look_backward,
                       apollo::hdmap::RouteSegments *extended_segments);
 
+ // 更新pnc map中无人车状态
   bool UpdateVehicleState(const common::VehicleState &vehicle_state);
+
   /**
    * @brief Find the waypoint index of a routing waypoint. It updates
    * adc_route_index_
@@ -110,15 +113,12 @@ class LaneFollowMap : public PncMapBase {
                          const apollo::hdmap::RouteSegments &segments,
                          apollo::hdmap::LaneWaypoint *waypoint) const;
 
-  static void AppendLaneToPoints(
-      apollo::hdmap::LaneInfoConstPtr lane, const double start_s,
-      const double end_s,
-      std::vector<apollo::hdmap::MapPathPoint> *const points);
+  static void AppendLaneToPoints(apollo::hdmap::LaneInfoConstPtr lane, 
+                                 const double start_s, const double end_s,
+                                 std::vector<apollo::hdmap::MapPathPoint> *const points);
 
-  apollo::hdmap::LaneInfoConstPtr GetRoutePredecessor(
-      apollo::hdmap::LaneInfoConstPtr lane) const;
-  apollo::hdmap::LaneInfoConstPtr GetRouteSuccessor(
-      apollo::hdmap::LaneInfoConstPtr lane) const;
+  apollo::hdmap::LaneInfoConstPtr GetRoutePredecessor(apollo::hdmap::LaneInfoConstPtr lane) const;
+  apollo::hdmap::LaneInfoConstPtr GetRouteSuccessor(apollo::hdmap::LaneInfoConstPtr lane) const;
 
   /**
    * Return the neighbor passages from passage with index start_passage on road.
@@ -135,16 +135,14 @@ class LaneFollowMap : public PncMapBase {
    * @return empty LaneWaypoint if the lane id cannot be found on map, otherwise
    * return a valid LaneWaypoint with lane ptr and s.
    */
-  apollo::hdmap::LaneWaypoint ToLaneWaypoint(
-      const routing::LaneWaypoint &waypoint) const;
+  apollo::hdmap::LaneWaypoint ToLaneWaypoint(const routing::LaneWaypoint &waypoint) const;
 
   /**
    * @brief convert a routing segment to lane segment
    * @return empty LaneSegmetn if the lane id cannot be found on map, otherwise
    * return a valid LaneSegment with lane ptr, start_s and end_s
    */
-  apollo::hdmap::LaneSegment ToLaneSegment(
-      const routing::LaneSegment &segment) const;
+  apollo::hdmap::LaneSegment ToLaneSegment(const routing::LaneSegment &segment) const;
 
   /**
    * @brief Update routing waypoint index to the next waypoint that ADC need to
@@ -162,24 +160,24 @@ class LaneFollowMap : public PncMapBase {
    * @return empty vector if not found, otherwise return a vector { road_index,
    * passage_index, lane_index}
    */
-  int SearchForwardWaypointIndex(
-      int start, const apollo::hdmap::LaneWaypoint &waypoint) const;
-  int SearchBackwardWaypointIndex(
-      int start, const apollo::hdmap::LaneWaypoint &waypoint) const;
+  int SearchForwardWaypointIndex(int start, const apollo::hdmap::LaneWaypoint &waypoint) const;
+  int SearchBackwardWaypointIndex(int start, const apollo::hdmap::LaneWaypoint &waypoint) const;
 
   void UpdateRoutingRange(int adc_index);
 
  private:
   struct RouteIndex {
     apollo::hdmap::LaneSegment segment;
-    std::array<int, 3> index;
+    std::array<int, 3> index;  // 当前lane_segment 的 `{road_index, passage_index, lane_index}`
   };
-  std::vector<RouteIndex> route_indices_;
+  std::vector<RouteIndex> route_indices_; // 非常重要的数据结构：存储routing查询到的路径
+
   int range_start_ = 0;
   int range_end_ = 0;
+  
   // routing ids in range
-  std::unordered_set<std::string> range_lane_ids_;
-  std::unordered_set<std::string> all_lane_ids_;
+  std::unordered_set<std::string> range_lane_ids_;  // 在搜索区间内的所有lane的id
+  std::unordered_set<std::string> all_lane_ids_;    // 当前routing结果的所有lane的id
 
   /**
    * The routing request waypoints
@@ -187,6 +185,7 @@ class LaneFollowMap : public PncMapBase {
   struct WaypointIndex {
     apollo::hdmap::LaneWaypoint waypoint;
     int index;
+    
     WaypointIndex(const apollo::hdmap::LaneWaypoint &waypoint, int index)
         : waypoint(waypoint), index(index) {}
   };
@@ -194,9 +193,10 @@ class LaneFollowMap : public PncMapBase {
   // return the segment of an index
   int NextWaypointIndex(int index) const;
 
-  std::vector<WaypointIndex> routing_waypoint_index_;
+  std::vector<WaypointIndex> routing_waypoint_index_;  // 用于保存查询点在哪些LaneSegment中
   /**
    * The next routing request waypoint index in routing_waypoint_index_
+   * 下一个必经查询点的索引
    */
   std::size_t next_routing_waypoint_index_ = 0;
 
@@ -227,8 +227,7 @@ class LaneFollowMap : public PncMapBase {
   bool stop_for_destination_ = false;
 };
 
-CYBER_PLUGIN_MANAGER_REGISTER_PLUGIN(apollo::planning::LaneFollowMap,
-                                     PncMapBase)
+CYBER_PLUGIN_MANAGER_REGISTER_PLUGIN(apollo::planning::LaneFollowMap, PncMapBase)
 
 }  // namespace planning
 }  // namespace apollo

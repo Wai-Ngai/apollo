@@ -56,40 +56,35 @@ class PncMapBase {
   /**
    * @brief use heuristic forward length and backward length
    */
-  virtual bool GetRouteSegments(
-      const common::VehicleState &vehicle_state,
-      std::list<apollo::hdmap::RouteSegments> *const route_segments) = 0;
+  virtual bool GetRouteSegments(const common::VehicleState &vehicle_state,
+                                std::list<apollo::hdmap::RouteSegments> *const route_segments) = 0;
 
   /**
    * Check if the routing is the same as existing one in Map
    */
   bool IsNewPlanningCommand(const planning::PlanningCommand &command) const;
 
-  static bool IsNewPlanningCommand(
-      const planning::PlanningCommand &prev_command,
-      const planning::PlanningCommand &new_command);
+  static bool IsNewPlanningCommand(const planning::PlanningCommand &prev_command,
+                                   const planning::PlanningCommand &new_command);
 
-  virtual bool ExtendSegments(
-      const apollo::hdmap::RouteSegments &segments, double start_s,
-      double end_s,
-      apollo::hdmap::RouteSegments *const truncated_segments) const = 0;
+  virtual bool ExtendSegments(const apollo::hdmap::RouteSegments &segments, 
+                              double start_s, double end_s,
+                              apollo::hdmap::RouteSegments *const truncated_segments) const = 0;
 
   virtual std::vector<routing::LaneWaypoint> FutureRouteWaypoints() const = 0;
   /**
    * @brief Get the end point of PlanningCommand.
    * @param end_point The end point of PlanningCommand.
    */
-  virtual void GetEndLaneWayPoint(
-      std::shared_ptr<routing::LaneWaypoint> &end_point) const = 0;
+  virtual void GetEndLaneWayPoint(std::shared_ptr<routing::LaneWaypoint> &end_point) const = 0;
   /**
    * @brief Get the Lane with the given id.
    * @param id The id of the lane.
    */
   virtual hdmap::LaneInfoConstPtr GetLaneById(const hdmap::Id &id) const = 0;
 
-  virtual bool GetNearestPointFromRouting(
-      const common::VehicleState &state,
-      apollo::hdmap::LaneWaypoint *waypoint) const = 0;
+  virtual bool GetNearestPointFromRouting(const common::VehicleState &state,
+                                          apollo::hdmap::LaneWaypoint *waypoint) const = 0;
 
  protected:
   planning::PlanningCommand last_command_;

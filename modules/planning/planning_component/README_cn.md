@@ -15,9 +15,9 @@ planning模块由以下几个目录构成：
 - **planning_base**: 包含planning的基础数据结构和算法库。
 - **planner**: 包含planning模块的几种规划器子类插件。
 - **pnc_map**: 生成参考线基于的pnc_map类，根据输入的planning导航命令或地图等信息，生成参考线数据，作为planning局部路径规划的路线参考。
-- **scenarios**: lanning模块支持的场景插件，每个目录下包含一个独立的场景插件包，包含scenario和stage类的定义。
-- **tasks**: lanning模块中支持的任务插件，每个目录下包含一个独立的任务插件包，包含task类的定义。
-- **traffic_rules**: lanning模块支持的通用交通规则插件，每个目录下包含一个独立的traffic rule插件包，traffic rules作用于所有运行的场景中。
+- **scenarios**: planning模块支持的场景插件，每个目录下包含一个独立的场景插件包，包含scenario和stage类的定义。
+- **tasks**: planning模块中支持的任务插件，每个目录下包含一个独立的任务插件包，包含task类的定义。
+- **traffic_rules**: planning模块支持的通用交通规则插件，每个目录下包含一个独立的traffic rule插件包，traffic rules作用于所有运行的场景中。
 
 ### planning框架介绍
 
@@ -85,7 +85,7 @@ planning模块从apollo 3.5开始使用了双层状态机的场景机制，相�
 
 #### planning模块运行流程
 
-planning模块运行流程如下图所示，模块的入口是PlanningComponent，当有预测信息PredictionObstacles输入时，触发它的Proc函数，进行轨迹规划处理。
+planning模块运行流程如下图所示，模块的入口是PlanningComponent，当有预测信息PredictionObstacles输入时，触发它的Proc函数，进行轨迹规划处理。由于预测模块运行周期是10Hz，所以Planning模块调用周期也是10Hz。
 
 ![](./docs/images/planning_flow.png)
 
@@ -107,11 +107,9 @@ planning模块中有两个主要的线程，一个是根据输入环境和车辆
 PlanningComponent是planning模块的入口，它是一个由topic触发的Component，接口函数是：
 
 ```C
-    bool Proc(
-        const std::shared_ptr<prediction::PredictionObstacles>& prediction_obstacles,
-        const std::shared_ptr<canbus::Chassis>& chassis,
-        const std::shared_ptr<localization::LocalizationEstimate>&
-            localization_estimate) override;
+bool Proc(const std::shared_ptr<prediction::PredictionObstacles>& prediction_obstacles,
+          const std::shared_ptr<canbus::Chassis>& chassis,
+          const std::shared_ptr<localization::LocalizationEstimate>& localization_estimate) override;
 ```
 
 当接收到新的 PredictionObstacles 数据时，会触发执行Proc函数，并获取最新的Chassis车辆信息和 LocalizationEstimate 车辆定位数据进行处理，计算planning轨迹。
@@ -119,6 +117,7 @@ PlanningComponent是planning模块的入口，它是一个由topic触发的Compo
 #### planning初始化
 
 planning初始化在PlanningComponent::Init函数中进行，在这里创建PlanningBase对象（默认OnLanePlanning），它是轨迹规划的主体；除此之外，还需要创建planning其他输入消息的订阅对象，以及输出的消息发布对象：
+
 
 | 成员对象                      | 类型                                                                                                                                | 描述                                     |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
@@ -219,6 +218,7 @@ planning模块框架如下图所示，planning-base包含了主流程，以及�
 - **调用外部接口命令**: 用户的场景需要进行多次规划任务才能完成一次作业要求，或者需要在规划任务执行过程中动态改变任务状
   态，可以在业务层根据您的业务需求自行编排规划任务，对规划模块发送命令。目前支持的外部接口有：
 
+
   | 命令名称                                                        | 描述             |
   | --------------------------------------------------------------- | ---------------- |
   | `apollo::external_command::LaneFollowCommand`                   | 点到点沿道路行驶 |
@@ -229,7 +229,6 @@ planning模块框架如下图所示，planning-base包含了主流程，以及�
   | `apollo::external_command::ActionCommandType::SWITCH_TO_MANUAL` | 切换到手动模式   |
   | `apollo::external_command::ActionCommandType::SWITCH_TO_AUTO`   | 切换到自动模式   |
   | `apollo::external_command::ActionCommandType::VIN_REQ`          | vin code验证     |
-
 - **扩展插件**: 含scenario，task或traffic rule
 
   planning的二次开发扩展都是以开发插件的形式给出的，在开发planning插件之前需要先了
@@ -245,7 +244,6 @@ planning模块框架如下图所示，planning-base包含了主流程，以及�
     - **切换函数** ，被 `apollo::planning::ScenarioManager` 中调用，判断是否需要切入该场景： `apollo::planning::Scenario::IsTransferable` 。
     - **进入场景时的操作函数** ，在首次进入场景前调用做一些预处理的工作，重置场景内变量，如果不需要做任何操作可以不重写： `apollo::planning::Scenario::Enter`
     - **退出场景时的操作函数** ，在场景切出时会被调用，可以用来清除一些全局变量，如果不需要做任何操作可以不重写： `apollo::planning::Scenario::Exit`
-
   - **开发task插件**
 
     当Apollo中的任务(Task)无法满足场景需求时，需要开发全新的任务插件。Apollo中存在多种类型的 `apollo::planning::Task` 基类：
@@ -258,7 +256,6 @@ planning模块框架如下图所示，planning-base包含了主流程，以及�
 
     - **初始化函数** ， `apollo::planning::Stage` 在首次运行任务前，会调用任务的 `Init` 函数对任务进行初始化，初始化函数中主要对任务的成员变量进行初始化，以及加载配置参数： `apollo::planning::Task::Init`
     - **运行函数** ，运行函数包含任务的主要运行逻辑： `apollo::planning::Task::Execute`
-
   - **开发traffic rule插件**
 
     交通规则插件 traffic rule 主要是在规划模块执行 Scenario 前对交通规则进行处理，当需要增加新的对于全场景生效的决策逻辑时，可以开发新的交通规则插件。
@@ -304,14 +301,16 @@ apollo::planning::PlanningComponent
 
 Planning模块需要获取外部环境信息，车辆自身信息进行轨迹规划，以下是planning的外部输入信息：
 
-| Channel 名                         | 类型                                         | <div style="width: 300pt">描述</div>                                                                                                               |
-| ---------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/apollo/prediction`               | `apollo::prediction::PredictionObstacles`    | 障碍物预测信息，可通过 `modules/planning/planning_component/dag/planning.dag` 启动文件修改channel名                                                     |
-| `/apollo/perception/traffic_light` | `apollo::perception::TrafficLight`           | perception模块输出的交通灯感知信息，包含交通灯亮起的颜色，id等信息                                                                                 |
-| `/apollo/localization/pose`        | `apollo::localization::LocalizationEstimate` | 定位信息，可通过 `modules/planning/planning_component/dag/planning.dag` 配置文件修改channel名                                                           |
-| `/apollo/canbus/chassis`           | `apollo::canbus::Chassis`                    | canbus模块输出的车辆底盘信息，包含底盘速度，油门，刹车，档位，灯光等状态， `modules/planning/planning_component/dag/planning.dag` 配置文件修改channel名 |
+
+| Channel 名                         | 类型                                         | <div style="width: 300pt">描述</div>                                                                                                                   |
+| ---------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/apollo/prediction`               | `apollo::prediction::PredictionObstacles`    | 障碍物预测信息，可通过`modules/planning/planning_component/dag/planning.dag` 启动文件修改channel名                                                     |
+| `/apollo/perception/traffic_light` | `apollo::perception::TrafficLight`           | perception模块输出的交通灯感知信息，包含交通灯亮起的颜色，id等信息                                                                                     |
+| `/apollo/localization/pose`        | `apollo::localization::LocalizationEstimate` | 定位信息，可通过`modules/planning/planning_component/dag/planning.dag` 配置文件修改channel名                                                           |
+| `/apollo/canbus/chassis`           | `apollo::canbus::Chassis`                    | canbus模块输出的车辆底盘信息，包含底盘速度，油门，刹车，档位，灯光等状态，`modules/planning/planning_component/dag/planning.dag` 配置文件修改channel名 |
 
 此外，planning模块还需要外部输入的导航命令信息，用户首先向external_command发送导航命令请求，external_command再将这些命令进行处理后转发给planning模块。下面介绍用户可以发送的几种导航命令：
+
 
 | Channel 名                               | 类型                                            | <div style="width: 300pt">描述</div>                                           |
 | ---------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -321,6 +320,7 @@ Planning模块需要获取外部环境信息，车辆自身信息进行轨迹规
 
 #### 输出
 
+
 | Channel 名                             | 类型                                          | <div style="width: 300pt">描述</div>             |
 | -------------------------------------- | --------------------------------------------- | ------------------------------------------------ |
 | `/apollo/planning`                     | `apollo::planning::ADCTrajectory`             | 输出规划轨迹，包含轨迹点，速度和时间等信息       |
@@ -329,10 +329,11 @@ Planning模块需要获取外部环境信息，车辆自身信息进行轨迹规
 
 #### 配置
 
-| 文件路径                                                                     | 类型/结构                                       | <div style="width: 300pt">说明</div> |
-| ---------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------ |
+
+| 文件路径                                                                          | 类型/结构                                       | <div style="width: 300pt">说明</div> |
+| --------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------ |
 | `modules/planning/planning_component/conf/planning_config.pb.txt`                 | `apollo::planning::PlanningConfig`              | planning组件的配置文件               |
-| `modules/planning/planning_component/conf/public_road_planner_config.pb.txt`       | `apollo::planning::PlannerOpenSpaceConfig`      | PublicRoadPlanner的配置文件           |
+| `modules/planning/planning_component/conf/public_road_planner_config.pb.txt`      | `apollo::planning::PlannerOpenSpaceConfig`      | PublicRoadPlanner的配置文件          |
 | `modules/planning/planning_component/conf/traffic_rule_config.pb.txt`             | `apollo::planning::TrafficRulesPipeline`        | 支持的traffic rules列表的配置文件    |
 | `modules/planning/planning_component/conf/discrete_points_smoother_config.pb.txt` | `apollo::planning::ReferenceLineSmootherConfig` | 参考线使用离散点平滑时的配置文件     |
 | `modules/planning/planning_component/conf/qp_spline_smoother_config.pb.txt`       | `apollo::planning::ReferenceLineSmootherConfig` | 参考线使用五次多项式平滑时的配置文件 |
@@ -341,9 +342,10 @@ Planning模块需要获取外部环境信息，车辆自身信息进行轨迹规
 
 #### Flags
 
-| 文件路径                                            |  <div style="width: 300pt">说明</div> |
-| --------------------------------------------------- |  ------------------------------------ |
-| `modules/planning/planning_component/conf/planning.conf` |  planning模块的flag配置文件           |
+
+| 文件路径                                                 | <div style="width: 300pt">说明</div> |
+| -------------------------------------------------------- | ------------------------------------ |
+| `modules/planning/planning_component/conf/planning.conf` | planning模块的flag配置文件           |
 
 #### 使用方式
 

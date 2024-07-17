@@ -315,8 +315,7 @@ double Obstacle::MinRadiusStopDistance(
 
 void Obstacle::BuildReferenceLineStBoundary(const ReferenceLine& reference_line,
                                             const double adc_start_s) {
-  const auto& adc_param =
-      VehicleConfigHelper::Instance()->GetConfig().vehicle_param();
+  const auto& adc_param = VehicleConfigHelper::Instance()->GetConfig().vehicle_param();
   const double half_adc_width = adc_param.width() / 2;
   if (is_static_ || trajectory_.trajectory_point().empty()) {
     std::vector<std::pair<STPoint, STPoint>> point_pairs;
@@ -375,6 +374,7 @@ bool Obstacle::BuildTrajectoryStBoundary(const ReferenceLine& reference_line,
   SLBoundary last_sl_boundary;
   int last_index = 0;
 
+  // Step 1. 首先还是对障碍物轨迹点两两选择，每两个点可以构建上图中的object_moving_box以及object_boundary。
   for (int i = 1; i < trajectory_points.size(); ++i) {
     ADEBUG << "last_sl_boundary: " << last_sl_boundary.ShortDebugString();
 
@@ -383,32 +383,28 @@ bool Obstacle::BuildTrajectoryStBoundary(const ReferenceLine& reference_line,
     const auto& first_point = first_traj_point.path_point();
     const auto& second_point = second_traj_point.path_point();
 
-    double object_moving_box_length =
-        object_length + common::util::DistanceXY(first_point, second_point);
+    double object_moving_box_length = object_length + common::util::DistanceXY(first_point, second_point); //object_moving_box总长度
 
-    common::math::Vec2d center((first_point.x() + second_point.x()) / 2.0,
+    common::math::Vec2d center((first_point.x() + second_point.x()) / 2.0,            // object_moving_box中心
                                (first_point.y() + second_point.y()) / 2.0);
-    common::math::Box2d object_moving_box(
-        center, first_point.theta(), object_moving_box_length, object_width);
+    common::math::Box2d object_moving_box(center, first_point.theta(), object_moving_box_length, object_width);
     SLBoundary object_boundary;
     // NOTICE: this method will have errors when the reference line is not
     // straight. Need double loop to cover all corner cases.
     // roughly skip points that are too close to last_sl_boundary box
-    const double distance_xy =
-        common::util::DistanceXY(trajectory_points[last_index].path_point(),
-                                 trajectory_points[i].path_point());
+    const double distance_xy = common::util::DistanceXY(trajectory_points[last_index].path_point(),
+                                                        trajectory_points[i].path_point());
     if (last_sl_boundary.start_l() > distance_xy ||
         last_sl_boundary.end_l() < -distance_xy) {
       continue;
     }
 
-    const double mid_s =
-        (last_sl_boundary.start_s() + last_sl_boundary.end_s()) / 2.0;
+    const double mid_s = (last_sl_boundary.start_s() + last_sl_boundary.end_s()) / 2.0;
     const double start_s = std::fmax(0.0, mid_s - 2.0 * distance_xy);
     const double end_s = (i == 1) ? reference_line.Length()
-                                  : std::fmin(reference_line.Length(),
-                                              mid_s + 2.0 * distance_xy);
+                                  : std::fmin(reference_line.Length(), mid_s + 2.0 * distance_xy);
 
+    // 计算object_boundary，由object_moving_box旋转一个heading得到，记录障碍物形式段的start_s, end_s, start_l和end_l
     if (!reference_line.GetApproximateSLBoundary(object_moving_box, start_s,
                                                  end_s, &object_boundary)) {
       AERROR << "failed to calculate boundary";
@@ -419,22 +415,19 @@ bool Obstacle::BuildTrajectoryStBoundary(const ReferenceLine& reference_line,
     last_sl_boundary = object_boundary;
     last_index = i;
 
+    // Step 2. 判断障碍物和车辆水平Lateral距离，如果障碍物在参考线两侧，那么障碍物可以忽略；如果障碍物在参考线后面，也可忽略
     // skip if object is entirely on one side of reference line.
     static constexpr double kSkipLDistanceFactor = 0.4;
-    const double skip_l_distance =
-        (object_boundary.end_s() - object_boundary.start_s()) *
-            kSkipLDistanceFactor +
-        adc_width / 2.0;
+    const double skip_l_distance = (object_boundary.end_s() - object_boundary.start_s()) *
+                                    kSkipLDistanceFactor + adc_width / 2.0;
 
     if (!IsCautionLevelObstacle() &&
-        (std::fmin(object_boundary.start_l(), object_boundary.end_l()) >
-             skip_l_distance ||
-         std::fmax(object_boundary.start_l(), object_boundary.end_l()) <
-             -skip_l_distance)) {
+        (std::fmin(object_boundary.start_l(), object_boundary.end_l()) > skip_l_distance ||     // 障碍物在参考线左侧，那么无人车可以直接通过障碍物，可忽略障碍物
+         std::fmax(object_boundary.start_l(), object_boundary.end_l()) < -skip_l_distance)) {   // 障碍物在参考线右侧，那么无人车可以直接通过障碍物，可忽略障碍物
       continue;
     }
 
-    if (!IsCautionLevelObstacle() && object_boundary.end_s() < 0) {
+    if (!IsCautionLevelObstacle() && object_boundary.end_s() < 0) {   // 障碍物在参考线后面，可忽略障碍物
       // skip if behind reference line
       continue;
     }
@@ -448,22 +441,22 @@ bool Obstacle::BuildTrajectoryStBoundary(const ReferenceLine& reference_line,
     if (object_s_diff < st_boundary_delta_s) {
       continue;
     }
-    const double delta_t =
-        second_traj_point.relative_time() - first_traj_point.relative_time();
+
+    // Step 3. 计算low_t和high_t时刻的行驶上下界边界框
+    const double delta_t = second_traj_point.relative_time() - first_traj_point.relative_time(); // 0.1s
     double low_s = std::max(object_boundary.start_s() - adc_half_length, 0.0);
     bool has_low = false;
-    double high_s =
-        std::min(object_boundary.end_s() + adc_half_length, FLAGS_st_max_s);
+    double high_s = std::min(object_boundary.end_s() + adc_half_length, FLAGS_st_max_s);
     bool has_high = false;
     while (low_s + st_boundary_delta_s < high_s && !(has_low && has_high)) {
-      if (!has_low) {
+      if (!has_low) {   // 采用渐进逼近的方法，逐渐计算边界框的下界
         auto low_ref = reference_line.GetReferencePoint(low_s);
         has_low = object_moving_box.HasOverlap(
             {low_ref, low_ref.heading(), adc_length,
              adc_width + FLAGS_nonstatic_obstacle_nudge_l_buffer});
         low_s += st_boundary_delta_s;
       }
-      if (!has_high) {
+      if (!has_high) {  // 采用渐进逼近的方法，逐渐计算边界框的上界
         auto high_ref = reference_line.GetReferencePoint(high_s);
         has_high = object_moving_box.HasOverlap(
             {high_ref, high_ref.heading(), adc_length,
@@ -479,19 +472,21 @@ bool Obstacle::BuildTrajectoryStBoundary(const ReferenceLine& reference_line,
            std::fabs((low_s - object_boundary.start_s()) / object_s_diff) *
                delta_t);
       polygon_points.emplace_back(
-          std::make_pair(STPoint{low_s - adc_start_s, low_t},
+          std::make_pair(STPoint{low_s - adc_start_s, low_t},    // 计算low_t时刻的上下界
                          STPoint{high_s - adc_start_s, low_t}));
       double high_t =
           (first_traj_point.relative_time() +
            std::fabs((high_s - object_boundary.start_s()) / object_s_diff) *
                delta_t);
-      if (high_t - low_t > 0.05) {
+      if (high_t - low_t > 0.05) {  // 计算high_t时刻的上下界
         polygon_points.emplace_back(
             std::make_pair(STPoint{low_s - adc_start_s, high_t},
                            STPoint{high_s - adc_start_s, high_t}));
       }
     }
   }
+
+  // Step 4. 计算完所有障碍物轨迹段的上下界框以后，根据时间t进行排序
   if (!polygon_points.empty()) {
     std::sort(polygon_points.begin(), polygon_points.end(),
               [](const std::pair<STPoint, STPoint>& a,

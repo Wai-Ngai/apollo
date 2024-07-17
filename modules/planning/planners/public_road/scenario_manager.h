@@ -44,7 +44,13 @@ class ScenarioManager final {
   Scenario* mutable_scenario() { return current_scenario_.get(); }
 
   DependencyInjector* injector() { return injector_.get(); }
-
+  
+  /**
+   * @brief 判断是否需要切换场景
+   * 
+   * @param ego_point 车辆当前的状态信息
+   * @param frame    planning循环计算所需要所有相关信息
+   */
   void Update(const common::TrajectoryPoint& ego_point, Frame* frame);
 
   void Reset(Frame* frame);

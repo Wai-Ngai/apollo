@@ -42,26 +42,22 @@ class PathOptimizerUtil {
    */
   static double EstimateJerkBoundary(const double vehicle_speed);
 
-  static std::vector<common::PathPoint>
-  ConvertPathPointRefFromFrontAxeToRearAxe(const PathData& path_data);
-  static void CalculateVertexConstraints(
-      const SLState& init_state, const PathBoundary& path_boundary,
-      ADCVertexConstraints* adc_vertex_constraints);
-  static void FormulateExtraConstraints(
-      PathBound extra_path_bound, const PathBoundary& path_boundary,
-      InterPolatedPointVec* extra_constraints);
+  static std::vector<common::PathPoint> ConvertPathPointRefFromFrontAxeToRearAxe(const PathData& path_data);
+  static void CalculateVertexConstraints(const SLState& init_state, const PathBoundary& path_boundary,
+                                         ADCVertexConstraints* adc_vertex_constraints);
+  static void FormulateExtraConstraints(PathBound extra_path_bound, const PathBoundary& path_boundary,
+                                        InterPolatedPointVec* extra_constraints);
 
   /**
    * @brief Piecewise jerk path optimizer.
    */
-  static bool OptimizePath(
-      const SLState& init_state, const std::array<double, 3>& end_state,
-      std::vector<double> l_ref, std::vector<double> l_ref_weight,
-      const PathBoundary& path_boundary,
-      const std::vector<std::pair<double, double>>& ddl_bounds,
-      double dddl_bound, const PiecewiseJerkPathConfig& config,
-      std::vector<double>* x, std::vector<double>* dx,
-      std::vector<double>* ddx);
+  static bool OptimizePath(const SLState& init_state, const std::array<double, 3>& end_state,
+                           std::vector<double> l_ref, std::vector<double> l_ref_weight,
+                           const PathBoundary& path_boundary,
+                           const std::vector<std::pair<double, double>>& ddl_bounds,
+                           double dddl_bound, const PiecewiseJerkPathConfig& config,
+                           std::vector<double>* x, std::vector<double>* dx,
+                           std::vector<double>* ddx);
 
   /**
    * @brief If ref_l is below or above path boundary, will update its values and
@@ -70,17 +66,15 @@ class PathOptimizerUtil {
   static void UpdatePathRefWithBound(const PathBoundary& path_boundary,
                                      double weight, std::vector<double>* ref_l,
                                      std::vector<double>* weight_ref_l);
-  static void UpdatePathRefWithBoundInSidePassDirection(
-      const PathBoundary& path_boundary, double weight,
-      std::vector<double>* ref_l, std::vector<double>* weight_ref_l,
-      bool is_left_side_pass);
+  static void UpdatePathRefWithBoundInSidePassDirection(const PathBoundary& path_boundary, double weight,
+                                                        std::vector<double>* ref_l, std::vector<double>* weight_ref_l,
+                                                        bool is_left_side_pass);
 
   /**
    * @brief calculate ddl bound by referenceline kappa and adc lat accleration
    */
-  static void CalculateAccBound(
-      const PathBoundary& path_boundary, const ReferenceLine& reference_line,
-      std::vector<std::pair<double, double>>* ddl_bounds);
+  static void CalculateAccBound(const PathBoundary& path_boundary, const ReferenceLine& reference_line,
+                                std::vector<std::pair<double, double>>* ddl_bounds);
 };
 
 }  // namespace planning

@@ -182,8 +182,8 @@ class VehicleStateProvider {
   const VehicleState& vehicle_state() const;
 
  private:
-  bool ConstructExceptLinearVelocity(
-      const localization::LocalizationEstimate& localization);
+  // 主要更新函数，根据定位信息更新自车位姿
+  bool ConstructExceptLinearVelocity(const localization::LocalizationEstimate& localization);
 
   common::VehicleState vehicle_state_;
   localization::LocalizationEstimate original_localization_;

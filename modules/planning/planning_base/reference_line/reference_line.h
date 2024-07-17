@@ -37,15 +37,20 @@
 namespace apollo {
 namespace planning {
 
+
+// 原始参考线,默认情况下，只生成一条参考线; 如果有变道，那么就生成多条参考线
 class ReferenceLine {
  public:
   ReferenceLine() = default;
+
   explicit ReferenceLine(const ReferenceLine& reference_line) = default;
+
   template <typename Iterator>
-  ReferenceLine(const Iterator begin, const Iterator end)
-      : reference_points_(begin, end),
-        map_path_(std::move(std::vector<hdmap::MapPathPoint>(begin, end))) {}
+  ReferenceLine(const Iterator begin, const Iterator end) : reference_points_(begin, end),
+                                                            map_path_(std::move(std::vector<hdmap::MapPathPoint>(begin, end))) {}
+ 
   explicit ReferenceLine(const std::vector<ReferencePoint>& reference_points);
+  
   explicit ReferenceLine(const hdmap::Path& hdmap_path);
 
   /** Stitch current reference line with the other reference line
@@ -55,7 +60,7 @@ class ReferenceLine {
    * Example 1
    * this:   |--------A-----x-----B------|
    * other:                 |-----C------x--------D-------|
-   * Result: |------A-----x-----B------x--------D-------|
+   * Result: |--------A-----x-----B------x--------D-------|
    * In the above example, A-B is current reference line, and C-D is the other
    * reference line. If part B and part C matches, we update current reference
    * line to A-B-D.
@@ -72,23 +77,26 @@ class ReferenceLine {
    */
   bool Stitch(const ReferenceLine& other);
 
-  bool Segment(const common::math::Vec2d& point, const double distance_backward,
+  bool Segment(const common::math::Vec2d& point, 
+               const double distance_backward,
                const double distance_forward);
 
-  bool Segment(const double s, const double distance_backward,
+  bool Segment(const double s, 
+               const double distance_backward,
                const double distance_forward);
 
   const hdmap::Path& map_path() const;
   const std::vector<ReferencePoint>& reference_points() const;
 
+  // 根据s值获取参考点（会根据s进行插值）
   ReferencePoint GetReferencePoint(const double s) const;
 
-  common::FrenetFramePoint GetFrenetPoint(
-      const common::PathPoint& path_point) const;
+  common::FrenetFramePoint GetFrenetPoint(const common::PathPoint& path_point) const;
 
   std::pair<std::array<double, 3>, std::array<double, 3>> ToFrenetFrame(
       const common::TrajectoryPoint& traj_point) const;
 
+  // 查找起点和终点分别为start_s和end_s的参考点
   std::vector<ReferencePoint> GetReferencePoints(double start_s,
                                                  double end_s) const;
 
@@ -122,7 +130,8 @@ class ReferenceLine {
                      SLBoundary* const sl_boundary,
                      double warm_start_s = -1.0) const;
   bool GetSLBoundary(const std::vector<common::math::Vec2d>& corners,
-                     SLBoundary* const sl_boundary, double warm_start_s) const;
+                     SLBoundary* const sl_boundary, 
+                     double warm_start_s) const;
   bool GetSLBoundary(const hdmap::Polygon& polygon,
                      SLBoundary* const sl_boundary) const;
 
@@ -141,8 +150,9 @@ class ReferenceLine {
   bool XYToSL(const common::math::Vec2d& xy_point,
               common::SLPoint* const sl_point,
               double warm_start_s = -1.0) const;
-
-  bool XYToSL(const double heading, const common::math::Vec2d& xy_point,
+              
+  bool XYToSL(const double heading, 
+              const common::math::Vec2d& xy_point,
               common::SLPoint* const sl_point,
               double warm_start_s = -1.0) const;
 
@@ -161,8 +171,8 @@ class ReferenceLine {
 
   hdmap::Road::Type GetRoadType(const double s) const;
   void GetLaneBoundaryType(const double s,
-        hdmap::LaneBoundaryType::Type* const left_boundary_type,
-        hdmap::LaneBoundaryType::Type* const right_boundary_type) const;
+                           hdmap::LaneBoundaryType::Type* const left_boundary_type,
+                           hdmap::LaneBoundaryType::Type* const right_boundary_type) const;
 
   void GetLaneFromS(const double s,
                     std::vector<hdmap::LaneInfoConstPtr>* lanes) const;
@@ -174,6 +184,7 @@ class ReferenceLine {
    */
   bool IsOnLane(const common::SLPoint& sl_point) const;
   bool IsOnLane(const common::math::Vec2d& vec2d_point) const;
+
   template <class XYPoint>
   bool IsOnLane(const XYPoint& xy) const {
     return IsOnLane(common::math::Vec2d(xy.x(), xy.y()));
@@ -239,9 +250,9 @@ class ReferenceLine {
   static ReferencePoint Interpolate(const ReferencePoint& p0, const double s0,
                                     const ReferencePoint& p1, const double s1,
                                     const double s);
-  ReferencePoint InterpolateWithMatchedIndex(
-      const ReferencePoint& p0, const double s0, const ReferencePoint& p1,
-      const double s1, const hdmap::InterpolatedIndex& index) const;
+  ReferencePoint InterpolateWithMatchedIndex(const ReferencePoint& p0, const double s0, 
+                                             const ReferencePoint& p1, const double s1, 
+                                             const hdmap::InterpolatedIndex& index) const;
 
   static double FindMinDistancePoint(const ReferencePoint& p0, const double s0,
                                      const ReferencePoint& p1, const double s1,
@@ -252,6 +263,7 @@ class ReferenceLine {
     double start_s = 0.0;
     double end_s = 0.0;
     double speed_limit = 0.0;  // unit m/s
+
     SpeedLimit() = default;
     SpeedLimit(double _start_s, double _end_s, double _speed_limit)
         : start_s(_start_s), end_s(_end_s), speed_limit(_speed_limit) {}
@@ -259,9 +271,9 @@ class ReferenceLine {
   /**
    * This speed limit overrides the lane speed limit
    **/
-  std::vector<SpeedLimit> speed_limit_;
-  std::vector<ReferencePoint> reference_points_;
-  hdmap::Path map_path_;
+  std::vector<SpeedLimit> speed_limit_;            // 一个参考线中可以有多段不同的限速
+  std::vector<ReferencePoint> reference_points_;   // 参考点
+  hdmap::Path map_path_;                           // 地图中的参考线
   uint32_t priority_ = 0;
 };
 

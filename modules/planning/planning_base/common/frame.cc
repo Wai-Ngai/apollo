@@ -144,19 +144,21 @@ void Frame::UpdateReferenceLinePriority(
   }
 }
 
-bool Frame::CreateReferenceLineInfo(
-    const std::list<ReferenceLine> &reference_lines,
-    const std::list<hdmap::RouteSegments> &segments) {
+bool Frame::CreateReferenceLineInfo(const std::list<ReferenceLine> &reference_lines,
+                                    const std::list<hdmap::RouteSegments> &segments) {
   reference_line_info_.clear();
   if (reference_lines.empty()) {
     return true;
   }
+
+  // 对于每条ReferenceLine实例化生成一个对应的ReferenceLineInfo
   auto ref_line_iter = reference_lines.begin();
   auto segments_iter = segments.begin();
   while (ref_line_iter != reference_lines.end()) {
     if (segments_iter->StopForDestination()) {
       is_near_destination_ = true;
     }
+    // 这里直接调用构造函数，创建ReferenceLineInfo对象
     reference_line_info_.emplace_back(vehicle_state_, planning_start_point_,
                                       *ref_line_iter, *segments_iter);
     ++ref_line_iter;
@@ -183,6 +185,8 @@ bool Frame::CreateReferenceLineInfo(
   if (local_view_.planning_command->has_target_speed()) {
     target_speed = local_view_.planning_command->target_speed();
   }
+
+  // Step B RerfenceLineInfo初始化
   bool has_valid_reference_line = false;
   for (auto iter = reference_line_info_.begin();
        iter != reference_line_info_.end();) {
@@ -263,10 +267,10 @@ const Obstacle *Frame::CreateStopObstacle(const std::string &obstacle_id,
 /**
  * @brief: create static virtual object with lane width,
  */
-const Obstacle *Frame::CreateStaticObstacle(
-    ReferenceLineInfo *const reference_line_info,
-    const std::string &obstacle_id, const double obstacle_start_s,
-    const double obstacle_end_s) {
+const Obstacle *Frame::CreateStaticObstacle(ReferenceLineInfo *const reference_line_info,
+                                            const std::string &obstacle_id, 
+                                            const double obstacle_start_s,
+                                            const double obstacle_end_s) {
   if (reference_line_info == nullptr) {
     AERROR << "reference_line_info nullptr";
     return nullptr;
@@ -275,6 +279,7 @@ const Obstacle *Frame::CreateStaticObstacle(
   const auto &reference_line = reference_line_info->reference_line();
 
   // start_xy
+  // 计算禁停区障碍物start_xy，需要映射到ReferenceLine
   common::SLPoint sl_point;
   sl_point.set_s(obstacle_start_s);
   sl_point.set_l(0.0);
@@ -285,6 +290,7 @@ const Obstacle *Frame::CreateStaticObstacle(
   }
 
   // end_xy
+  // 计算禁停区障碍物end_xy，需要映射到ReferenceLine
   sl_point.set_s(obstacle_end_s);
   sl_point.set_l(0.0);
   common::math::Vec2d obstacle_end_xy;
@@ -293,6 +299,7 @@ const Obstacle *Frame::CreateStaticObstacle(
     return nullptr;
   }
 
+  // 计算禁停区障碍物左侧宽度和右侧宽度，与参考线一致
   double left_lane_width = 0.0;
   double right_lane_width = 0.0;
   if (!reference_line.GetLaneWidth(obstacle_start_s, &left_lane_width,
@@ -301,10 +308,12 @@ const Obstacle *Frame::CreateStaticObstacle(
     return nullptr;
   }
 
+  // 最终可以得到禁停区障碍物的标定框
   common::math::Box2d obstacle_box{
       common::math::LineSegment2d(obstacle_start_xy, obstacle_end_xy),
       left_lane_width + right_lane_width};
 
+  // 将禁停区障碍物封装成PathObstacle放入PathDecision中
   return CreateStaticVirtualObstacle(obstacle_id, obstacle_box);
 }
 
@@ -323,18 +332,21 @@ const Obstacle *Frame::CreateStaticVirtualObstacle(const std::string &id,
   return ptr;
 }
 
-Status Frame::Init(
-    const common::VehicleStateProvider *vehicle_state_provider,
-    const std::list<ReferenceLine> &reference_lines,
-    const std::list<hdmap::RouteSegments> &segments,
-    const std::vector<routing::LaneWaypoint> &future_route_waypoints,
-    const EgoInfo *ego_info) {
+Status Frame::Init(const common::VehicleStateProvider *vehicle_state_provider,
+                   const std::list<ReferenceLine> &reference_lines,
+                   const std::list<hdmap::RouteSegments> &segments,
+                   const std::vector<routing::LaneWaypoint> &future_route_waypoints,
+                   const EgoInfo *ego_info) {
   // TODO(QiL): refactor this to avoid redundant nullptr checks in scenarios.
+  // 对hdmap_、vehicle_state_、obstacles、traffic_lights进行赋值
   auto status = InitFrameData(vehicle_state_provider, ego_info);
+
   if (!status.ok()) {
     AERROR << "failed to init frame:" << status.ToString();
     return status;
   }
+
+  // 构建ReferenceLineInfo结构
   if (!CreateReferenceLineInfo(reference_lines, segments)) {
     const std::string msg = "Failed to init reference line info.";
     AERROR << msg;

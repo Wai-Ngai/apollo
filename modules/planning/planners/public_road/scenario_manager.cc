@@ -35,6 +35,7 @@ bool ScenarioManager::Init(const std::shared_ptr<DependencyInjector>& injector,
   if (init_) {
     return true;
   }
+  // 遍历运行场景列表配置，加载运行场景列表至scenario_list_，在后面场景切换中使用
   injector_ = injector;
   for (int i = 0; i < planner_config.scenario_size(); i++) {
     auto scenario = PluginManager::Instance()->CreateInstance<Scenario>(
@@ -48,6 +49,7 @@ bool ScenarioManager::Init(const std::shared_ptr<DependencyInjector>& injector,
     }
   }
   AINFO << "Load scenario list:" << planner_config.DebugString();
+  // 默认运行场景：LANE_FOLLOW  
   current_scenario_ = default_scenario_type_;
   init_ = true;
   return true;
@@ -56,6 +58,7 @@ bool ScenarioManager::Init(const std::shared_ptr<DependencyInjector>& injector,
 void ScenarioManager::Update(const common::TrajectoryPoint& ego_point,
                              Frame* frame) {
   CHECK_NOTNULL(frame);
+  // 场景切换：遍历场景列表，判断场景切换条件IsTransferable。场景列表中需要将优先级高的场景放在前面。
   for (auto scenario : scenario_list_) {
     if (current_scenario_.get() == scenario.get() &&
         current_scenario_->GetStatus() ==

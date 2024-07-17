@@ -43,10 +43,9 @@ DEFINE_string(vehicle_config_path,
               "/apollo/modules/common/data/vehicle_param.pb.txt",
               "the file path of vehicle config file");
 
-DEFINE_string(
-    vehicle_model_config_filename,
-    "/apollo/modules/common/vehicle_model/conf/vehicle_model_config.pb.txt",
-    "the file path of vehicle model config file");
+DEFINE_string(vehicle_model_config_filename,
+              "/apollo/modules/common/vehicle_model/conf/vehicle_model_config.pb.txt",
+              "the file path of vehicle model config file");
 
 DEFINE_bool(use_cyber_time, false,
             "Whether Clock::Now() gets time from system_clock::now() or from "
@@ -58,10 +57,9 @@ DEFINE_string(localization_tf2_child_frame_id, "localization",
 
 DEFINE_bool(use_navigation_mode, false,
             "Use relative position in navigation mode");
-DEFINE_string(
-    navigation_mode_end_way_point_file,
-    "modules/dreamview/conf/navigation_mode_default_end_way_point.txt",
-    "end_way_point file used if navigation mode is set.");
+DEFINE_string(navigation_mode_end_way_point_file,
+              "modules/dreamview/conf/navigation_mode_default_end_way_point.txt",
+              "end_way_point file used if navigation mode is set.");
 
 DEFINE_double(half_vehicle_width, 1.05, "half vehicle width");
 

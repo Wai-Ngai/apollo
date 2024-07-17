@@ -55,22 +55,23 @@ int BuildStopDecision(const std::string& stop_wall_id, const double stop_line_s,
   }
 
   // build stop decision
-  const double stop_s = stop_line_s - stop_distance;
+  const double stop_s = stop_line_s - stop_distance;   // 计算停车位置的累计距离，stop_distance：1m，人行横道前1m处停车
   const auto& stop_point = reference_line.GetReferencePoint(stop_s);
   const double stop_heading =
       reference_line.GetReferencePoint(stop_s).heading();
 
+  // 定义一个停止墙
   ObjectDecisionType stop;
   auto* stop_decision = stop.mutable_stop();
-  stop_decision->set_reason_code(stop_reason_code);
-  stop_decision->set_distance_s(-stop_distance);
-  stop_decision->set_stop_heading(stop_heading);
-  stop_decision->mutable_stop_point()->set_x(stop_point.x());
+  stop_decision->set_reason_code(stop_reason_code);              // 决策停车原因
+  stop_decision->set_distance_s(-stop_distance);                 // 决策停车安全距离
+  stop_decision->set_stop_heading(stop_heading);                 // 设置停车点的角度/方向
+  stop_decision->mutable_stop_point()->set_x(stop_point.x());    // 设置停车点的坐标
   stop_decision->mutable_stop_point()->set_y(stop_point.y());
   stop_decision->mutable_stop_point()->set_z(0.0);
 
   for (size_t i = 0; i < wait_for_obstacles.size(); ++i) {
-    stop_decision->add_wait_for_obstacle(wait_for_obstacles[i]);
+    stop_decision->add_wait_for_obstacle(wait_for_obstacles[i]);   // 设置促使无人车停车的障碍物id
   }
 
   auto* path_decision = reference_line_info->path_decision();

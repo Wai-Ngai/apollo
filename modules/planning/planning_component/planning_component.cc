@@ -58,15 +58,16 @@ bool PlanningComponent::Init() {
     }
   }
 
-  planning_base_->Init(config_);
+  planning_base_->Init(config_); // OnLanePlanning的init
 
+  // 创建reader，传入topic和回调函数
   planning_command_reader_ = node_->CreateReader<PlanningCommand>(
       config_.topic_config().planning_command_topic(),
       [this](const std::shared_ptr<PlanningCommand>& planning_command) {
         AINFO << "Received planning data: run planning callback."
               << planning_command->header().DebugString();
-        std::lock_guard<std::mutex> lock(mutex_);
-        planning_command_.CopyFrom(*planning_command);
+        std::lock_guard<std::mutex> lock(mutex_);       // 使用互斥锁 std::lock_guard 对共享的 planning_command_ 进行保护，以确保线程安全性。
+        planning_command_.CopyFrom(*planning_command);  // 将接收到的消息内容拷贝到成员变量 planning_command_ 中
       });
 
   traffic_light_reader_ = node_->CreateReader<TrafficLightDetection>(
@@ -102,33 +103,28 @@ bool PlanningComponent::Init() {
           relative_map_.CopyFrom(*map_message);
         });
   }
-  planning_writer_ = node_->CreateWriter<ADCTrajectory>(
-      config_.topic_config().planning_trajectory_topic());
 
-  rerouting_client_ =
-      node_->CreateClient<apollo::external_command::LaneFollowCommand,
-                          external_command::CommandStatus>(
-          config_.topic_config().routing_request_topic());
+  planning_writer_ = node_->CreateWriter<ADCTrajectory>(config_.topic_config().planning_trajectory_topic());
+
+  rerouting_client_ = node_->CreateClient<apollo::external_command::LaneFollowCommand,
+                                          external_command::CommandStatus>(
+                                          config_.topic_config().routing_request_topic());
   planning_learning_data_writer_ = node_->CreateWriter<PlanningLearningData>(
-      config_.topic_config().planning_learning_data_topic());
-  command_status_writer_ = node_->CreateWriter<external_command::CommandStatus>(
-      FLAGS_planning_command_status);
+                                                       config_.topic_config().planning_learning_data_topic());
+  command_status_writer_ = node_->CreateWriter<external_command::CommandStatus>(FLAGS_planning_command_status);
   return true;
 }
 
-bool PlanningComponent::Proc(
-    const std::shared_ptr<prediction::PredictionObstacles>&
-        prediction_obstacles,
-    const std::shared_ptr<canbus::Chassis>& chassis,
-    const std::shared_ptr<localization::LocalizationEstimate>&
-        localization_estimate) {
+bool PlanningComponent::Proc(const std::shared_ptr<prediction::PredictionObstacles>& prediction_obstacles,
+                             const std::shared_ptr<canbus::Chassis>& chassis,
+                             const std::shared_ptr<localization::LocalizationEstimate>& localization_estimate) {
   ACHECK(prediction_obstacles != nullptr);
 
   // check and process possible rerouting request
   CheckRerouting();
 
-  // process fused input data
-  local_view_.prediction_obstacles = prediction_obstacles;
+  // process fused input data  
+  local_view_.prediction_obstacles = prediction_obstacles;  // local_view_赋值
   local_view_.chassis = chassis;
   local_view_.localization_estimate = localization_estimate;
   {
@@ -136,14 +132,12 @@ bool PlanningComponent::Proc(
     if (!local_view_.planning_command ||
         !common::util::IsProtoEqual(local_view_.planning_command->header(),
                                     planning_command_.header())) {
-      local_view_.planning_command =
-          std::make_shared<PlanningCommand>(planning_command_);
+      local_view_.planning_command = std::make_shared<PlanningCommand>(planning_command_);
     }
   }
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    local_view_.traffic_light =
-        std::make_shared<TrafficLightDetection>(traffic_light_);
+    local_view_.traffic_light = std::make_shared<TrafficLightDetection>(traffic_light_);
     local_view_.relative_map = std::make_shared<MapMsg>(relative_map_);
   }
   {
@@ -174,8 +168,7 @@ bool PlanningComponent::Proc(
     message_process_.OnChassis(*local_view_.chassis);
     message_process_.OnPrediction(*local_view_.prediction_obstacles);
     if (local_view_.planning_command->has_lane_follow_command()) {
-      message_process_.OnRoutingResponse(
-          local_view_.planning_command->lane_follow_command());
+      message_process_.OnRoutingResponse(local_view_.planning_command->lane_follow_command());
     }
     message_process_.OnStoryTelling(*local_view_.stories);
     message_process_.OnTrafficLightDetection(*local_view_.traffic_light);
@@ -185,11 +178,9 @@ bool PlanningComponent::Proc(
   // publish learning data frame for RL test
   if (config_.learning_mode() == PlanningConfig::RL_TEST) {
     PlanningLearningData planning_learning_data;
-    LearningDataFrame* learning_data_frame =
-        injector_->learning_based_data()->GetLatestLearningDataFrame();
+    LearningDataFrame* learning_data_frame = injector_->learning_based_data()->GetLatestLearningDataFrame();
     if (learning_data_frame) {
-      planning_learning_data.mutable_learning_data_frame()->CopyFrom(
-          *learning_data_frame);
+      planning_learning_data.mutable_learning_data_frame()->CopyFrom(*learning_data_frame);
       common::util::FillHeader(node_->Name(), &planning_learning_data);
       planning_learning_data_writer_->Write(planning_learning_data);
     } else {
@@ -199,8 +190,10 @@ bool PlanningComponent::Proc(
     return true;
   }
 
+  // 规划执行的主体函数：调OnLanePlanning::RunOnce()进行规划
   ADCTrajectory adc_trajectory_pb;
   planning_base_->RunOnce(local_view_, &adc_trajectory_pb);
+
   auto start_time = adc_trajectory_pb.header().timestamp_sec();
   common::util::FillHeader(node_->Name(), &adc_trajectory_pb);
 
@@ -219,10 +212,9 @@ bool PlanningComponent::Proc(
     command_status.set_command_id(local_view_.planning_command->command_id());
   }
 
-  ADCTrajectory::TrajectoryType current_trajectory_type =
-      adc_trajectory_pb.trajectory_type();
-  if (adc_trajectory_pb.header().status().error_code() !=
-      common::ErrorCode::OK) {
+  ADCTrajectory::TrajectoryType current_trajectory_type = adc_trajectory_pb.trajectory_type();
+
+  if (adc_trajectory_pb.header().status().error_code() != common::ErrorCode::OK) {
     command_status.set_status(external_command::CommandStatusType::ERROR);
     command_status.set_message(adc_trajectory_pb.header().status().msg());
   } else if (planning_base_->IsPlanningFinished(current_trajectory_type)) {
@@ -243,8 +235,8 @@ bool PlanningComponent::Proc(
 
 void PlanningComponent::CheckRerouting() {
   auto* rerouting = injector_->planning_context()
-                        ->mutable_planning_status()
-                        ->mutable_rerouting();
+                             ->mutable_planning_status()
+                             ->mutable_rerouting();
   if (!rerouting->need_rerouting()) {
     return;
   }

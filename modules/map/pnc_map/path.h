@@ -34,12 +34,14 @@ namespace hdmap {
 // class LaneInfoConstPtr;
 // class OverlapInfoConstPtr;
 
+// 描述了车道上的点,它是hdmap中直接拿取的道路点，包含道路信息以及s和l信息
 struct LaneWaypoint {
   LaneWaypoint() = default;
   LaneWaypoint(LaneInfoConstPtr lane, const double s)
       : lane(CHECK_NOTNULL(lane)), s(s) {}
   LaneWaypoint(LaneInfoConstPtr lane, const double s, const double l)
       : lane(CHECK_NOTNULL(lane)), s(s), l(l) {}
+
   LaneInfoConstPtr lane = nullptr;
   double s = 0.0;
   double l = 0.0;
@@ -80,6 +82,7 @@ struct LaneSegment {
 
   /**
    * Join neighboring lane segments if they have the same lane id
+   * 相同车道的相邻段合并
    */
   static void Join(std::vector<LaneSegment>* segments);
 
@@ -101,17 +104,17 @@ struct PathOverlap {
 class MapPathPoint : public common::math::Vec2d {
  public:
   MapPathPoint() = default;
+
   MapPathPoint(const common::math::Vec2d& point, double heading)
       : Vec2d(point.x(), point.y()), heading_(heading) {}
-  MapPathPoint(const common::math::Vec2d& point, double heading,
-               LaneWaypoint lane_waypoint)
+
+  MapPathPoint(const common::math::Vec2d& point, double heading, LaneWaypoint lane_waypoint)
       : Vec2d(point.x(), point.y()), heading_(heading) {
     lane_waypoints_.emplace_back(std::move(lane_waypoint));
   }
-  MapPathPoint(const common::math::Vec2d& point, double heading,
-               std::vector<LaneWaypoint> lane_waypoints)
-      : Vec2d(point.x(), point.y()),
-        heading_(heading),
+
+  MapPathPoint(const common::math::Vec2d& point, double heading, std::vector<LaneWaypoint> lane_waypoints)
+      : Vec2d(point.x(), point.y()), heading_(heading),
         lane_waypoints_(std::move(lane_waypoints)) {}
 
   double heading() const { return heading_; }
@@ -125,7 +128,8 @@ class MapPathPoint : public common::math::Vec2d {
     lane_waypoints_.emplace_back(std::move(lane_waypoint));
   }
   void add_lane_waypoints(const std::vector<LaneWaypoint>& lane_waypoints) {
-    lane_waypoints_.insert(lane_waypoints_.end(), lane_waypoints.begin(),
+    lane_waypoints_.insert(lane_waypoints_.end(), 
+                           lane_waypoints.begin(),
                            lane_waypoints.end());
   }
 
@@ -133,8 +137,7 @@ class MapPathPoint : public common::math::Vec2d {
 
   static void RemoveDuplicates(std::vector<MapPathPoint>* points);
 
-  static std::vector<MapPathPoint> GetPointsFromSegment(
-      const LaneSegment& segment);
+  static std::vector<MapPathPoint> GetPointsFromSegment(const LaneSegment& segment);
 
   static std::vector<MapPathPoint> GetPointsFromLane(LaneInfoConstPtr lane,
                                                      const double start_s,
@@ -143,7 +146,11 @@ class MapPathPoint : public common::math::Vec2d {
   std::string DebugString() const;
 
  protected:
+  // 描述点的朝向，将直接影响车辆的方向控制
   double heading_ = 0.0;
+  
+  // 描述路径上的点，这些点是直接从hdmap中拿出来的。
+  // 有些车道可能会存在重合的部分，所以地图上的一个点可能同时属于多个车道，因此这里的数据是一个vector结构。
   std::vector<LaneWaypoint> lane_waypoints_;
 };
 
@@ -357,8 +364,7 @@ class Path {
 
   double GetSample(const std::vector<double>& samples, const double s) const;
 
-  using GetOverlapFromLaneFunc =
-      std::function<const std::vector<OverlapInfoConstPtr>&(const LaneInfo&)>;
+  using GetOverlapFromLaneFunc = std::function<const std::vector<OverlapInfoConstPtr>&(const LaneInfo&)>;
   void GetAllOverlaps(GetOverlapFromLaneFunc GetOverlaps_from_lane,
                       std::vector<PathOverlap>* const overlaps) const;
 
@@ -404,8 +410,8 @@ class Path {
    * @param target_s The target s.
    * @param mid_index Output result.
    */
-  void FindIndex(int left_index, int right_index, double target_s,
-                 int* mid_index) const;
+  void FindIndex(int left_index, int right_index, 
+                 double target_s, int* mid_index) const;
 };
 
 }  // namespace hdmap

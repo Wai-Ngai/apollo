@@ -33,9 +33,8 @@ DiscretePointsReferenceLineSmoother::DiscretePointsReferenceLineSmoother(
     const ReferenceLineSmootherConfig& config)
     : ReferenceLineSmoother(config) {}
 
-bool DiscretePointsReferenceLineSmoother::Smooth(
-    const ReferenceLine& raw_reference_line,
-    ReferenceLine* const smoothed_reference_line) {
+bool DiscretePointsReferenceLineSmoother::Smooth(const ReferenceLine& raw_reference_line,
+                                                 ReferenceLine* const smoothed_reference_line) {
   std::vector<std::pair<double, double>> raw_point2d;
   std::vector<double> anchorpoints_lateralbound;
 
@@ -45,8 +44,7 @@ bool DiscretePointsReferenceLineSmoother::Smooth(
     anchorpoints_lateralbound.emplace_back(anchor_point.lateral_bound);
   }
 
-  // fix front and back points to avoid end states deviate from the center of
-  // road
+  // fix front and back points to avoid end states deviate from the center of road
   anchorpoints_lateralbound.front() = 0.0;
   anchorpoints_lateralbound.back() = 0.0;
 
@@ -75,6 +73,7 @@ bool DiscretePointsReferenceLineSmoother::Smooth(
     return false;
   }
 
+  //反归一化，获取原来的点
   DeNormalizePoints(&smoothed_point2d);
 
   std::vector<ReferencePoint> ref_points;
@@ -91,10 +90,9 @@ bool DiscretePointsReferenceLineSmoother::Smooth(
   return true;
 }
 
-bool DiscretePointsReferenceLineSmoother::CosThetaSmooth(
-    const std::vector<std::pair<double, double>>& raw_point2d,
-    const std::vector<double>& bounds,
-    std::vector<std::pair<double, double>>* ptr_smoothed_point2d) {
+bool DiscretePointsReferenceLineSmoother::CosThetaSmooth(const std::vector<std::pair<double, double>>& raw_point2d,
+                                                         const std::vector<double>& bounds,
+                                                         std::vector<std::pair<double, double>>* ptr_smoothed_point2d) {
   const auto& cos_theta_config =
       config_.discrete_points().cos_theta_smoothing();
 
@@ -132,26 +130,24 @@ bool DiscretePointsReferenceLineSmoother::CosThetaSmooth(
   return true;
 }
 
-bool DiscretePointsReferenceLineSmoother::FemPosSmooth(
-    const std::vector<std::pair<double, double>>& raw_point2d,
-    const std::vector<double>& bounds,
-    std::vector<std::pair<double, double>>* ptr_smoothed_point2d) {
-  const auto& fem_pos_config =
-      config_.discrete_points().fem_pos_deviation_smoothing();
+bool DiscretePointsReferenceLineSmoother::FemPosSmooth(const std::vector<std::pair<double, double>>& raw_point2d,
+                                                       const std::vector<double>& bounds,
+                                                       std::vector<std::pair<double, double>>* ptr_smoothed_point2d) {
+  
+  const auto& fem_pos_config = config_.discrete_points().fem_pos_deviation_smoothing();
 
   FemPosDeviationSmoother smoother(fem_pos_config);
 
-  // box contraints on pos are used in fem pos smoother, thus shrink the
-  // bounds by 1.0 / sqrt(2.0)
+  // box contraints on pos are used in fem pos smoother, thus shrink the bounds by 1.0 / sqrt(2.0)
   std::vector<double> box_bounds = bounds;
-  const double box_ratio = 1.0 / std::sqrt(2.0);
+  const double box_ratio = 1.0 / std::sqrt(2.0);  // 将横向的裕度进行收缩
   for (auto& bound : box_bounds) {
     bound *= box_ratio;
   }
 
   std::vector<double> opt_x;
   std::vector<double> opt_y;
-  bool status = smoother.Solve(raw_point2d, box_bounds, &opt_x, &opt_y);
+  bool status = smoother.Solve(raw_point2d, box_bounds, &opt_x, &opt_y);  // 问题求解
 
   if (!status) {
     AERROR << "Fem Pos reference line smoothing failed";
@@ -173,16 +169,15 @@ bool DiscretePointsReferenceLineSmoother::FemPosSmooth(
   return true;
 }
 
-void DiscretePointsReferenceLineSmoother::SetAnchorPoints(
-    const std::vector<AnchorPoint>& anchor_points) {
+void DiscretePointsReferenceLineSmoother::SetAnchorPoints(const std::vector<AnchorPoint>& anchor_points) {
   CHECK_GT(anchor_points.size(), 1U);
   anchor_points_ = anchor_points;
 }
 
-void DiscretePointsReferenceLineSmoother::NormalizePoints(
-    std::vector<std::pair<double, double>>* xy_points) {
+void DiscretePointsReferenceLineSmoother::NormalizePoints(std::vector<std::pair<double, double>>* xy_points) {
   zero_x_ = xy_points->front().first;
   zero_y_ = xy_points->front().second;
+
   std::for_each(xy_points->begin(), xy_points->end(),
                 [this](std::pair<double, double>& point) {
                   auto curr_x = point.first;
@@ -193,8 +188,7 @@ void DiscretePointsReferenceLineSmoother::NormalizePoints(
                 });
 }
 
-void DiscretePointsReferenceLineSmoother::DeNormalizePoints(
-    std::vector<std::pair<double, double>>* xy_points) {
+void DiscretePointsReferenceLineSmoother::DeNormalizePoints(std::vector<std::pair<double, double>>* xy_points) {
   std::for_each(xy_points->begin(), xy_points->end(),
                 [this](std::pair<double, double>& point) {
                   auto curr_x = point.first;
@@ -205,17 +199,16 @@ void DiscretePointsReferenceLineSmoother::DeNormalizePoints(
                 });
 }
 
-bool DiscretePointsReferenceLineSmoother::GenerateRefPointProfile(
-    const ReferenceLine& raw_reference_line,
-    const std::vector<std::pair<double, double>>& xy_points,
-    std::vector<ReferencePoint>* reference_points) {
+bool DiscretePointsReferenceLineSmoother::GenerateRefPointProfile(const ReferenceLine& raw_reference_line,
+                                                                  const std::vector<std::pair<double, double>>& xy_points,
+                                                                  std::vector<ReferencePoint>* reference_points) {
   // Compute path profile
   std::vector<double> headings;
   std::vector<double> kappas;
   std::vector<double> dkappas;
   std::vector<double> accumulated_s;
-  if (!DiscretePointsMath::ComputePathProfile(
-          xy_points, &headings, &accumulated_s, &kappas, &dkappas)) {
+  if (!DiscretePointsMath::ComputePathProfile(xy_points, &headings, &accumulated_s, 
+                                              &kappas, &dkappas)) {
     return false;
   }
 

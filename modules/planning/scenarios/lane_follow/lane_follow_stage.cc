@@ -79,8 +79,8 @@ void LaneFollowStage::RecordObstacleDebugInfo(
   }
 }
 
-StageResult LaneFollowStage::Process(
-    const TrajectoryPoint& planning_start_point, Frame* frame) {
+StageResult LaneFollowStage::Process(const TrajectoryPoint& planning_start_point, 
+                                     Frame* frame) {
   if (frame->reference_line_info().empty()) {
     return StageResult(StageStatusType::FINISHED);
   }
@@ -104,9 +104,8 @@ StageResult LaneFollowStage::Process(
       reference_line_info.SetDrivable(false);
       break;
     }
-
-    result =
-        PlanOnReferenceLine(planning_start_point, frame, &reference_line_info);
+    // 调用父类函数：基于参考线的规划函数
+    result = PlanOnReferenceLine(planning_start_point, frame, &reference_line_info);
 
     if (!result.HasError()) {
       if (!reference_line_info.IsChangeLanePath()) {
@@ -142,7 +141,8 @@ StageResult LaneFollowStage::PlanOnReferenceLine(
   ADEBUG << "planning start point:" << planning_start_point.DebugString();
   ADEBUG << "Current reference_line_info is IsChangeLanePath: "
          << reference_line_info->IsChangeLanePath();
-
+  
+  // 顺序执行task任务
   StageResult ret;
   for (auto task : task_list_) {
     const double start_timestamp = Clock::NowInSeconds();
@@ -151,6 +151,7 @@ StageResult LaneFollowStage::PlanOnReferenceLine(
             std::chrono::system_clock::now().time_since_epoch())
             .count();
 
+    // 调用task的执行函数
     ret.SetTaskStatus(task->Execute(frame, reference_line_info));
 
     const double end_timestamp = Clock::NowInSeconds();

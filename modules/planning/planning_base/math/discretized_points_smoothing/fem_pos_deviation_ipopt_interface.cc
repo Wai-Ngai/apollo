@@ -25,17 +25,18 @@
 namespace apollo {
 namespace planning {
 
-FemPosDeviationIpoptInterface::FemPosDeviationIpoptInterface(
-    std::vector<std::pair<double, double>> points, std::vector<double> bounds) {
+FemPosDeviationIpoptInterface::FemPosDeviationIpoptInterface(std::vector<std::pair<double, double>> points, 
+                                                             std::vector<double> bounds) {
   CHECK_GT(points.size(), 1U);
   CHECK_GT(bounds.size(), 1U);
+  
   bounds_around_refs_ = std::move(bounds);
   ref_points_ = std::move(points);
   num_of_points_ = ref_points_.size();
 }
 
-void FemPosDeviationIpoptInterface::get_optimization_results(
-    std::vector<double>* ptr_x, std::vector<double>* ptr_y) const {
+void FemPosDeviationIpoptInterface::get_optimization_results(std::vector<double>* ptr_x, 
+                                                             std::vector<double>* ptr_y) const {
   *ptr_x = opt_x_;
   *ptr_y = opt_y_;
 }
@@ -47,7 +48,7 @@ bool FemPosDeviationIpoptInterface::get_nlp_info(int& n, int& m, int& nnz_jac_g,
   // Number of variables
   // Variables include 2D points and curvature constraints slack variable
   num_of_slack_var_ = num_of_points_ - 2;
-  n = static_cast<int>(num_of_points_ * 2 + num_of_slack_var_);
+  n = static_cast<int>(num_of_points_ * 2 + num_of_slack_var_); // 待优化变量包括n个坐标和n-2个slack,因此共有2 * n + (n-2)个待优化变量。
   num_of_variables_ = n;
 
   // Number of constraints
@@ -241,11 +242,10 @@ bool FemPosDeviationIpoptInterface::eval_h(int n, const double* x, bool new_x,
   return true;
 }
 
-void FemPosDeviationIpoptInterface::finalize_solution(
-    Ipopt::SolverReturn status, int n, const double* x, const double* z_L,
-    const double* z_U, int m, const double* g, const double* lambda,
-    double obj_value, const Ipopt::IpoptData* ip_data,
-    Ipopt::IpoptCalculatedQuantities* ip_cq) {
+void FemPosDeviationIpoptInterface::finalize_solution(Ipopt::SolverReturn status, int n, const double* x, const double* z_L,
+                                                      const double* z_U, int m, const double* g, const double* lambda,
+                                                      double obj_value, const Ipopt::IpoptData* ip_data,
+                                                      Ipopt::IpoptCalculatedQuantities* ip_cq) {
   opt_x_.reserve(num_of_points_);
   opt_y_.reserve(num_of_points_);
   for (size_t i = 0; i < num_of_points_; ++i) {

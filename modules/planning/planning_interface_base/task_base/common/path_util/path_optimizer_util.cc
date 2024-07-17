@@ -29,16 +29,16 @@
 namespace apollo {
 namespace planning {
 
-FrenetFramePath PathOptimizerUtil::ToPiecewiseJerkPath(
-    const std::vector<double>& x, const std::vector<double>& dx,
-    const std::vector<double>& ddx, const double delta_s,
-    const double start_s) {
+FrenetFramePath PathOptimizerUtil::ToPiecewiseJerkPath(const std::vector<double>& x, 
+                                                       const std::vector<double>& dx,
+                                                       const std::vector<double>& ddx, 
+                                                       const double delta_s,
+                                                       const double start_s) {
   ACHECK(!x.empty());
   ACHECK(!dx.empty());
   ACHECK(!ddx.empty());
 
-  PiecewiseJerkTrajectory1d piecewise_jerk_traj(x.front(), dx.front(),
-                                                ddx.front());
+  PiecewiseJerkTrajectory1d piecewise_jerk_traj(x.front(), dx.front(), ddx.front());
 
   for (std::size_t i = 1; i < x.size(); ++i) {
     const auto dddl = (ddx[i] - ddx[i - 1]) / delta_s;

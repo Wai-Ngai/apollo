@@ -37,12 +37,14 @@ Status PublicRoadPlanner::Init(
 Status PublicRoadPlanner::Plan(const TrajectoryPoint& planning_start_point,
                                Frame* frame,
                                ADCTrajectory* ptr_computed_trajectory) {
+  
   scenario_manager_.Update(planning_start_point, frame);
   scenario_ = scenario_manager_.mutable_scenario();
   if (!scenario_) {
     return Status(apollo::common::ErrorCode::PLANNING_ERROR,
                   "Unknown Scenario");
   }
+
   auto result = scenario_->Process(planning_start_point, frame);
 
   if (FLAGS_enable_record_debug) {
@@ -59,8 +61,7 @@ Status PublicRoadPlanner::Plan(const TrajectoryPoint& planning_start_point,
     // STATUS_DONE
     scenario_manager_.Update(planning_start_point, frame);
   } else if (result.GetScenarioStatus() == ScenarioStatusType::STATUS_UNKNOWN) {
-    return Status(common::PLANNING_ERROR,
-                  result.GetTaskStatus().error_message());
+    return Status(common::PLANNING_ERROR, result.GetTaskStatus().error_message());
   }
   return Status(common::OK, result.GetTaskStatus().error_message());
 }

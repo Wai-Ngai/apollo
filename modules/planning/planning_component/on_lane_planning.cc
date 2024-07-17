@@ -62,13 +62,17 @@ using apollo::hdmap::HDMapUtil;
 using apollo::planning_internal::SLFrameDebug;
 using apollo::planning_internal::SpeedPlan;
 using apollo::planning_internal::STGraphDebug;
-void SetChartminmax(apollo::dreamview::Chart* chart, std::string label_name_x,
+
+
+void SetChartminmax(apollo::dreamview::Chart* chart, 
+                    std::string label_name_x,
                     std::string label_name_y) {
   auto* options = chart->mutable_options();
   double xmin(std::numeric_limits<double>::max()),
-      xmax(std::numeric_limits<double>::lowest()),
-      ymin(std::numeric_limits<double>::max()),
-      ymax(std::numeric_limits<double>::lowest());
+         xmax(std::numeric_limits<double>::lowest()),
+         ymin(std::numeric_limits<double>::max()),
+         ymax(std::numeric_limits<double>::lowest());
+
   for (int i = 0; i < chart->line_size(); i++) {
     auto* line = chart->mutable_line(i);
     for (auto& pt : line->point()) {
@@ -84,6 +88,7 @@ void SetChartminmax(apollo::dreamview::Chart* chart, std::string label_name_x,
     (*properties)["fill"] = "false";
     (*properties)["showLine"] = "true";
   }
+  
   options->mutable_x()->set_min(xmin);
   options->mutable_x()->set_max(xmax);
   options->mutable_x()->set_label_string(label_name_x);
@@ -92,6 +97,7 @@ void SetChartminmax(apollo::dreamview::Chart* chart, std::string label_name_x,
   options->mutable_y()->set_label_string(label_name_y);
   // Set chartJS's dataset properties
 }
+
 OnLanePlanning::~OnLanePlanning() {
   if (reference_line_provider_) {
     reference_line_provider_->Stop();
@@ -129,19 +135,19 @@ Status OnLanePlanning::Init(const PlanningConfig& config) {
   if (config_.has_reference_line_config()) {
     reference_line_config = &config_.reference_line_config();
   }
-  reference_line_provider_ = std::make_unique<ReferenceLineProvider>(
-      injector_->vehicle_state(), reference_line_config);
+  reference_line_provider_ = std::make_unique<ReferenceLineProvider>(injector_->vehicle_state(), 
+                                                                     reference_line_config);
   reference_line_provider_->Start();
 
   // dispatch planner
-  LoadPlanner();
+  LoadPlanner();   //加载规划器
   if (!planner_) {
     return Status(
         ErrorCode::PLANNING_ERROR,
         "planning is not initialized with config : " + config_.DebugString());
   }
 
-  if (config_.learning_mode() != PlanningConfig::NO_LEARNING) {
+  if (config_.learning_mode() != PlanningConfig::NO_LEARNING) { //学习模型相关的
     PlanningSemanticMapConfig renderer_config;
     ACHECK(apollo::cyber::common::GetProtoFromFile(
         FLAGS_planning_birdview_img_feature_renderer_config_file,
@@ -152,10 +158,10 @@ Status OnLanePlanning::Init(const PlanningConfig& config) {
     BirdviewImgFeatureRenderer::Instance()->Init(renderer_config);
   }
 
-  traffic_decider_.Init(injector_);
+  traffic_decider_.Init(injector_);   //decider初始化
 
   start_time_ = Clock::NowInSeconds();
-  return planner_->Init(injector_, FLAGS_planner_config_path);
+  return planner_->Init(injector_, FLAGS_planner_config_path);   //planner初始化
 }
 
 Status OnLanePlanning::InitFrame(const uint32_t sequence_num,
@@ -173,8 +179,7 @@ Status OnLanePlanning::InitFrame(const uint32_t sequence_num,
   reference_line_provider_->GetReferenceLines(&reference_lines, &segments);
   DCHECK_EQ(reference_lines.size(), segments.size());
 
-  auto forward_limit = planning::PncMapBase::LookForwardDistance(
-      vehicle_state.linear_velocity());
+  auto forward_limit = planning::PncMapBase::LookForwardDistance(vehicle_state.linear_velocity());
 
   for (auto& ref_line : reference_lines) {
     if (!ref_line.Segment(Vec2d(vehicle_state.x(), vehicle_state.y()),
@@ -207,9 +212,9 @@ Status OnLanePlanning::InitFrame(const uint32_t sequence_num,
     segment_print_curve.PrintToLog();
   }
 
-  auto status = frame_->Init(
-      injector_->vehicle_state(), reference_lines, segments,
-      reference_line_provider_->FutureRouteWaypoints(), injector_->ego_info());
+  auto status = frame_->Init(injector_->vehicle_state(), reference_lines, segments,
+                             reference_line_provider_->FutureRouteWaypoints(), 
+                             injector_->ego_info());
   if (!status.ok()) {
     AERROR << "failed to init frame:" << status.ToString();
     return status;
@@ -246,10 +251,8 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
   // module maintains not-ready until be restarted.
   local_view_ = local_view;
   const double start_timestamp = Clock::NowInSeconds();
-  const double start_system_timestamp =
-      std::chrono::duration<double>(
-          std::chrono::system_clock::now().time_since_epoch())
-          .count();
+  const double start_system_timestamp = std::chrono::duration<double>(
+          std::chrono::system_clock::now().time_since_epoch()).count();
 
   // localization
   ADEBUG << "Get localization:"
@@ -258,8 +261,8 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
   // chassis
   ADEBUG << "Get chassis:" << local_view_.chassis->DebugString();
 
-  Status status = injector_->vehicle_state()->Update(
-      *local_view_.localization_estimate, *local_view_.chassis);
+  Status status = injector_->vehicle_state()->Update(*local_view_.localization_estimate, 
+                                                     *local_view_.chassis);
 
   VehicleState vehicle_state = injector_->vehicle_state()->vehicle_state();
   const double vehicle_state_timestamp = vehicle_state.timestamp();
@@ -268,14 +271,13 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
       << start_timestamp - vehicle_state_timestamp << " secs";
 
   if (!status.ok() || !util::IsVehicleStateValid(vehicle_state)) {
-    const std::string msg =
-        "Update VehicleStateProvider failed "
-        "or the vehicle state is out dated.";
+    const std::string msg ="Update VehicleStateProvider failed "
+                           "or the vehicle state is out dated.";
     AERROR << msg;
     ptr_trajectory_pb->mutable_decision()
-        ->mutable_main_decision()
-        ->mutable_not_ready()
-        ->set_reason(msg);
+                     ->mutable_main_decision()
+                     ->mutable_not_ready()
+                     ->set_reason(msg);
     status.Save(ptr_trajectory_pb->mutable_header()->mutable_status());
     // TODO(all): integrate reverse gear
     ptr_trajectory_pb->set_gear(canbus::Chassis::GEAR_DRIVE);
@@ -290,8 +292,7 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
     monitor_logger_buffer.ERROR("ego system time is behind GPS time");
   }
 
-  if (start_timestamp - vehicle_state_timestamp <
-      FLAGS_message_latency_threshold) {
+  if (start_timestamp - vehicle_state_timestamp < FLAGS_message_latency_threshold) {
     vehicle_state = AlignTimeStamp(vehicle_state, start_timestamp);
   }
 
@@ -313,8 +314,7 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
 
   // planning is triggered by prediction data, but we can still use an estimated
   // cycle time for stitching
-  const double planning_cycle_time =
-      1.0 / static_cast<double>(FLAGS_planning_loop_rate);
+  const double planning_cycle_time = 1.0 / static_cast<double>(FLAGS_planning_loop_rate);
 
   std::string replan_reason;
   std::vector<TrajectoryPoint> stitching_trajectory =
@@ -326,10 +326,11 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
   injector_->ego_info()->Update(stitching_trajectory.back(), vehicle_state);
   const uint32_t frame_num = static_cast<uint32_t>(seq_num_++);
   AINFO << "Planning start frame sequence id = [" << frame_num << "]";
+
+  // 获取参考线
   status = InitFrame(frame_num, stitching_trajectory.back(), vehicle_state);
   if (status.ok()) {
-    injector_->ego_info()->CalculateFrontObstacleClearDistance(
-        frame_->obstacles());
+    injector_->ego_info()->CalculateFrontObstacleClearDistance(frame_->obstacles());
   }
 
   if (FLAGS_enable_record_debug) {
@@ -367,9 +368,9 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
     return;
   }
 
+  // 交规决策：将决策结果附加在参考线上
   for (auto& ref_line_info : *frame_->mutable_reference_line_info()) {
-    auto traffic_status =
-        traffic_decider_.Execute(frame_.get(), &ref_line_info);
+    auto traffic_status = traffic_decider_.Execute(frame_.get(), &ref_line_info);
     if (!traffic_status.ok() || !ref_line_info.IsDrivable()) {
       ref_line_info.SetDrivable(false);
       AWARN << "Reference line " << ref_line_info.Lanes().Id()
@@ -382,7 +383,8 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
   // print trajxy
   PrintCurves trajectory_print_curve;
   for (const auto& p : ptr_trajectory_pb->trajectory_point()) {
-    trajectory_print_curve.AddPoint("trajxy", p.path_point().x(),
+    trajectory_print_curve.AddPoint("trajxy", 
+                                    p.path_point().x(),
                                     p.path_point().y());
   }
   trajectory_print_curve.PrintToLog();
@@ -435,8 +437,7 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
   } else {
     auto* ref_line_task =
         ptr_trajectory_pb->mutable_latency_stats()->add_task_stats();
-    ref_line_task->set_time_ms(reference_line_provider_->LastTimeDelay() *
-                               1000.0);
+    ref_line_task->set_time_ms(reference_line_provider_->LastTimeDelay() * 1000.0);
     ref_line_task->set_name("ReferenceLineProvider");
 
     FillPlanningPb(start_timestamp, ptr_trajectory_pb);
@@ -533,10 +534,9 @@ void OnLanePlanning::ExportReferenceLineDebug(planning_internal::Debug* debug) {
   }
 }
 
-Status OnLanePlanning::Plan(
-    const double current_time_stamp,
-    const std::vector<TrajectoryPoint>& stitching_trajectory,
-    ADCTrajectory* const ptr_trajectory_pb) {
+Status OnLanePlanning::Plan(const double current_time_stamp,
+                            const std::vector<TrajectoryPoint>& stitching_trajectory,
+                            ADCTrajectory* const ptr_trajectory_pb) {
   auto* ptr_debug = ptr_trajectory_pb->mutable_debug();
   if (FLAGS_enable_record_debug) {
     ptr_debug->mutable_planning_data()->mutable_init_point()->CopyFrom(
@@ -545,8 +545,8 @@ Status OnLanePlanning::Plan(
     frame_->mutable_open_space_info()->sync_debug_instance();
   }
 
-  auto status = planner_->Plan(stitching_trajectory.back(), frame_.get(),
-                               ptr_trajectory_pb);
+  // 调用PublicRoadPlanner的Plan()算法
+  auto status = planner_->Plan(stitching_trajectory.back(), frame_.get(), ptr_trajectory_pb);
 
   ptr_debug->mutable_planning_data()->set_front_clear_distance(
       injector_->ego_info()->front_clear_distance());

@@ -46,11 +46,12 @@ void RouteSegments::SetStopForDestination(bool stop_for_destination) {
   stop_for_destination_ = stop_for_destination;
 }
 
+// 计算这个waypoint是否在当前LaneSegment中
 bool RouteSegments::WithinLaneSegment(const LaneSegment &lane_segment,
                                       const LaneWaypoint &waypoint) {
   return waypoint.lane &&
-         lane_segment.lane->id().id() == waypoint.lane->id().id() &&
-         lane_segment.start_s - kSegmentationEpsilon <= waypoint.s &&
+         lane_segment.lane->id().id() == waypoint.lane->id().id() &&  // 1. waypoint和lane_segment的所在的车道lane的id必须一致
+         lane_segment.start_s - kSegmentationEpsilon <= waypoint.s && // 2. waypoint的累计距离s必须在lane_segment的start_s和end_s之间。
          lane_segment.end_s + kSegmentationEpsilon >= waypoint.s;
 }
 
@@ -269,24 +270,30 @@ bool RouteSegments::GetProjection(const common::math::Vec2d &point,
   double min_l = std::numeric_limits<double>::infinity();
   double accumulated_s = 0.0;
   bool has_projection = false;
-  for (auto iter = begin(); iter != end();
-       accumulated_s += (iter->end_s - iter->start_s), ++iter) {
+
+  // 遍历 RouteSegments 对象中的每一个车道片段 LaneSegment
+  for (auto iter = begin(); iter != end(); accumulated_s += (iter->end_s - iter->start_s), ++iter) {
     double lane_s = 0.0;
     double lane_l = 0.0;
+
     if (!iter->lane->GetProjection(point, &lane_s, &lane_l)) {
       AERROR << "Failed to get projection from point " << point.DebugString()
              << " on lane " << iter->lane->id().id();
       return false;
     }
+
+    // 检查投影位置是否在本片段范围内
     if (lane_s < iter->start_s - kSegmentationEpsilon ||
         lane_s > iter->end_s + kSegmentationEpsilon) {
       continue;
     }
-    if (std::fabs(lane_l) < min_l) {
+
+    if (std::fabs(lane_l) < min_l) {  // 更新最小横向距离
       has_projection = true;
       lane_s = std::max(iter->start_s, lane_s);
       lane_s = std::min(iter->end_s, lane_s);
       min_l = std::fabs(lane_l);
+
       sl_point->set_l(lane_l);
       sl_point->set_s(lane_s - iter->start_s + accumulated_s);
       waypoint->lane = iter->lane;
@@ -367,21 +374,20 @@ bool RouteSegments::CanDriveFrom(const LaneWaypoint &waypoint) const {
   LaneWaypoint segment_waypoint;
   common::SLPoint route_sl;
   bool has_projection = GetProjection(point, &route_sl, &segment_waypoint);
-  if (!has_projection) {
+  if (!has_projection) {                            // 车辆无法投影到passage中，不可驶入
     AERROR << "No projection from waypoint: " << waypoint.DebugString();
     return false;
   }
   static constexpr double kMaxLaneWidth = 10.0;
-  if (std::fabs(route_sl.l()) > 2 * kMaxLaneWidth) {
+  if (std::fabs(route_sl.l()) > 2 * kMaxLaneWidth) { // 车辆横向距离passage过大，不可驶入
     return false;
   }
 
   // 2. heading should be the same.
   double waypoint_heading = waypoint.lane->Heading(waypoint.s);
   double segment_heading = segment_waypoint.lane->Heading(segment_waypoint.s);
-  double heading_diff =
-      common::math::AngleDiff(waypoint_heading, segment_heading);
-  if (std::fabs(heading_diff) > M_PI / 2) {
+  double heading_diff = common::math::AngleDiff(waypoint_heading, segment_heading);
+  if (std::fabs(heading_diff) > M_PI / 2) {  // 必须小于90度，否则就是反向车道，不能直接驶入。
     ADEBUG << "Angle diff too large:" << heading_diff;
     return false;
   }
@@ -389,25 +395,23 @@ bool RouteSegments::CanDriveFrom(const LaneWaypoint &waypoint) const {
   // 3. the waypoint and the projected lane should not be separated apart.
   double waypoint_left_width = 0.0;
   double waypoint_right_width = 0.0;
-  waypoint.lane->GetWidth(waypoint.s, &waypoint_left_width,
-                          &waypoint_right_width);
+  waypoint.lane->GetWidth(waypoint.s, &waypoint_left_width, &waypoint_right_width);
+
   double segment_left_width = 0.0;
   double segment_right_width = 0.0;
-  segment_waypoint.lane->GetWidth(segment_waypoint.s, &segment_left_width,
-                                  &segment_right_width);
-  auto segment_projected_point =
-      segment_waypoint.lane->GetSmoothPoint(segment_waypoint.s);
+  segment_waypoint.lane->GetWidth(segment_waypoint.s, &segment_left_width, &segment_right_width);
+
+  auto segment_projected_point = segment_waypoint.lane->GetSmoothPoint(segment_waypoint.s);
   double dist = common::util::DistanceXY(point, segment_projected_point);
-  const double kLaneSeparationDistance = 0.3;
-  if (route_sl.l() < 0) {  // waypoint at right side
-    if (dist >
-        waypoint_left_width + segment_right_width + kLaneSeparationDistance) {
-      AERROR << "waypoint is too far to reach: " << dist;
+
+  const double kLaneSeparationDistance = 0.3; // 中间分割线宽度
+  if (route_sl.l() < 0) {  // waypoint at right side 车辆在passage右边
+    if (dist > waypoint_left_width + segment_right_width + kLaneSeparationDistance) {
+      AERROR << "waypoint is too far to reach: " << dist;   // 无法变道，因为距离太大，无法一次性变道完成。
       return false;
     }
-  } else {  // waypoint at left side
-    if (dist >
-        waypoint_right_width + segment_left_width + kLaneSeparationDistance) {
+  } else {                 // waypoint at left side 车辆在passage左边
+    if (dist > waypoint_right_width + segment_left_width + kLaneSeparationDistance) {
       AERROR << "waypoint is too far to reach: " << dist;
       return false;
     }

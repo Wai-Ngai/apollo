@@ -36,8 +36,7 @@ namespace planning {
 
 using apollo::common::Status;
 
-PlanningBase::PlanningBase(const std::shared_ptr<DependencyInjector>& injector)
-    : injector_(injector) {}
+PlanningBase::PlanningBase(const std::shared_ptr<DependencyInjector>& injector) : injector_(injector) {}
 
 PlanningBase::~PlanningBase() {}
 
