@@ -53,12 +53,12 @@ bool SpeedDecider::Init(const std::string& config_dir, const std::string& name,
   if (!Task::LoadConfig<SpeedDeciderConfig>(&config_)) {
     return false;
   }
-  for (const auto& follow_function :
-       config_.follow_distance_scheduler().follow_distance()) {
-    follow_distance_function_.emplace_back(
-        std::make_pair(follow_function.speed(), follow_function.slope()));
+  for (const auto& follow_function : config_.follow_distance_scheduler().follow_distance()) {
+    follow_distance_function_.emplace_back(std::make_pair(follow_function.speed(), 
+                                                          follow_function.slope()));
   }
-  std::sort(follow_distance_function_.begin(), follow_distance_function_.end());
+  std::sort(follow_distance_function_.begin(), 
+            follow_distance_function_.end());
   for (const auto& iter : follow_distance_function_) {
     AINFO << "speed: " << iter.first << ", slope: " << iter.second;
   }
@@ -68,12 +68,13 @@ bool SpeedDecider::Init(const std::string& config_dir, const std::string& name,
 common::Status SpeedDecider::Execute(Frame* frame,
                                      ReferenceLineInfo* reference_line_info) {
   Task::Execute(frame, reference_line_info);
+
   init_point_ = frame_->PlanningStartPoint();
   adc_sl_boundary_ = reference_line_info_->AdcSlBoundary();
   reference_line_ = &reference_line_info_->reference_line();
+
   if (!MakeObjectDecision(reference_line_info->speed_data(),
-                          reference_line_info->path_decision())
-           .ok()) {
+                          reference_line_info->path_decision()).ok()) {
     const std::string msg = "Get object decision by speed profile failed.";
     AERROR << msg;
     return Status(ErrorCode::PLANNING_ERROR, msg);
@@ -81,9 +82,9 @@ common::Status SpeedDecider::Execute(Frame* frame,
   return Status::OK();
 }
 
-SpeedDecider::STLocation SpeedDecider::GetSTLocation(
-    const PathDecision* const path_decision, const SpeedData& speed_profile,
-    const STBoundary& st_boundary) const {
+SpeedDecider::STLocation SpeedDecider::GetSTLocation(const PathDecision* const path_decision, 
+                                                     const SpeedData& speed_profile,
+                                                     const STBoundary& st_boundary) const {
   if (st_boundary.IsEmpty()) {
     return BELOW;
   }
@@ -109,8 +110,7 @@ SpeedDecider::STLocation SpeedDecider::GetSTLocation(
         st_location = CROSS;
 
         if (!FLAGS_use_st_drivable_boundary) {
-          if (st_boundary.boundary_type() ==
-              STBoundary::BoundaryType::KEEP_CLEAR) {
+          if (st_boundary.boundary_type() == STBoundary::BoundaryType::KEEP_CLEAR) {
             if (!CheckKeepClearCrossable(path_decision, speed_profile,
                                          st_boundary)) {
               st_location = BELOW;
@@ -125,8 +125,8 @@ SpeedDecider::STLocation SpeedDecider::GetSTLocation(
     //       but we need iterate all st points to make sure there is no CROSS
     if (!st_position_set) {
       if (start_t < next_st.t() && curr_st.t() < end_t) {
-        STPoint bd_point_front = st_boundary.upper_points().front();
-        double side = common::math::CrossProd(bd_point_front, curr_st, next_st);
+        STPoint bd_point_front = st_boundary.upper_points().front();             // AB × AC > 0 , 点 ( C ) 在点 ( A ) 和 ( B ) 所形成的线段的左侧（即上方）。
+        double side = common::math::CrossProd(bd_point_front, curr_st, next_st); // AB × AC < 0 , 点 ( C ) 在点 ( A ) 和 ( B ) 所形成的线段的右侧（即下方）。
         st_location = side < 0.0 ? ABOVE : BELOW;
         st_position_set = true;
       }
@@ -135,9 +135,9 @@ SpeedDecider::STLocation SpeedDecider::GetSTLocation(
   return st_location;
 }
 
-bool SpeedDecider::CheckKeepClearCrossable(
-    const PathDecision* const path_decision, const SpeedData& speed_profile,
-    const STBoundary& keep_clear_st_boundary) const {
+bool SpeedDecider::CheckKeepClearCrossable(const PathDecision* const path_decision, 
+                                           const SpeedData& speed_profile,
+                                           const STBoundary& keep_clear_st_boundary) const {
   bool keep_clear_crossable = true;
 
   const auto& last_speed_point = speed_profile.back();
@@ -162,9 +162,8 @@ bool SpeedDecider::CheckKeepClearCrossable(
   return keep_clear_crossable;
 }
 
-bool SpeedDecider::CheckKeepClearBlocked(
-    const PathDecision* const path_decision,
-    const Obstacle& keep_clear_obstacle) const {
+bool SpeedDecider::CheckKeepClearBlocked(const PathDecision* const path_decision,
+                                         const Obstacle& keep_clear_obstacle) const {
   bool keep_clear_blocked = false;
 
   // check if overlap with other stop wall
@@ -173,10 +172,8 @@ bool SpeedDecider::CheckKeepClearBlocked(
       continue;
     }
     const double obstacle_start_s = obstacle->PerceptionSLBoundary().start_s();
-    const double adc_length =
-        VehicleConfigHelper::GetConfig().vehicle_param().length();
-    const double distance =
-        obstacle_start_s - keep_clear_obstacle.PerceptionSLBoundary().end_s();
+    const double adc_length = VehicleConfigHelper::GetConfig().vehicle_param().length();
+    const double distance = obstacle_start_s - keep_clear_obstacle.PerceptionSLBoundary().end_s();
 
     if (obstacle->IsBlockingObstacle() && distance > 0 &&
         distance < (adc_length / 2)) {
@@ -200,13 +197,12 @@ bool SpeedDecider::IsFollowTooClose(const Obstacle& obstacle) const {
   if (obs_speed > ego_speed) {
     return false;
   }
-  const double distance =
-      obstacle.path_st_boundary().min_s() - FLAGS_min_stop_distance_obstacle;
+  const double distance = obstacle.path_st_boundary().min_s() - FLAGS_min_stop_distance_obstacle;
   static constexpr double lane_follow_max_decel = 3.0;
   static constexpr double lane_change_max_decel = 3.0;
   auto* planning_status = injector_->planning_context()
-                              ->mutable_planning_status()
-                              ->mutable_change_lane();
+                                   ->mutable_planning_status()
+                                   ->mutable_change_lane();
   double distance_numerator = std::pow((ego_speed - obs_speed), 2) * 0.5;
   double distance_denominator = lane_follow_max_decel;
   if (planning_status->has_status() &&
@@ -216,8 +212,8 @@ bool SpeedDecider::IsFollowTooClose(const Obstacle& obstacle) const {
   return distance < distance_numerator / distance_denominator;
 }
 
-Status SpeedDecider::MakeObjectDecision(
-    const SpeedData& speed_profile, PathDecision* const path_decision) const {
+Status SpeedDecider::MakeObjectDecision(const SpeedData& speed_profile, 
+                                        PathDecision* const path_decision) const {
   if (speed_profile.size() < 2) {
     const std::string msg = "dp_st_graph failed to get speed profile.";
     AERROR << msg;
@@ -228,26 +224,26 @@ Status SpeedDecider::MakeObjectDecision(
     auto* mutable_obstacle = path_decision->Find(obstacle->Id());
     const auto& boundary = mutable_obstacle->path_st_boundary();
 
+    // 对于没有st边界或者st边界在可行驶ST区域以外的障碍物产生忽略决策
     if (boundary.IsEmpty() || boundary.max_s() < 0.0 ||
-        boundary.max_t() < 0.0 ||
-        boundary.min_t() >= speed_profile.back().t()) {
+        boundary.max_t() < 0.0 || boundary.min_t() >= speed_profile.back().t()) {
       AppendIgnoreDecision(mutable_obstacle);
       continue;
     }
     if (obstacle->HasLongitudinalDecision()) {
-      AppendIgnoreDecision(mutable_obstacle);
+      AppendIgnoreDecision(mutable_obstacle);  // 已经存在纵向决策，为啥添加忽略决策？？
       continue;
     }
 
     // for Virtual obstacle, skip if center point NOT "on lane"
     if (obstacle->IsVirtual()) {
       const auto& obstacle_box = obstacle->PerceptionBoundingBox();
-      if (!reference_line_->IsOnLane(obstacle_box.center())) {
+      if (!reference_line_->IsOnLane(obstacle_box.center())) { // 根据虚拟障碍物中心点判断是否在本车道内
         continue;
       }
     }
 
-    // always STOP for pedestrian
+    // always STOP for pedestrian 对于行人产生停止决策
     if (config_.is_stop_for_pedestrain() &&
         CheckStopForPedestrian(*mutable_obstacle)) {
       ObjectDecisionType stop_decision;
@@ -259,6 +255,7 @@ Status SpeedDecider::MakeObjectDecision(
       continue;
     }
 
+    // 判断障碍物ST图在dp速度曲线的上面、下面、还是穿过
     auto location = GetSTLocation(path_decision, speed_profile, boundary);
 
     if (!FLAGS_use_st_drivable_boundary) {
@@ -270,7 +267,7 @@ Status SpeedDecider::MakeObjectDecision(
     }
 
     switch (location) {
-      case BELOW:
+      case BELOW:  // 如果ST曲线 在障碍物下方
         if (boundary.boundary_type() == STBoundary::BoundaryType::KEEP_CLEAR) {
           ObjectDecisionType stop_decision;
           if (CreateStopDecision(*mutable_obstacle, &stop_decision, 0.0)) {
@@ -278,7 +275,7 @@ Status SpeedDecider::MakeObjectDecision(
                                                       stop_decision);
           }
         } else if (CheckIsFollow(*obstacle, boundary)) {
-          // stop for low_speed decelerating
+          // stop for low_speed decelerating 且障碍物距离主车过近，产生停止决策
           if (IsFollowTooClose(*mutable_obstacle)) {
             ObjectDecisionType stop_decision;
             if (CreateStopDecision(*mutable_obstacle, &stop_decision,
@@ -286,8 +283,9 @@ Status SpeedDecider::MakeObjectDecision(
               mutable_obstacle->AddLongitudinalDecision("dp_st_graph/too_close",
                                                         stop_decision);
             }
-          } else {  // high speed or low speed accelerating
-            // FOLLOW decision
+          } else {  
+            // high speed or low speed accelerating
+            // FOLLOW decision  如果ST曲线在障碍物下方，且障碍物行驶方向和主车相同，产生跟车决策
             ObjectDecisionType follow_decision;
             if (CreateFollowDecision(*mutable_obstacle, &follow_decision)) {
               mutable_obstacle->AddLongitudinalDecision("dp_st_graph",
@@ -295,7 +293,7 @@ Status SpeedDecider::MakeObjectDecision(
             }
           }
         } else {
-          // YIELD decision
+          // YIELD decision  如果ST曲线 在障碍物下方，且障碍物横穿主车路径，产生让行决策
           ObjectDecisionType yield_decision;
           if (CreateYieldDecision(*mutable_obstacle, &yield_decision)) {
             mutable_obstacle->AddLongitudinalDecision("dp_st_graph",
@@ -303,7 +301,7 @@ Status SpeedDecider::MakeObjectDecision(
           }
         }
         break;
-      case ABOVE:
+      case ABOVE:   // 如果ST曲线 在障碍物上方
         if (boundary.boundary_type() == STBoundary::BoundaryType::KEEP_CLEAR) {
           ObjectDecisionType ignore;
           ignore.mutable_ignore();
@@ -317,7 +315,7 @@ Status SpeedDecider::MakeObjectDecision(
           }
         }
         break;
-      case CROSS:
+      case CROSS: // 如果ST曲线 在障碍物中间穿过，且障碍物为阻塞障碍物，产生停车决策
         if (mutable_obstacle->IsBlockingObstacle()) {
           ObjectDecisionType stop_decision;
           if (CreateStopDecision(*mutable_obstacle, &stop_decision,
@@ -393,16 +391,14 @@ bool SpeedDecider::CreateStopDecision(const Obstacle& obstacle,
   return true;
 }
 
-bool SpeedDecider::CreateFollowDecision(
-    const Obstacle& obstacle, ObjectDecisionType* const follow_decision) const {
+bool SpeedDecider::CreateFollowDecision(const Obstacle& obstacle, 
+                                        ObjectDecisionType* const follow_decision) const {
   const double follow_speed = init_point_.v();
   const double follow_distance_s = -EstimateProperFollowGap(follow_speed);
 
   const auto& boundary = obstacle.path_st_boundary();
-  const double reference_s =
-      adc_sl_boundary_.end_s() + boundary.min_s() + follow_distance_s;
-  const double main_stop_s =
-      reference_line_info_->path_decision()->stop_reference_line_s();
+  const double reference_s = adc_sl_boundary_.end_s() + boundary.min_s() + follow_distance_s;
+  const double main_stop_s = reference_line_info_->path_decision()->stop_reference_line_s();
   if (main_stop_s < reference_s) {
     ADEBUG << "Follow reference_s is further away, ignore.";
     return false;
@@ -426,19 +422,16 @@ bool SpeedDecider::CreateFollowDecision(
   return true;
 }
 
-bool SpeedDecider::CreateYieldDecision(
-    const Obstacle& obstacle, ObjectDecisionType* const yield_decision) const {
+bool SpeedDecider::CreateYieldDecision(const Obstacle& obstacle, 
+                                       ObjectDecisionType* const yield_decision) const {
   PerceptionObstacle::Type obstacle_type = obstacle.Perception().type();
   double yield_distance = config_.yield_distance_buffer();
 
   const auto& obstacle_boundary = obstacle.path_st_boundary();
-  const double yield_distance_s =
-      std::max(-obstacle_boundary.min_s(), -yield_distance);
+  const double yield_distance_s = std::max(-obstacle_boundary.min_s(), -yield_distance);
 
-  const double reference_line_fence_s =
-      adc_sl_boundary_.end_s() + obstacle_boundary.min_s() + yield_distance_s;
-  const double main_stop_s =
-      reference_line_info_->path_decision()->stop_reference_line_s();
+  const double reference_line_fence_s = adc_sl_boundary_.end_s() + obstacle_boundary.min_s() + yield_distance_s;
+  const double main_stop_s = reference_line_info_->path_decision()->stop_reference_line_s();
   if (main_stop_s < reference_line_fence_s) {
     ADEBUG << "Yield reference_s is further away, ignore.";
     return false;
@@ -460,22 +453,17 @@ bool SpeedDecider::CreateYieldDecision(
   return true;
 }
 
-bool SpeedDecider::CreateOvertakeDecision(
-    const Obstacle& obstacle,
-    ObjectDecisionType* const overtake_decision) const {
+bool SpeedDecider::CreateOvertakeDecision(const Obstacle& obstacle,
+                                          ObjectDecisionType* const overtake_decision) const {
   const auto& velocity = obstacle.Perception().velocity();
-  const double obstacle_speed =
-      common::math::Vec2d::CreateUnitVec2d(init_point_.path_point().theta())
-          .InnerProd(Vec2d(velocity.x(), velocity.y()));
+  const double obstacle_speed = common::math::Vec2d::CreateUnitVec2d(init_point_.path_point().theta())
+                                                     .InnerProd(Vec2d(velocity.x(), velocity.y()));
 
-  double overtake_distance_s =
-      EstimateProperOvertakingGap(obstacle_speed, init_point_.v());
+  double overtake_distance_s = EstimateProperOvertakingGap(obstacle_speed, init_point_.v());
 
   const auto& boundary = obstacle.path_st_boundary();
-  const double reference_line_fence_s =
-      adc_sl_boundary_.end_s() + boundary.min_s() + overtake_distance_s;
-  const double main_stop_s =
-      reference_line_info_->path_decision()->stop_reference_line_s();
+  const double reference_line_fence_s = adc_sl_boundary_.end_s() + boundary.min_s() + overtake_distance_s;
+  const double main_stop_s = reference_line_info_->path_decision()->stop_reference_line_s();
   if (main_stop_s < reference_line_fence_s) {
     ADEBUG << "Overtake reference_s is further away, ignore.";
     return false;
@@ -500,9 +488,8 @@ bool SpeedDecider::CreateOvertakeDecision(
 
 bool SpeedDecider::CheckIsFollow(const Obstacle& obstacle,
                                  const STBoundary& boundary) const {
-  const double obstacle_l_distance =
-      std::min(std::fabs(obstacle.PerceptionSLBoundary().start_l()),
-               std::fabs(obstacle.PerceptionSLBoundary().end_l()));
+  const double obstacle_l_distance = std::min(std::fabs(obstacle.PerceptionSLBoundary().start_l()),
+                                              std::fabs(obstacle.PerceptionSLBoundary().end_l()));
   if (obstacle_l_distance > config_.follow_min_obs_lateral_distance()) {
     return false;
   }
@@ -540,13 +527,11 @@ bool SpeedDecider::CheckStopForPedestrian(const Obstacle& obstacle) const {
 
   // read pedestrian stop time from PlanningContext
   auto* mutable_speed_decider_status = injector_->planning_context()
-                                           ->mutable_planning_status()
-                                           ->mutable_speed_decider();
+                                                ->mutable_planning_status()
+                                                ->mutable_speed_decider();
   std::unordered_map<std::string, double> stop_time_map;
-  for (const auto& pedestrian_stop_time :
-       mutable_speed_decider_status->pedestrian_stop_time()) {
-    stop_time_map[pedestrian_stop_time.obstacle_id()] =
-        pedestrian_stop_time.stop_timestamp_sec();
+  for (const auto& pedestrian_stop_time : mutable_speed_decider_status->pedestrian_stop_time()) {
+    stop_time_map[pedestrian_stop_time.obstacle_id()] = pedestrian_stop_time.stop_timestamp_sec();
   }
 
   const std::string& obstacle_id = obstacle.Id();
@@ -584,8 +569,7 @@ bool SpeedDecider::CheckStopForPedestrian(const Obstacle& obstacle) const {
   // write pedestrian stop time to PlanningContext
   mutable_speed_decider_status->mutable_pedestrian_stop_time()->Clear();
   for (const auto& stop_time : stop_time_map) {
-    auto pedestrian_stop_time =
-        mutable_speed_decider_status->add_pedestrian_stop_time();
+    auto pedestrian_stop_time = mutable_speed_decider_status->add_pedestrian_stop_time();
     pedestrian_stop_time->set_obstacle_id(stop_time.first);
     pedestrian_stop_time->set_stop_timestamp_sec(stop_time.second);
   }

@@ -100,10 +100,15 @@ class HistoryStatus {
 class History {
  public:
   History() = default;
+
   const HistoryFrame* GetLastFrame() const;
+
   int Add(const ADCTrajectory& adc_trajectory_pb);
+
   void Clear();
+
   size_t Size() const;
+  
   HistoryStatus* mutable_history_status() { return &history_status_; }
 
  private:

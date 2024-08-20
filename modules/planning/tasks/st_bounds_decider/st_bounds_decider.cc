@@ -39,9 +39,8 @@ using STBound = std::vector<STBoundPoint>;
 using ObsDecSet = std::vector<std::pair<std::string, ObjectDecisionType>>;
 }  // namespace
 
-bool STBoundsDecider::Init(
-    const std::string& config_dir, const std::string& name,
-    const std::shared_ptr<DependencyInjector>& injector) {
+bool STBoundsDecider::Init(const std::string& config_dir, const std::string& name,
+                           const std::shared_ptr<DependencyInjector>& injector) {
   if (!Decider::Init(config_dir, name, injector)) {
     return false;
   }
@@ -88,8 +87,8 @@ Status STBoundsDecider::Process(Frame* const frame,
   return Status::OK();
 }
 
-void STBoundsDecider::InitSTBoundsDecider(
-    const Frame& frame, ReferenceLineInfo* const reference_line_info) {
+void STBoundsDecider::InitSTBoundsDecider(const Frame& frame, 
+                                          ReferenceLineInfo* const reference_line_info) {
   const PathData& path_data = reference_line_info->path_data();
   PathDecision* path_decision = reference_line_info->path_decision();
 
@@ -226,9 +225,8 @@ Status STBoundsDecider::GenerateFallbackSTBound(STBound* const st_bound,
   return Status::OK();
 }
 
-Status STBoundsDecider::GenerateRegularSTBound(
-    STBound* const st_bound, STBound* const vt_bound,
-    std::vector<std::pair<double, double>>* const st_guide_line) {
+Status STBoundsDecider::GenerateRegularSTBound(STBound* const st_bound, STBound* const vt_bound,
+                                               std::vector<std::pair<double, double>>* const st_guide_line) {
   // Initialize st-boundary.
   for (double curr_t = 0.0; curr_t <= config_.total_time();
        curr_t += kSTBoundsDeciderResolution) {
@@ -327,9 +325,8 @@ Status STBoundsDecider::GenerateRegularSTBound(
   return Status::OK();
 }
 
-void STBoundsDecider::RemoveInvalidDecisions(
-    std::pair<double, double> driving_limit,
-    std::vector<std::pair<STBoundPoint, ObsDecSet>>* available_choices) {
+void STBoundsDecider::RemoveInvalidDecisions(std::pair<double, double> driving_limit,
+                                             std::vector<std::pair<STBoundPoint, ObsDecSet>>* available_choices) {
   // Remove those choices that don't even fall within driving-limits.
   size_t i = 0;
   while (i < available_choices->size()) {
@@ -350,9 +347,8 @@ void STBoundsDecider::RemoveInvalidDecisions(
   }
 }
 
-void STBoundsDecider::RankDecisions(
-    double s_guide_line, std::pair<double, double> driving_limit,
-    std::vector<std::pair<STBoundPoint, ObsDecSet>>* available_choices) {
+void STBoundsDecider::RankDecisions(double s_guide_line, std::pair<double, double> driving_limit,
+                                    std::vector<std::pair<STBoundPoint, ObsDecSet>>* available_choices) {
   // Perform sorting of the existing decisions.
   bool has_swaps = true;
   while (has_swaps) {
@@ -404,10 +400,9 @@ void STBoundsDecider::RankDecisions(
   }
 }
 
-void STBoundsDecider::RecordSTGraphDebug(
-    const std::vector<STBoundary>& st_graph_data, const STBound& st_bound,
-    const std::vector<std::pair<double, double>>& st_guide_line,
-    planning_internal::STGraphDebug* const st_graph_debug) {
+void STBoundsDecider::RecordSTGraphDebug(const std::vector<STBoundary>& st_graph_data, const STBound& st_bound,
+                                         const std::vector<std::pair<double, double>>& st_guide_line,
+                                         planning_internal::STGraphDebug* const st_graph_debug) {
   if (!FLAGS_enable_record_debug || !st_graph_debug) {
     ADEBUG << "Skip record debug info";
     return;

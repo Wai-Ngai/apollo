@@ -41,7 +41,7 @@ bool PlanningComponent::Init() {
   injector_ = std::make_shared<DependencyInjector>();
 
   if (FLAGS_use_navigation_mode) {
-    planning_base_ = std::make_unique<NaviPlanning>(injector_);
+    planning_base_ = std::make_unique<NaviPlanning>(injector_);  // 父类指针指向子类对象
   } else {
     planning_base_ = std::make_unique<OnLanePlanning>(injector_);
   }
@@ -178,7 +178,8 @@ bool PlanningComponent::Proc(const std::shared_ptr<prediction::PredictionObstacl
   // publish learning data frame for RL test
   if (config_.learning_mode() == PlanningConfig::RL_TEST) {
     PlanningLearningData planning_learning_data;
-    LearningDataFrame* learning_data_frame = injector_->learning_based_data()->GetLatestLearningDataFrame();
+    LearningDataFrame* learning_data_frame = injector_->learning_based_data()
+                                                      ->GetLatestLearningDataFrame();
     if (learning_data_frame) {
       planning_learning_data.mutable_learning_data_frame()->CopyFrom(*learning_data_frame);
       common::util::FillHeader(node_->Name(), &planning_learning_data);
@@ -202,6 +203,7 @@ bool PlanningComponent::Proc(const std::shared_ptr<prediction::PredictionObstacl
   for (auto& p : *adc_trajectory_pb.mutable_trajectory_point()) {
     p.set_relative_time(p.relative_time() + dt);
   }
+  
   planning_writer_->Write(adc_trajectory_pb);
 
   // Send command execution feedback.
@@ -240,11 +242,11 @@ void PlanningComponent::CheckRerouting() {
   if (!rerouting->need_rerouting()) {
     return;
   }
+
+  // 需要重新路由
   common::util::FillHeader(node_->Name(),
                            rerouting->mutable_lane_follow_command());
-  auto lane_follow_command_ptr =
-      std::make_shared<apollo::external_command::LaneFollowCommand>(
-          rerouting->lane_follow_command());
+  auto lane_follow_command_ptr = std::make_shared<apollo::external_command::LaneFollowCommand>(rerouting->lane_follow_command());
   rerouting_client_->SendRequest(lane_follow_command_ptr);
   rerouting->set_need_rerouting(false);
 }
@@ -252,8 +254,8 @@ void PlanningComponent::CheckRerouting() {
 bool PlanningComponent::CheckInput() {
   ADCTrajectory trajectory_pb;
   auto* not_ready = trajectory_pb.mutable_decision()
-                        ->mutable_main_decision()
-                        ->mutable_not_ready();
+                                 ->mutable_main_decision()
+                                 ->mutable_not_ready();
 
   if (local_view_.localization_estimate == nullptr) {
     not_ready->set_reason("localization not ready");

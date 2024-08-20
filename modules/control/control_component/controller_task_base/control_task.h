@@ -77,10 +77,10 @@ class ControlTask {
    * @param cmd control command
    * @return Status computation status
    */
-  virtual common::Status ComputeControlCommand(
-      const localization::LocalizationEstimate *localization,
-      const canbus::Chassis *chassis, const planning::ADCTrajectory *trajectory,
-      control::ControlCommand *cmd) = 0;
+  virtual common::Status ComputeControlCommand(const localization::LocalizationEstimate *localization,
+                                               const canbus::Chassis *chassis, 
+                                               const planning::ADCTrajectory *trajectory,
+                                               control::ControlCommand *cmd) = 0;
 
   /**
    * @brief reset Controller
@@ -120,13 +120,11 @@ class ControlTask {
 template <typename T>
 bool ControlTask::LoadConfig(T *config) {
   int status;
-  std::string class_name =
-      abi::__cxa_demangle(typeid(*this).name(), 0, 0, &status);
+  std::string class_name = abi::__cxa_demangle(typeid(*this).name(), 0, 0, &status);
   // Generate the default task config path from PluginManager.
-  std::string config_path_ =
-      apollo::cyber::plugin_manager::PluginManager::Instance()
-          ->GetPluginConfPath<ControlTask>(class_name,
-                                           "conf/controller_conf.pb.txt");
+  std::string config_path_ = apollo::cyber::plugin_manager::PluginManager::Instance()
+                             ->GetPluginConfPath<ControlTask>(class_name,
+                                                              "conf/controller_conf.pb.txt");
 
   if (!apollo::cyber::common::GetProtoFromFile(config_path_, config)) {
     AERROR << "Load config of " << class_name << " failed!";

@@ -42,9 +42,8 @@ class SpeedLimitDecider {
 
   virtual ~SpeedLimitDecider() = default;
 
-  virtual common::Status GetSpeedLimits(
-      const IndexedList<std::string, Obstacle>& obstacles,
-      SpeedLimit* const speed_limit_data) const;
+  virtual common::Status GetSpeedLimits(const IndexedList<std::string, Obstacle>& obstacles,
+                                        SpeedLimit* const speed_limit_data) const;
 
  private:
   FRIEND_TEST(SpeedLimitDeciderTest, get_centric_acc_limit);

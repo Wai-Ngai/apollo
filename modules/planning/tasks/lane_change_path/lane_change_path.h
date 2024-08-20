@@ -33,14 +33,15 @@ namespace apollo {
 namespace planning {
 
 enum SidePassDirection { LEFT_BORROW = 1, RIGHT_BORROW = 2 };
+
 class LaneChangePath : public PathGeneration {
  public:
   bool Init(const std::string& config_dir, const std::string& name,
             const std::shared_ptr<DependencyInjector>& injector) override;
 
  private:
-  apollo::common::Status Process(
-      Frame* frame, ReferenceLineInfo* reference_line_info) override;
+  apollo::common::Status Process(Frame* frame, 
+                                 ReferenceLineInfo* reference_line_info) override;
 
   /**
    * @brief Calculate all path boundaries

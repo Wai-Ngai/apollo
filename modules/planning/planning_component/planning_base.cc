@@ -46,8 +46,7 @@ Status PlanningBase::Init(const PlanningConfig& config) {
   return Status::OK();
 }
 
-bool PlanningBase::IsPlanningFinished(
-    const ADCTrajectory::TrajectoryType& current_trajectory_type) const {
+bool PlanningBase::IsPlanningFinished(const ADCTrajectory::TrajectoryType& current_trajectory_type) const {
   const auto frame = injector_->frame_history()->Latest();
   if (current_trajectory_type == apollo::planning::ADCTrajectory::OPEN_SPACE) {
     AINFO << "Current trajectory type is: OPEN SPACE";

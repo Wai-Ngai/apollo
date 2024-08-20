@@ -55,8 +55,7 @@ class PrintCurves {
    */
   void AddPoint(std::string key, double x, double y);
   void AddPoint(std::string key, const common::math::Vec2d& point);
-  void AddPoint(std::string key,
-                const std::vector<common::math::Vec2d>& points);
+  void AddPoint(std::string key, const std::vector<common::math::Vec2d>& points);
   void PrintToLog();
 
  private:

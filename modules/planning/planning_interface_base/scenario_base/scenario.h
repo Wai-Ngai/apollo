@@ -72,8 +72,8 @@ class Scenario {
     return false;
   }
 
-  virtual ScenarioResult Process(
-      const common::TrajectoryPoint& planning_init_point, Frame* frame);
+  virtual ScenarioResult Process(const common::TrajectoryPoint& planning_init_point, 
+                                 Frame* frame);
 
   virtual bool Exit(Frame* frame) { return true; }
 

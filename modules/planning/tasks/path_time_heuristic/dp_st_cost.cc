@@ -51,10 +51,9 @@ DpStCost::DpStCost(const DpStSpeedOptimizerConfig& config, const double total_t,
 
   AddToKeepClearRange(obstacles);
 
-  const auto dimension_t =
-      static_cast<uint32_t>(std::ceil(total_t / static_cast<double>(unit_t_))) +
-      1;
+  const auto dimension_t = static_cast<uint32_t>(std::ceil(total_t / static_cast<double>(unit_t_))) + 1;
   boundary_cost_.resize(obstacles_.size());
+
   for (auto& vec : boundary_cost_) {
     vec.resize(dimension_t, std::make_pair(-1.0, -1.0));
   }
@@ -62,8 +61,7 @@ DpStCost::DpStCost(const DpStSpeedOptimizerConfig& config, const double total_t,
   jerk_cost_.fill(-1.0);
 }
 
-void DpStCost::AddToKeepClearRange(
-    const std::vector<const Obstacle*>& obstacles) {
+void DpStCost::AddToKeepClearRange(const std::vector<const Obstacle*>& obstacles) {
   for (const auto& obstacle : obstacles) {
     if (obstacle->path_st_boundary().IsEmpty()) {
       continue;
@@ -80,8 +78,7 @@ void DpStCost::AddToKeepClearRange(
   SortAndMergeRange(&keep_clear_range_);
 }
 
-void DpStCost::SortAndMergeRange(
-    std::vector<std::pair<double, double>>* keep_clear_range) {
+void DpStCost::SortAndMergeRange(std::vector<std::pair<double, double>>* keep_clear_range) {
   if (!keep_clear_range || keep_clear_range->empty()) {
     return;
   }
@@ -120,19 +117,17 @@ double DpStCost::GetObstacleCost(const StGraphPoint& st_graph_point) {
     // TODO(Jiancheng): move to configs
     static constexpr double boundary_resolution = 0.1;
     int index = static_cast<int>(t / boundary_resolution);
-    const double lower_bound =
-        st_drivable_boundary_.st_boundary(index).s_lower();
-    const double upper_bound =
-        st_drivable_boundary_.st_boundary(index).s_upper();
+    const double lower_bound = st_drivable_boundary_.st_boundary(index).s_lower();
+    const double upper_bound = st_drivable_boundary_.st_boundary(index).s_upper();
 
     if (s > upper_bound || s < lower_bound) {
       return kInf;
     }
   }
 
+  // 遍历每个障碍物，计算t时刻障碍物st边界框的上界和下界，根据无人车的位置(t,s)与边界框是否重合，计算障碍物代价
   for (const auto* obstacle : obstacles_) {
-    // Not applying obstacle approaching cost to virtual obstacle like created
-    // stop fences
+    // Not applying obstacle approaching cost to virtual obstacle like created stop fences
     if (obstacle->IsVirtual()) {
       continue;
     }
@@ -155,44 +150,46 @@ double DpStCost::GetObstacleCost(const StGraphPoint& st_graph_point) {
     if (boundary.IsPointInBoundary(st_graph_point.point())) {
       return kInf;
     }
+
+    // 情况4：需要减速避让或加速超过的障碍物。计算障碍物在t时刻的上界和下界位置，即上下界的累积距离s
     double s_upper = 0.0;
     double s_lower = 0.0;
 
+    // 为了避免其他节点再一次计算(t,s)时刻的障碍物上下界，利用缓存加速计算。GetBoundarySRange函数可以用来计算t时刻障碍物上界和下界累积距离s，并缓存
     int boundary_index = boundary_map_[boundary.id()];
     if (boundary_cost_[boundary_index][st_graph_point.index_t()].first < 0.0) {
       boundary.GetBoundarySRange(t, &s_upper, &s_lower);
-      boundary_cost_[boundary_index][st_graph_point.index_t()] =
-          std::make_pair(s_upper, s_lower);
+      boundary_cost_[boundary_index][st_graph_point.index_t()] = std::make_pair(s_upper, s_lower);
     } else {
       s_upper = boundary_cost_[boundary_index][st_graph_point.index_t()].first;
       s_lower = boundary_cost_[boundary_index][st_graph_point.index_t()].second;
     }
+
+    // 如果t时刻无人车在障碍物后方
     if (s < s_lower) {
       const double follow_distance_s = config_.safe_distance();
-      if (s + follow_distance_s < s_lower) {
+      if (s + follow_distance_s < s_lower) {           // 如果障碍物和无人车在t时刻距离大于安全距离，距离比较远，cost=0
         continue;
-      } else {
+      } else {                           // 否则距离小于安全距离，计算cost。obstacle_weight：1.0，default_obstacle_cost：1000，
         auto s_diff = follow_distance_s - s_lower + s;
-        cost += config_.obstacle_weight() * config_.default_obstacle_cost() *
-                s_diff * s_diff;
+        cost += config_.obstacle_weight() * config_.default_obstacle_cost() * s_diff * s_diff;
       }
+    // 如果t时刻无人车在障碍物前方
     } else if (s > s_upper) {
-      const double overtake_distance_s =
-          StGapEstimator::EstimateSafeOvertakingGap();
+      const double overtake_distance_s = StGapEstimator::EstimateSafeOvertakingGap();
       if (s > s_upper + overtake_distance_s) {  // or calculated from velocity
-        continue;
-      } else {
+        continue; // 如果障碍物和无人车在t时刻距离大于安全距离，距离比较远，cost=0
+      } else {                           // 否则距离小于安全距离，计算cost。obstacle_weight：1.0，default_obstacle_cost：1000，
         auto s_diff = overtake_distance_s + s_upper - s;
-        cost += config_.obstacle_weight() * config_.default_obstacle_cost() *
-                s_diff * s_diff;
+        cost += config_.obstacle_weight() * config_.default_obstacle_cost() * s_diff * s_diff;
       }
     }
   }
-  return cost * unit_t_;
+  return cost * unit_t_;  // unit_t_ = 7 / 8
 }
 
 double DpStCost::GetSpatialPotentialCost(const StGraphPoint& point) {
-  return (total_s_ - point.point().s()) * config_.spatial_potential_penalty();
+  return (total_s_ - point.point().s()) * config_.spatial_potential_penalty();  // 距离终点惩罚 100 or 100000(变道)
 }
 
 double DpStCost::GetReferenceCost(const STPoint& point,
@@ -205,34 +202,31 @@ double DpStCost::GetSpeedCost(const STPoint& first, const STPoint& second,
                               const double speed_limit,
                               const double cruise_speed) const {
   double cost = 0.0;
-  const double speed = (second.s() - first.s()) / unit_t_;
-  if (speed < 0) {
+  const double speed = (second.s() - first.s()) / unit_t_; //计算时间段[t-1,t]内的平均速度
+  if (speed < 0) { // 倒车？速度代价无穷大
     return kInf;
   }
 
   const double max_adc_stop_speed = common::VehicleConfigHelper::Instance()
-                                        ->GetConfig()
-                                        .vehicle_param()
-                                        .max_abs_speed_when_stopped();
+                                                                 ->GetConfig().vehicle_param()
+                                                                 .max_abs_speed_when_stopped();
+  // 如果速度接近停车，并且在禁停区内 max_stop_speed = 0.2  
   if (speed < max_adc_stop_speed && InKeepClearRange(second.s())) {
     // first.s in range
-    cost += config_.keep_clear_low_speed_penalty() * unit_t_ *
-            config_.default_speed_cost();
+    cost += config_.keep_clear_low_speed_penalty() * unit_t_ * config_.default_speed_cost();
   }
 
+  // 计算当前速度和限速的差值比，大于0，超速；小于0，未超速
   double det_speed = (speed - speed_limit) / speed_limit;
   if (det_speed > 0) {
-    cost += config_.exceed_speed_penalty() * config_.default_speed_cost() *
-            (det_speed * det_speed) * unit_t_;
+    cost += config_.exceed_speed_penalty() * config_.default_speed_cost() * (det_speed * det_speed) * unit_t_;
   } else if (det_speed < 0) {
-    cost += config_.low_speed_penalty() * config_.default_speed_cost() *
-            -det_speed * unit_t_;
+    cost += config_.low_speed_penalty() * config_.default_speed_cost() * -det_speed * unit_t_;
   }
 
   if (config_.enable_dp_reference_speed()) {
     double diff_speed = speed - cruise_speed;
-    cost += config_.reference_speed_penalty() * config_.default_speed_cost() *
-            fabs(diff_speed) * unit_t_;
+    cost += config_.reference_speed_penalty() * config_.default_speed_cost() * fabs(diff_speed) * unit_t_;
   }
 
   return cost;
@@ -240,9 +234,12 @@ double DpStCost::GetSpeedCost(const STPoint& first, const STPoint& second,
 
 double DpStCost::GetAccelCost(const double accel) {
   double cost = 0.0;
+
+  // 将给定的加速度 accel 标准化并加上一个偏移量 kShift 来计算得到。这样做可以确保不同的 accel 值映射到 accel_cost_ 中不同的索引位置。
   static constexpr double kEpsilon = 0.1;
   static constexpr size_t kShift = 100;
   const size_t accel_key = static_cast<size_t>(accel / kEpsilon + 0.5 + kShift);
+  
   DCHECK_LT(accel_key, accel_cost_.size());
   if (accel_key >= accel_cost_.size()) {
     return kInf;
@@ -250,23 +247,23 @@ double DpStCost::GetAccelCost(const double accel) {
 
   if (accel_cost_.at(accel_key) < 0.0) {
     const double accel_sq = accel * accel;
-    double max_acc = config_.max_acceleration();
-    double max_dec = config_.max_deceleration();
-    double accel_penalty = config_.accel_penalty();
-    double decel_penalty = config_.decel_penalty();
+    double max_acc = config_.max_acceleration();          // 3.0  m/s^2
+    double max_dec = config_.max_deceleration();          // -4.0 m/s^2
+    double accel_penalty = config_.accel_penalty();       // 1.0
+    double decel_penalty = config_.decel_penalty();       // 1.0
 
-    if (accel > 0.0) {
+    if (accel > 0.0) {          // 计算加速度正情况下cost
       cost = accel_penalty * accel_sq;
-    } else {
+    } else {                    // 计算加速度负情况下cost
       cost = decel_penalty * accel_sq;
     }
-    cost += accel_sq * decel_penalty * decel_penalty /
-                (1 + std::exp(1.0 * (accel - max_dec))) +
-            accel_sq * accel_penalty * accel_penalty /
-                (1 + std::exp(-1.0 * (accel - max_acc)));
+    
+    // 总体cost
+    cost += accel_sq * decel_penalty * decel_penalty / (1 + std::exp(1.0 * (accel - max_dec))) +
+            accel_sq * accel_penalty * accel_penalty / (1 + std::exp(-1.0 * (accel - max_acc)));
     accel_cost_.at(accel_key) = cost;
   } else {
-    cost = accel_cost_.at(accel_key);
+    cost = accel_cost_.at(accel_key); // 该加速度之前计算过，直接索引
   }
   return cost * unit_t_;
 }
@@ -274,6 +271,7 @@ double DpStCost::GetAccelCost(const double accel) {
 double DpStCost::GetAccelCostByThreePoints(const STPoint& first,
                                            const STPoint& second,
                                            const STPoint& third) {
+  // 利用3个节点的累积距离s1，s2，s3来计算加速度   
   double accel = (first.s() + third.s() - 2 * second.s()) / (unit_t_ * unit_t_);
   return GetAccelCost(accel);
 }
@@ -281,6 +279,7 @@ double DpStCost::GetAccelCostByThreePoints(const STPoint& first,
 double DpStCost::GetAccelCostByTwoPoints(const double pre_speed,
                                          const STPoint& pre_point,
                                          const STPoint& curr_point) {
+  // 利用2个节点的累积距离s1，s2来计算加速度
   double current_speed = (curr_point.s() - pre_point.s()) / unit_t_;
   double accel = (current_speed - pre_speed) / unit_t_;
   return GetAccelCost(accel);

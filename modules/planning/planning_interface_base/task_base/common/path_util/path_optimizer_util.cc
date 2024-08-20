@@ -66,22 +66,16 @@ FrenetFramePath PathOptimizerUtil::ToPiecewiseJerkPath(const std::vector<double>
 }
 
 double PathOptimizerUtil::EstimateJerkBoundary(const double vehicle_speed) {
-  const auto& veh_param =
-      common::VehicleConfigHelper::GetConfig().vehicle_param();
-  const double axis_distance = veh_param.wheel_base();
-  const double max_yaw_rate =
-      veh_param.max_steer_angle_rate() / veh_param.steer_ratio();
+  const auto& veh_param = common::VehicleConfigHelper::GetConfig().vehicle_param();
+  const double axis_distance = veh_param.wheel_base();   // 2.8448
+  const double max_yaw_rate = veh_param.max_steer_angle_rate() / veh_param.steer_ratio(); // 0.43633
   return max_yaw_rate / axis_distance / vehicle_speed;
 }
 
-std::vector<common::PathPoint>
-PathOptimizerUtil::ConvertPathPointRefFromFrontAxeToRearAxe(
-    const PathData& path_data) {
+std::vector<common::PathPoint> PathOptimizerUtil::ConvertPathPointRefFromFrontAxeToRearAxe(const PathData& path_data) {
   std::vector<common::PathPoint> ret;
-  double front_to_rear_axe_distance =
-      apollo::common::VehicleConfigHelper::GetConfig()
-          .vehicle_param()
-          .wheel_base();
+  double front_to_rear_axe_distance = apollo::common::VehicleConfigHelper::GetConfig().vehicle_param().wheel_base();
+
   for (auto path_point : path_data.discretized_path()) {
     common::PathPoint new_path_point = path_point;
     new_path_point.set_x(path_point.x() - front_to_rear_axe_distance *
@@ -93,18 +87,18 @@ PathOptimizerUtil::ConvertPathPointRefFromFrontAxeToRearAxe(
   return ret;
 }
 
-bool PathOptimizerUtil::OptimizePath(
-    const SLState& init_state, const std::array<double, 3>& end_state,
-    std::vector<double> l_ref, std::vector<double> l_ref_weight,
-    const PathBoundary& path_boundary,
-    const std::vector<std::pair<double, double>>& ddl_bounds, double dddl_bound,
-    const PiecewiseJerkPathConfig& config, std::vector<double>* x,
-    std::vector<double>* dx, std::vector<double>* ddx) {
+bool PathOptimizerUtil::OptimizePath(const SLState& init_state, const std::array<double, 3>& end_state,
+                                     std::vector<double> l_ref, std::vector<double> l_ref_weight,
+                                     const PathBoundary& path_boundary,
+                                     const std::vector<std::pair<double, double>>& ddl_bounds,
+                                     double dddl_bound, const PiecewiseJerkPathConfig& config,
+                                     std::vector<double>* x, std::vector<double>* dx,
+                                     std::vector<double>* ddx) {
   // num of knots
   const auto& lat_boundaries = path_boundary.boundary();
   const size_t kNumKnots = lat_boundaries.size();
 
-  double delta_s = path_boundary.delta_s();
+  double delta_s = path_boundary.delta_s(); // 0.5
   PiecewiseJerkPathProblem piecewise_jerk_problem(kNumKnots, delta_s,
                                                   init_state.second);
   PrintCurves print_curve;
@@ -122,36 +116,36 @@ bool PathOptimizerUtil::OptimizePath(
     print_curve.AddPoint(path_boundary.label() + "_ddl_upper",
                          i * path_boundary.delta_s(), ddl_bounds[i].second);
   }
-  print_curve.AddPoint(path_boundary.label() + "_opt_l", 0,
-                       init_state.second[0]);
-  print_curve.AddPoint(path_boundary.label() + "_opt_dl", 0,
-                       init_state.second[1]);
-  print_curve.AddPoint(path_boundary.label() + "_opt_ddl", 0,
-                       init_state.second[2]);
+  print_curve.AddPoint(path_boundary.label() + "_opt_l", 
+                       0, init_state.second[0]);
+  print_curve.AddPoint(path_boundary.label() + "_opt_dl", 
+                       0, init_state.second[1]);
+  print_curve.AddPoint(path_boundary.label() + "_opt_ddl",
+                       0, init_state.second[2]);
+
   // TODO(Hongyi): update end_state settings
-  std::array<double, 3U> end_state_weight = {config.weight_end_state_l(),
-                                             config.weight_end_state_dl(),
-                                             config.weight_end_state_ddl()};
+  std::array<double, 3U> end_state_weight = {config.weight_end_state_l(),    // 1000
+                                             config.weight_end_state_dl(),   // 0
+                                             config.weight_end_state_ddl()}; // 0
   piecewise_jerk_problem.set_end_state_ref(end_state_weight, end_state);
   piecewise_jerk_problem.set_x_ref(std::move(l_ref_weight), l_ref);
   // for debug:here should use std::move
-  piecewise_jerk_problem.set_weight_x(config.l_weight());
-  piecewise_jerk_problem.set_weight_dx(config.dl_weight());
-  piecewise_jerk_problem.set_weight_ddx(config.ddl_weight());
-  piecewise_jerk_problem.set_weight_dddx(config.dddl_weight());
+  piecewise_jerk_problem.set_weight_x(config.l_weight());        // 1
+  piecewise_jerk_problem.set_weight_dx(config.dl_weight());      // 20
+  piecewise_jerk_problem.set_weight_ddx(config.ddl_weight());    // 1000
+  piecewise_jerk_problem.set_weight_dddx(config.dddl_weight());  // 5000
 
   piecewise_jerk_problem.set_scale_factor({1.0, 10.0, 100.0});
 
   auto start_time = std::chrono::system_clock::now();
 
   piecewise_jerk_problem.set_x_bounds(lat_boundaries);
-  piecewise_jerk_problem.set_dx_bounds(
-      -config.lateral_derivative_bound_default(),
-      config.lateral_derivative_bound_default());
+  piecewise_jerk_problem.set_dx_bounds(-config.lateral_derivative_bound_default(),  // 2.0
+                                        config.lateral_derivative_bound_default());
   piecewise_jerk_problem.set_ddx_bounds(ddl_bounds);
-
   piecewise_jerk_problem.set_dddx_bound(dddl_bound);
 
+  // 二次规划优化路径
   bool success = piecewise_jerk_problem.Optimize(config.max_iteration());
 
   auto end_time = std::chrono::system_clock::now();
@@ -184,16 +178,16 @@ bool PathOptimizerUtil::OptimizePath(
   return true;
 }
 
-void PathOptimizerUtil::UpdatePathRefWithBound(
-    const PathBoundary& path_boundary, double weight,
-    std::vector<double>* ref_l, std::vector<double>* weight_ref_l) {
+void PathOptimizerUtil::UpdatePathRefWithBound(const PathBoundary& path_boundary, 
+                                               double weight,
+                                               std::vector<double>* ref_l, 
+                                               std::vector<double>* weight_ref_l) {
   ref_l->resize(path_boundary.size());
   weight_ref_l->resize(path_boundary.size());
   for (size_t i = 0; i < ref_l->size(); i++) {
     if (path_boundary[i].l_lower.type == BoundType::OBSTACLE ||
         path_boundary[i].l_upper.type == BoundType::OBSTACLE) {
-      ref_l->at(i) =
-          (path_boundary[i].l_lower.l + path_boundary[i].l_upper.l) / 2.0;
+      ref_l->at(i) = (path_boundary[i].l_lower.l + path_boundary[i].l_upper.l) / 2.0;
       weight_ref_l->at(i) = weight;
     } else {
       weight_ref_l->at(i) = 0;
@@ -201,18 +195,15 @@ void PathOptimizerUtil::UpdatePathRefWithBound(
   }
 }
 
-void PathOptimizerUtil::CalculateAccBound(
-    const PathBoundary& path_boundary, const ReferenceLine& reference_line,
-    std::vector<std::pair<double, double>>* ddl_bounds) {
-  const auto& veh_param =
-      common::VehicleConfigHelper::GetConfig().vehicle_param();
-  const double lat_acc_bound =
-      std::tan(veh_param.max_steer_angle() / veh_param.steer_ratio()) /
-      veh_param.wheel_base();
+void PathOptimizerUtil::CalculateAccBound(const PathBoundary& path_boundary, 
+                                          const ReferenceLine& reference_line,
+                                          std::vector<std::pair<double, double>>* ddl_bounds) {
+  const auto& veh_param = common::VehicleConfigHelper::GetConfig().vehicle_param();
+  const double lat_acc_bound = std::tan(veh_param.max_steer_angle() / veh_param.steer_ratio()) /
+                               veh_param.wheel_base();  // 0.197868
   size_t path_boundary_size = path_boundary.boundary().size();
   for (size_t i = 0; i < path_boundary_size; ++i) {
-    double s = static_cast<double>(i) * path_boundary.delta_s() +
-               path_boundary.start_s();
+    double s = static_cast<double>(i) * path_boundary.delta_s() + path_boundary.start_s();
     double kappa = reference_line.GetNearestReferencePoint(s).kappa();
     ddl_bounds->emplace_back(-lat_acc_bound - kappa, lat_acc_bound - kappa);
   }

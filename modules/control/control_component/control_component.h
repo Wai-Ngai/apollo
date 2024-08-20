@@ -64,20 +64,14 @@ class ControlComponent final : public apollo::cyber::TimerComponent {
 
   void OnChassis(const std::shared_ptr<apollo::canbus::Chassis> &chassis);
 
-  void OnPlanning(
-      const std::shared_ptr<apollo::planning::ADCTrajectory> &trajectory);
+  void OnPlanning(const std::shared_ptr<apollo::planning::ADCTrajectory> &trajectory);
 
-  void OnPlanningCommandStatus(
-      const std::shared_ptr<external_command::CommandStatus>
-          &planning_command_status);
+  void OnPlanningCommandStatus(const std::shared_ptr<external_command::CommandStatus> &planning_command_status);
 
-  void OnLocalization(
-      const std::shared_ptr<apollo::localization::LocalizationEstimate>
-          &localization);
+  void OnLocalization(const std::shared_ptr<apollo::localization::LocalizationEstimate> &localization);
 
   // Upon receiving monitor message
-  void OnMonitor(
-      const apollo::common::monitor::MonitorMessage &monitor_message);
+  void OnMonitor(const apollo::common::monitor::MonitorMessage &monitor_message);
 
   common::Status ProduceControlCommand(ControlCommand *control_command);
   common::Status CheckInput(LocalView *local_view);
@@ -113,12 +107,9 @@ class ControlComponent final : public apollo::cyber::TimerComponent {
 
   std::shared_ptr<cyber::Reader<apollo::canbus::Chassis>> chassis_reader_;
   std::shared_ptr<cyber::Reader<PadMessage>> pad_msg_reader_;
-  std::shared_ptr<cyber::Reader<apollo::localization::LocalizationEstimate>>
-      localization_reader_;
-  std::shared_ptr<cyber::Reader<apollo::planning::ADCTrajectory>>
-      trajectory_reader_;
-  std::shared_ptr<cyber::Reader<apollo::external_command::CommandStatus>>
-      planning_command_status_reader_;
+  std::shared_ptr<cyber::Reader<apollo::localization::LocalizationEstimate>> localization_reader_;
+  std::shared_ptr<cyber::Reader<apollo::planning::ADCTrajectory>> trajectory_reader_;
+  std::shared_ptr<cyber::Reader<apollo::external_command::CommandStatus>> planning_command_status_reader_;
 
   std::shared_ptr<cyber::Writer<ControlCommand>> control_cmd_writer_;
   // when using control submodules

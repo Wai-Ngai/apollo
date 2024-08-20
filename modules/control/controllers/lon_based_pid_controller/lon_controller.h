@@ -80,10 +80,10 @@ class LonController : public ControlTask {
    * @param cmd control command
    * @return Status computation status
    */
-  common::Status ComputeControlCommand(
-      const localization::LocalizationEstimate *localization,
-      const canbus::Chassis *chassis, const planning::ADCTrajectory *trajectory,
-      control::ControlCommand *cmd) override;
+  common::Status ComputeControlCommand(const localization::LocalizationEstimate *localization,
+                                       const canbus::Chassis *chassis, 
+                                       const planning::ADCTrajectory *trajectory,
+                                       control::ControlCommand *cmd) override;
 
   /**
    * @brief reset longitudinal controller
@@ -106,16 +106,25 @@ class LonController : public ControlTask {
   void ComputeLongitudinalErrors(const TrajectoryAnalyzer *trajectory,
                                  const double preview_time, const double ts,
                                  SimpleLongitudinalDebug *debug);
-
+  //根据规划发布的轨迹msg寻找轨迹点上接下来的第一个停车点
+  //停车点信息存到debug里，这个参数又是用来装结果的
   void GetPathRemain(SimpleLongitudinalDebug *debug);
 
   std::shared_ptr<DependencyInjector> injector_;
 
  private:
+  //设置Pitch车辆俯仰角
+  //参数：lon_controller_conf是纵向控制器配置类对象，该类由modules/control/proto/.proto文件生成
+  //从该对象中读取截至频率，控制周期等参数来设置pitch角滤波器
+  //pitch角用来进行车辆的坡道补偿，默认坡道补偿是关闭的
   void SetDigitalFilterPitchAngle();
 
   void InitControlCalibrationTable();
 
+  //设置数字滤波器函数
+  //参数：控制周期ts
+  //参数：截至频率cutoff_freq
+  //参数：数字滤波器类对象digital_filter，前面两项参数就是为了设置这个对象
   void SetDigitalFilter(double ts, double cutoff_freq,
                         common::DigitalFilter *digital_filter);
 
@@ -149,6 +158,7 @@ class LonController : public ControlTask {
   LeadlagController speed_leadlag_controller_;
   LeadlagController station_leadlag_controller_;
 
+  //定义文件类对象 speed_log_file_用于存放纵向上的日志信息，默认也关闭csv日志
   FILE *speed_log_file_ = nullptr;
 
   common::DigitalFilter digital_filter_pitch_angle_;

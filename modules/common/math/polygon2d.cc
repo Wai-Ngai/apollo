@@ -60,8 +60,7 @@ double Polygon2d::DistanceSquareTo(const Vec2d &point) const {
   }
   double distance_sqr = std::numeric_limits<double>::infinity();
   for (int i = 0; i < num_points_; ++i) {
-    distance_sqr =
-        std::min(distance_sqr, line_segments_[i].DistanceSquareTo(point));
+    distance_sqr = std::min(distance_sqr, line_segments_[i].DistanceSquareTo(point));
   }
   return distance_sqr;
 }
@@ -121,9 +120,8 @@ double Polygon2d::DistanceToBoundary(const Vec2d &point) const {
 
 bool Polygon2d::IsPointOnBoundary(const Vec2d &point) const {
   CHECK_GE(points_.size(), 3U);
-  return std::any_of(
-      line_segments_.begin(), line_segments_.end(),
-      [&](const LineSegment2d &poly_seg) { return poly_seg.IsPointIn(point); });
+  return std::any_of(line_segments_.begin(), line_segments_.end(),
+                     [&](const LineSegment2d &poly_seg) { return poly_seg.IsPointIn(point); });
 }
 
 bool Polygon2d::IsPointIn(const Vec2d &point) const {
@@ -232,17 +230,16 @@ void Polygon2d::BuildFromPoints() {
     line_segments_.emplace_back(points_[i], points_[Next(i)]);
   }
 
-  // Check convexity.
+  // Check convexity. 检查是否是凸的
   is_convex_ = true;
   for (int i = 0; i < num_points_; ++i) {
-    if (CrossProd(points_[Prev(i)], points_[i], points_[Next(i)]) <=
-        -kMathEpsilon) {
+    if (CrossProd(points_[Prev(i)], points_[i], points_[Next(i)]) <= -kMathEpsilon) {
       is_convex_ = false;
       break;
     }
   }
 
-  // Compute aabox.
+  // Compute aabox. 计算四个角点组成点平行四边形
   min_x_ = points_[0].x();
   max_x_ = points_[0].x();
   min_y_ = points_[0].y();
@@ -440,8 +437,7 @@ void Polygon2d::GetAllVertices(std::vector<Vec2d> *const vertices) const {
 
 std::vector<Vec2d> Polygon2d::GetAllVertices() const { return points_; }
 
-std::vector<LineSegment2d> Polygon2d::GetAllOverlaps(
-    const LineSegment2d &line_segment) const {
+std::vector<LineSegment2d> Polygon2d::GetAllOverlaps(const LineSegment2d &line_segment) const {
   CHECK_GE(points_.size(), 3U);
 
   if (line_segment.length() <= kMathEpsilon) {
@@ -472,9 +468,8 @@ std::vector<LineSegment2d> Polygon2d::GetAllOverlaps(
     if (end_proj - start_proj <= kMathEpsilon) {
       continue;
     }
-    const Vec2d reference_point =
-        line_segment.start() +
-        (start_proj + end_proj) / 2.0 * line_segment.unit_direction();
+    const Vec2d reference_point = line_segment.start() +
+                                  (start_proj + end_proj) / 2.0 * line_segment.unit_direction();
     if (!IsPointIn(reference_point)) {
       continue;
     }
@@ -533,10 +528,10 @@ Box2d Polygon2d::BoundingBoxWithHeading(const double heading) const {
   const double x2 = px2.InnerProd(direction_vec);
   const double y1 = py1.CrossProd(direction_vec);
   const double y2 = py2.CrossProd(direction_vec);
-  return Box2d(
-      (x1 + x2) / 2.0 * direction_vec +
-          (y1 + y2) / 2.0 * Vec2d(direction_vec.y(), -direction_vec.x()),
-      heading, x2 - x1, y2 - y1);
+
+  return Box2d((x1 + x2) / 2.0 * direction_vec +
+               (y1 + y2) / 2.0 * Vec2d(direction_vec.y(), -direction_vec.x()),
+               heading, x2 - x1, y2 - y1);
 }
 
 Box2d Polygon2d::MinAreaBoundingBox() const {
@@ -556,36 +551,30 @@ Box2d Polygon2d::MinAreaBoundingBox() const {
     const auto &line_segment = line_segments_[i];
     double proj = 0.0;
     double min_proj = line_segment.ProjectOntoUnit(points_[left_most]);
-    while ((proj = line_segment.ProjectOntoUnit(points_[Prev(left_most)])) <
-           min_proj) {
+    while ((proj = line_segment.ProjectOntoUnit(points_[Prev(left_most)])) < min_proj) {
       min_proj = proj;
       left_most = Prev(left_most);
     }
-    while ((proj = line_segment.ProjectOntoUnit(points_[Next(left_most)])) <
-           min_proj) {
+    while ((proj = line_segment.ProjectOntoUnit(points_[Next(left_most)])) < min_proj) {
       min_proj = proj;
       left_most = Next(left_most);
     }
     double max_proj = line_segment.ProjectOntoUnit(points_[right_most]);
-    while ((proj = line_segment.ProjectOntoUnit(points_[Prev(right_most)])) >
-           max_proj) {
+    while ((proj = line_segment.ProjectOntoUnit(points_[Prev(right_most)])) > max_proj) {
       max_proj = proj;
       right_most = Prev(right_most);
     }
-    while ((proj = line_segment.ProjectOntoUnit(points_[Next(right_most)])) >
-           max_proj) {
+    while ((proj = line_segment.ProjectOntoUnit(points_[Next(right_most)])) > max_proj) {
       max_proj = proj;
       right_most = Next(right_most);
     }
     double prod = 0.0;
     double max_prod = line_segment.ProductOntoUnit(points_[top_most]);
-    while ((prod = line_segment.ProductOntoUnit(points_[Prev(top_most)])) >
-           max_prod) {
+    while ((prod = line_segment.ProductOntoUnit(points_[Prev(top_most)])) > max_prod) {
       max_prod = prod;
       top_most = Prev(top_most);
     }
-    while ((prod = line_segment.ProductOntoUnit(points_[Next(top_most)])) >
-           max_prod) {
+    while ((prod = line_segment.ProductOntoUnit(points_[Next(top_most)])) > max_prod) {
       max_prod = prod;
       top_most = Next(top_most);
     }
@@ -617,8 +606,7 @@ Polygon2d Polygon2d::ExpandByDistance(const double distance) const {
     } else {
       const int count = static_cast<int>(diff / kMinAngle) + 1;
       for (int k = 0; k <= count; ++k) {
-        const double angle = start_angle + diff * static_cast<double>(k) /
-                                               static_cast<double>(count);
+        const double angle = start_angle + diff * static_cast<double>(k) / static_cast<double>(count);
         points.push_back(points_[i] + Vec2d::CreateUnitVec2d(angle) * distance);
       }
     }

@@ -52,9 +52,9 @@ bool Smoother::IsCloseStop(const common::VehicleState& vehicle_state,
 
 // TODO(all): extend more smooth policies into different objects
 // when more use cases happens later.
-apollo::common::Status Smoother::Smooth(
-    const FrameHistory* frame_history, const Frame* current_frame,
-    ADCTrajectory* const current_trajectory_pb) {
+apollo::common::Status Smoother::Smooth(const FrameHistory* frame_history, 
+                                        const Frame* current_frame,
+                                        ADCTrajectory* const current_trajectory_pb) {
   if (frame_history == nullptr) {
     const std::string msg = "frame history is null.";
     AERROR << msg;
@@ -100,17 +100,15 @@ apollo::common::Status Smoother::Smooth(
     AWARN << msg;
     return Status(ErrorCode::PLANNING_ERROR, msg);
   }
-  const auto& previous_planning =
-      previous_frame->current_frame_planned_trajectory();
+  const auto& previous_planning = previous_frame->current_frame_planned_trajectory();
   auto header = current_trajectory_pb->header();
   *current_trajectory_pb = previous_planning;
   current_trajectory_pb->mutable_header()->CopyFrom(header);
   auto smoother_debug = current_trajectory_pb->mutable_debug()
-                            ->mutable_planning_data()
-                            ->mutable_smoother();
+                                             ->mutable_planning_data()
+                                             ->mutable_smoother();
   smoother_debug->set_is_smoothed(true);
-  smoother_debug->set_type(
-      planning_internal::SmootherDebug::SMOOTHER_CLOSE_STOP);
+  smoother_debug->set_type(planning_internal::SmootherDebug::SMOOTHER_CLOSE_STOP);
   return Status::OK();
 }
 

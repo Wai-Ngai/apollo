@@ -93,8 +93,7 @@ bool DiscretePointsReferenceLineSmoother::Smooth(const ReferenceLine& raw_refere
 bool DiscretePointsReferenceLineSmoother::CosThetaSmooth(const std::vector<std::pair<double, double>>& raw_point2d,
                                                          const std::vector<double>& bounds,
                                                          std::vector<std::pair<double, double>>* ptr_smoothed_point2d) {
-  const auto& cos_theta_config =
-      config_.discrete_points().cos_theta_smoothing();
+  const auto& cos_theta_config = config_.discrete_points().cos_theta_smoothing();
 
   CosThetaSmoother smoother(cos_theta_config);
 

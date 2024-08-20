@@ -35,18 +35,16 @@
 namespace apollo {
 namespace planning {
 
-void WaypointSampler::Init(
-    const ReferenceLineInfo *reference_line_info,
-    const common::SLPoint &init_sl_point,
-    const common::FrenetFramePoint &init_frenet_frame_point) {
+void WaypointSampler::Init(const ReferenceLineInfo *reference_line_info,
+                           const common::SLPoint &init_sl_point,
+                           const common::FrenetFramePoint &init_frenet_frame_point) {
   reference_line_info_ = reference_line_info;
   init_sl_point_ = init_sl_point;
   init_frenet_frame_point_ = init_frenet_frame_point;
 }
 
-bool WaypointSampler::SamplePathWaypoints(
-    const common::TrajectoryPoint &init_point,
-    std::vector<std::vector<common::SLPoint>> *const points) {
+bool WaypointSampler::SamplePathWaypoints(const common::TrajectoryPoint &init_point,
+                                          std::vector<std::vector<common::SLPoint>> *const points) {
   CHECK_NOTNULL(points);
   points->clear();
   points->insert(points->begin(), std::vector<common::SLPoint>{init_sl_point_});

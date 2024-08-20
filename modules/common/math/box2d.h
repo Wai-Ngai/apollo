@@ -60,9 +60,8 @@ class Box2d {
    * @param length The size of the heading-axis.
    * @param width The size of the axis perpendicular to the heading-axis.
    */
-  Box2d(const Vec2d &center, const double heading, const double length,
-        const double width);
-
+  Box2d(const Vec2d &center, const double heading, 
+        const double length, const double width);
   /**
    * @brief Constructor which takes the point on the axis, front length, back
    * length, heading, and width.
@@ -73,9 +72,8 @@ class Box2d {
    * @param back_length The length from the end point to the given point.
    * @param width The size of the axis perpendicular to the heading-axis.
    */
-  Box2d(const Vec2d &point, double heading, double front_length,
-        double back_length, double width);
-
+  Box2d(const Vec2d &point, double heading,
+        double front_length, double back_length, double width);
   /**
    * @brief Constructor which takes the heading-axis and the width of the box
    * @param axis The heading-axis
@@ -83,7 +81,6 @@ class Box2d {
    * to the heading direction.
    */
   Box2d(const LineSegment2d &axis, const double width);
-
   /**
    * @brief Constructor which takes an AABox2d (axes-aligned box).
    * @param aabox The input AABox2d.
@@ -176,7 +173,6 @@ class Box2d {
    * @param corners The vector where the corners are listed
    */
   void GetAllCorners(std::vector<Vec2d> *const corners) const;
-
   /**
    * @brief Getter of the corners of the box
    * @param corners The vector where the corners are listed
@@ -203,14 +199,12 @@ class Box2d {
    * @return A distance
    */
   double DistanceTo(const Vec2d &point) const;
-
   /**
    * @brief Determines the distance between the box and a given line segment
    * @param line_segment The line segment whose distance to the box we compute
    * @return A distance
    */
   double DistanceTo(const LineSegment2d &line_segment) const;
-
   /**
    * @brief Determines the distance between two boxes
    * @param box The box whose distance to this box we want to compute
@@ -224,7 +218,6 @@ class Box2d {
    * @return True if they overlap
    */
   bool HasOverlap(const LineSegment2d &line_segment) const;
-
   /**
    * @brief Determines whether these two boxes overlap
    * @param line_segment The other box

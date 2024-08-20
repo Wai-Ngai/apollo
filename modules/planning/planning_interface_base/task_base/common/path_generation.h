@@ -32,14 +32,14 @@ class PathGeneration : public Task {
  public:
   virtual ~PathGeneration() = default;
 
-  apollo::common::Status Execute(
-      Frame* frame, ReferenceLineInfo* reference_line_info) override;
+  apollo::common::Status Execute(Frame* frame, 
+                                 ReferenceLineInfo* reference_line_info) override;
 
   apollo::common::Status Execute(Frame* frame) override;
 
  protected:
-  virtual apollo::common::Status Process(
-      Frame* frame, ReferenceLineInfo* reference_line_info) {
+  virtual apollo::common::Status Process(Frame* frame, 
+                                         ReferenceLineInfo* reference_line_info) {
     return apollo::common::Status::OK();
   }
 
@@ -64,7 +64,8 @@ class PathGeneration : public Task {
   /**
    * @brief add path debug info for PnC monitor
    */
-  void RecordDebugInfo(const PathData& path_data, const std::string& debug_name,
+  void RecordDebugInfo(const PathData& path_data, 
+                       const std::string& debug_name,
                        ReferenceLineInfo* const reference_line_info);
   /**
    * @brief get sl boundary of the point on PathData

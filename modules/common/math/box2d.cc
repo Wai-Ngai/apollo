@@ -31,8 +31,9 @@ namespace common {
 namespace math {
 namespace {
 
-double PtSegDistance(double query_x, double query_y, double start_x,
-                     double start_y, double end_x, double end_y,
+double PtSegDistance(double query_x, double query_y, 
+                     double start_x, double start_y, 
+                     double end_x, double end_y,
                      double length) {
   const double x0 = query_x - start_x;
   const double y0 = query_y - start_y;
@@ -50,8 +51,8 @@ double PtSegDistance(double query_x, double query_y, double start_x,
 
 }  // namespace
 
-Box2d::Box2d(const Vec2d &center, const double heading, const double length,
-             const double width)
+Box2d::Box2d(const Vec2d &center, const double heading, 
+             const double length, const double width)
     : center_(center),
       length_(length),
       width_(width),
@@ -65,8 +66,8 @@ Box2d::Box2d(const Vec2d &center, const double heading, const double length,
   InitCorners();
 }
 
-Box2d::Box2d(const Vec2d &point, double heading, double front_length,
-             double back_length, double width)
+Box2d::Box2d(const Vec2d &point, double heading, 
+             double front_length, double back_length, double width)
     : length_(front_length + back_length),
       width_(width),
       half_length_(length_ / 2.0),
@@ -159,19 +160,15 @@ bool Box2d::IsPointOnBoundary(const Vec2d &point) const {
   const double y0 = point.y() - center_.y();
   const double dx = std::abs(x0 * cos_heading_ + y0 * sin_heading_);
   const double dy = std::abs(x0 * sin_heading_ - y0 * cos_heading_);
-  return (std::abs(dx - half_length_) <= kMathEpsilon &&
-          dy <= half_width_ + kMathEpsilon) ||
-         (std::abs(dy - half_width_) <= kMathEpsilon &&
-          dx <= half_length_ + kMathEpsilon);
+  return (std::abs(dx - half_length_) <= kMathEpsilon && dy <= half_width_ + kMathEpsilon) ||
+         (std::abs(dy - half_width_) <= kMathEpsilon && dx <= half_length_ + kMathEpsilon);
 }
 
 double Box2d::DistanceTo(const Vec2d &point) const {
   const double x0 = point.x() - center_.x();
   const double y0 = point.y() - center_.y();
-  const double dx =
-      std::abs(x0 * cos_heading_ + y0 * sin_heading_) - half_length_;
-  const double dy =
-      std::abs(x0 * sin_heading_ - y0 * cos_heading_) - half_width_;
+  const double dx = std::abs(x0 * cos_heading_ + y0 * sin_heading_) - half_length_;
+  const double dy = std::abs(x0 * sin_heading_ - y0 * cos_heading_) - half_width_;
   if (dx <= 0.0) {
     return std::max(0.0, dy);
   }
@@ -197,8 +194,7 @@ bool Box2d::HasOverlap(const LineSegment2d &line_segment) const {
   Vec2d y_axis(cos_heading_, sin_heading_);
   // corners_[2] is the left bottom point of the box.
   Vec2d start_v = line_segment.start() - corners_[2];
-  // "start_point" is the start point of "line_segment" mapped in the new
-  // coordinate system.
+  // "start_point" is the start point of "line_segment" mapped in the new coordinate system.
   Vec2d start_point(start_v.InnerProd(x_axis), start_v.InnerProd(y_axis));
   // Check if "start_point" is inside the box.
   if (is_inside_rectangle(start_point)) {

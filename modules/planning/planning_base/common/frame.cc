@@ -338,6 +338,7 @@ Status Frame::Init(const common::VehicleStateProvider *vehicle_state_provider,
                    const std::vector<routing::LaneWaypoint> &future_route_waypoints,
                    const EgoInfo *ego_info) {
   // TODO(QiL): refactor this to avoid redundant nullptr checks in scenarios.
+
   // 对hdmap_、vehicle_state_、obstacles、traffic_lights进行赋值
   auto status = InitFrameData(vehicle_state_provider, ego_info);
 

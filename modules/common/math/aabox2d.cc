@@ -99,10 +99,8 @@ double AABox2d::DistanceTo(const Vec2d &point) const {
 }
 
 double AABox2d::DistanceTo(const AABox2d &box) const {
-  const double dx =
-      std::abs(box.center_x() - center_.x()) - box.half_length() - half_length_;
-  const double dy =
-      std::abs(box.center_y() - center_.y()) - box.half_width() - half_width_;
+  const double dx = std::abs(box.center_x() - center_.x()) - box.half_length() - half_length_;
+  const double dy = std::abs(box.center_y() - center_.y()) - box.half_width() - half_width_;
   if (dx <= 0.0) {
     return std::max(0.0, dy);
   }
@@ -113,10 +111,8 @@ double AABox2d::DistanceTo(const AABox2d &box) const {
 }
 
 bool AABox2d::HasOverlap(const AABox2d &box) const {
-  return std::abs(box.center_x() - center_.x()) <=
-             box.half_length() + half_length_ &&
-         std::abs(box.center_y() - center_.y()) <=
-             box.half_width() + half_width_;
+  return std::abs(box.center_x() - center_.x()) <= box.half_length() + half_length_ &&
+         std::abs(box.center_y() - center_.y()) <= box.half_width() + half_width_;
 }
 
 void AABox2d::Shift(const Vec2d &shift_vec) { center_ += shift_vec; }

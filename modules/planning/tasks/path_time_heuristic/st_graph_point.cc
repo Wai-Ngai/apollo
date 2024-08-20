@@ -58,8 +58,7 @@ void StGraphPoint::SetObstacleCost(const double obs_cost) {
   obstacle_cost_ = obs_cost;
 }
 
-void StGraphPoint::SetSpatialPotentialCost(
-    const double spatial_potential_cost) {
+void StGraphPoint::SetSpatialPotentialCost(const double spatial_potential_cost) {
   spatial_potential_cost_ = spatial_potential_cost;
 }
 

@@ -64,10 +64,9 @@ class STBoundaryMapper {
    * represented as upper and lower points for every s of interests.
    * Note that upper_points.size() = lower_points.size()
    */
-  bool GetOverlapBoundaryPoints(
-      const std::vector<common::PathPoint>& path_points,
-      const Obstacle& obstacle, std::vector<STPoint>* upper_points,
-      std::vector<STPoint>* lower_points) const;
+  bool GetOverlapBoundaryPoints(const std::vector<common::PathPoint>& path_points,
+                                const Obstacle& obstacle, std::vector<STPoint>* upper_points,
+                                std::vector<STPoint>* lower_points) const;
 
   /** @brief Given a path-point and an obstacle bounding box, check if the
    *        ADC, when at that path-point, will collide with the obstacle.
@@ -103,16 +102,15 @@ class STBoundaryMapper {
   void ComputeSTBoundaryWithDecision(Obstacle* obstacle,
                                      const ObjectDecisionType& decision) const;
 
-  bool CheckOverlapWithTrajectoryPoint(
-    const DiscretizedPath& discretized_path,
-    const common::math::Polygon2d& obstacle_shape,
-    std::vector<STPoint>* upper_points,
-    std::vector<STPoint>* lower_points,
-    const double l_buffer,
-    int default_num_point,
-    const double obstacle_length,
-    const double obstacle_width,
-    const double trajectory_point_time) const;
+  bool CheckOverlapWithTrajectoryPoint(const DiscretizedPath& discretized_path,
+                                       const common::math::Polygon2d& obstacle_shape,
+                                       std::vector<STPoint>* upper_points,
+                                       std::vector<STPoint>* lower_points,
+                                       const double l_buffer,
+                                       int default_num_point,
+                                       const double obstacle_length,
+                                       const double obstacle_width,
+                                       const double trajectory_point_time) const;
 
  private:
   const SpeedBoundsDeciderConfig& speed_bounds_config_;

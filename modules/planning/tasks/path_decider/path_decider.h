@@ -35,8 +35,7 @@ class PathDecider : public Task {
   bool Init(const std::string &config_dir, const std::string &name,
             const std::shared_ptr<DependencyInjector> &injector) override;
 
-  apollo::common::Status Execute(
-      Frame *frame, ReferenceLineInfo *reference_line_info) override;
+  apollo::common::Status Execute(Frame *frame, ReferenceLineInfo *reference_line_info) override;
 
  private:
   apollo::common::Status Process(const ReferenceLineInfo *reference_line_info,

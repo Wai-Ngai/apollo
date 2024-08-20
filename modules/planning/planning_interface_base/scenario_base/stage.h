@@ -58,8 +58,8 @@ class Stage {
    * If the stage want to transit to a different stage after finish,
    * it should set the type of 'next_stage_'.
    */
-  virtual StageResult Process(
-      const common::TrajectoryPoint& planning_init_point, Frame* frame) = 0;
+  virtual StageResult Process(const common::TrajectoryPoint& planning_init_point, 
+                              Frame* frame) = 0;
 
   const std::string& Name() const;
 
@@ -71,11 +71,11 @@ class Stage {
   const std::string& NextStage() const { return next_stage_; }
 
  protected:
-  StageResult ExecuteTaskOnReferenceLine(
-      const common::TrajectoryPoint& planning_start_point, Frame* frame);
+  StageResult ExecuteTaskOnReferenceLine(const common::TrajectoryPoint& planning_start_point, 
+                                         Frame* frame);
 
-  StageResult ExecuteTaskOnReferenceLineForOnlineLearning(
-      const common::TrajectoryPoint& planning_start_point, Frame* frame);
+  StageResult ExecuteTaskOnReferenceLineForOnlineLearning(const common::TrajectoryPoint& planning_start_point, 
+                                                          Frame* frame);
 
   StageResult ExecuteTaskOnOpenSpace(Frame* frame);
 

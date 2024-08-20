@@ -70,9 +70,8 @@ planning_internal::STGraphDebug* StGraphData::mutable_st_graph_debug() {
   return st_graph_debug_;
 }
 
-bool StGraphData::SetSTDrivableBoundary(
-    const std::vector<std::tuple<double, double, double>>& s_boundary,
-    const std::vector<std::tuple<double, double, double>>& v_obs_info) {
+bool StGraphData::SetSTDrivableBoundary(const std::vector<std::tuple<double, double, double>>& s_boundary,
+                                        const std::vector<std::tuple<double, double, double>>& v_obs_info) {
   if (s_boundary.size() != v_obs_info.size()) {
     return false;
   }

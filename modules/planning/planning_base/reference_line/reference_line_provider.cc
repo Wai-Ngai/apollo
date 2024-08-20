@@ -716,14 +716,15 @@ bool ReferenceLineProvider::CreateReferenceLine(std::list<ReferenceLine> *refere
 bool ReferenceLineProvider::ExtendReferenceLine(const VehicleState &state,
                                                 RouteSegments *segments,
                                                 ReferenceLine *reference_line) {
-  // 1. 查找和segments连接的segment
+
+  // 1. 根据历史缓存信息，查询当前RouteSegments是否在某条(Smoothed)ReferenceLine上，如果不是就直接进行平滑参考线操作
   RouteSegments segment_properties;
   segment_properties.SetProperties(*segments);
 
   auto prev_segment = route_segments_.begin();
   auto prev_ref = reference_lines_.begin();
   while (prev_segment != route_segments_.end()) {
-    if (prev_segment->IsConnectedSegment(*segments)) {
+    if (prev_segment->IsConnectedSegment(*segments)) {   // 1. 查找和segments连接的segment
       break;
     }
     ++prev_segment;
@@ -742,18 +743,18 @@ bool ReferenceLineProvider::ExtendReferenceLine(const VehicleState &state,
   Vec2d vec2d(state.x(), state.y());
   LaneWaypoint waypoint;
   if (!prev_segment->GetProjection(vec2d, state.heading(), &sl_point,
-                                   &waypoint)) {
+                                   &waypoint)) {                     // 计算车辆当前位置在历史平滑参考线上的位置
     AWARN << "Vehicle current point: " << vec2d.DebugString()
           << " not on previous reference line";
     return SmoothRouteSegment(*segments, reference_line);
   }
 
   // 3. 如果remain_s大于look_forward_required_distance，则直接用上一周期的reference_line和segment
-  const double prev_segment_length = RouteSegments::Length(*prev_segment);
-  const double remain_s = prev_segment_length - sl_point.s();
-  const double look_forward_required_distance = planning::PncMapBase::LookForwardDistance(state.linear_velocity());
+  const double prev_segment_length = RouteSegments::Length(*prev_segment);     // 历史平滑参考线总长度
+  const double remain_s = prev_segment_length - sl_point.s();                 // 历史平滑参考线前方剩下的距离
+  const double look_forward_required_distance = planning::PncMapBase::LookForwardDistance(state.linear_velocity());   // 前向查询距离
 
-  if (remain_s > look_forward_required_distance) {
+  if (remain_s > look_forward_required_distance) {       // 如果剩下的距离足够长，那么直接复用这条历史平滑参考线。
     *segments = *prev_segment;
     segments->SetProperties(segment_properties);
     *reference_line = *prev_ref;
@@ -763,10 +764,10 @@ bool ReferenceLineProvider::ExtendReferenceLine(const VehicleState &state,
     return true;
   }
 
-  // 4. 如果小于，则需要补充下一个segment
+  // 4. 历史参考线遗留长度不够，那么就需要先对RouteSegments进行扩展
   double future_start_s = std::max(sl_point.s(), prev_segment_length -
                                    FLAGS_reference_line_stitch_overlap_distance);   // 20m 
-  double future_end_s = prev_segment_length + FLAGS_look_forward_extend_distance;   // 50m
+  double future_end_s = prev_segment_length + FLAGS_look_forward_extend_distance;   // 向后额外扩展 50m
   RouteSegments shifted_segments;
   std::unique_lock<std::mutex> lock(pnc_map_mutex_);
 
@@ -774,18 +775,18 @@ bool ReferenceLineProvider::ExtendReferenceLine(const VehicleState &state,
                                         future_end_s, &shifted_segments)) {
     lock.unlock();
     AERROR << "Failed to shift route segments forward";
-    return SmoothRouteSegment(*segments, reference_line);
+    return SmoothRouteSegment(*segments, reference_line); // C.1 扩展操作失败，直接对新的RouteSegments进行平滑得到平滑参考线
   }
   lock.unlock();
   if (prev_segment->IsWaypointOnSegment(shifted_segments.LastWaypoint())) {
-    *segments = *prev_segment;
+    *segments = *prev_segment;                           // C.2 扩展操作成功，但是扩招以后长度没有太大变化，死路，直接使用历史平滑参考线
     segments->SetProperties(segment_properties);
     *reference_line = *prev_ref;
     ADEBUG << "Could not further extend reference line";
     return true;
   }
 
-  // 5.参考线平滑和拼接
+  // 5.扩展成功，并且额外增加了一定长度，得到了新的Path(也即新的RouteSegments)，接下来对新的路径进行平滑然后与历史平滑参考线进行拼接，就可以得到一条更长的平滑参考线。
   hdmap::Path path(shifted_segments);
   ReferenceLine new_ref(path);
   if (!SmoothPrefixedReferenceLine(*prev_ref, new_ref, reference_line)) { // 带有上一周期参考线的 参考线平滑
@@ -793,12 +794,11 @@ bool ReferenceLineProvider::ExtendReferenceLine(const VehicleState &state,
     return SmoothRouteSegment(*segments, reference_line);
   }
 
-  // 拼接
-  if (!reference_line->Stitch(*prev_ref)) {
+  if (!reference_line->Stitch(*prev_ref)) {             // 两条平滑车道线拼接
     AWARN << "Failed to stitch reference line";
     return SmoothRouteSegment(*segments, reference_line);
   }
-  if (!shifted_segments.Stitch(*prev_segment)) {
+  if (!shifted_segments.Stitch(*prev_segment)) {         // 两条平滑车道线对应的RouteSegments拼接
     AWARN << "Failed to stitch route segments";
     return SmoothRouteSegment(*segments, reference_line);
   }
@@ -823,7 +823,7 @@ bool ReferenceLineProvider::Shrink(const common::SLPoint &sl,
   double new_backward_distance = sl.s();
   double new_forward_distance = reference_line->Length() - sl.s();
   bool need_shrink = false;
-  if (sl.s() > planning::FLAGS_look_backward_distance * 1.5) {
+  if (sl.s() > planning::FLAGS_look_backward_distance * 1.5) {   // 如果车后参考线的距离大于后向查询距离1.5倍，就需要收缩
     ADEBUG << "reference line back side is " << sl.s()
            << ", shrink reference line: origin length: "
            << reference_line->Length();

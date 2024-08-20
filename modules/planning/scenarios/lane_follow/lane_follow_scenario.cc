@@ -28,12 +28,17 @@ namespace planning {
 
 bool LaneFollowScenario::IsTransferable(const Scenario* other_scenario,
                                         const Frame& frame) {
+  // 首先，检查frame规划命令中是否存在车道跟随命令。如果不存在，函数返回false，不能转移。
   if (!frame.local_view().planning_command->has_lane_follow_command()) {
     return false;
   }
+  
+  // 然后，检查frame的参考线信息是否为空。如果为空，返回false，不能转移。
   if (frame.reference_line_info().empty()) {
     return false;
   }
+
+  // 最后，检查other_scenario是否为空。如果为空，返回true，可以转移。
   if (other_scenario == nullptr) {
     return true;
   }

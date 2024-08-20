@@ -41,20 +41,20 @@ using apollo::common::SpeedPoint;
 using apollo::common::Status;
 using apollo::common::TrajectoryPoint;
 
-bool PiecewiseJerkSpeedOptimizer::Init(
-    const std::string& config_dir, const std::string& name,
-    const std::shared_ptr<DependencyInjector>& injector) {
+bool PiecewiseJerkSpeedOptimizer::Init(const std::string& config_dir, 
+                                       const std::string& name,
+                                       const std::shared_ptr<DependencyInjector>& injector) {
   if (!SpeedOptimizer::Init(config_dir, name, injector)) {
     return false;
   }
   // Load the config_ this task.
-  return SpeedOptimizer::LoadConfig<PiecewiseJerkSpeedOptimizerConfig>(
-      &config_);
+  return SpeedOptimizer::LoadConfig<PiecewiseJerkSpeedOptimizerConfig>(&config_);
 }
 
 Status PiecewiseJerkSpeedOptimizer::Process(const PathData& path_data,
                                             const TrajectoryPoint& init_point,
                                             SpeedData* const speed_data) {
+  // 检查是否到达终点，如果到达终点不再进行速度规划
   if (reference_line_info_->ReachedDestination()) {
     return Status::OK();
   }
@@ -67,19 +67,20 @@ Status PiecewiseJerkSpeedOptimizer::Process(const PathData& path_data,
     AERROR << msg;
     return Status(ErrorCode::PLANNING_ERROR, msg);
   }
+
   StGraphData& st_graph_data = *reference_line_info_->mutable_st_graph_data();
   PrintCurves print_debug;
-  const auto& veh_param =
-      common::VehicleConfigHelper::GetConfig().vehicle_param();
+  const auto& veh_param = common::VehicleConfigHelper::GetConfig().vehicle_param();
 
-  std::array<double, 3> init_s = {0.0, st_graph_data.init_point().v(),
+  std::array<double, 3> init_s = {0.0, 
+                                  st_graph_data.init_point().v(),
                                   st_graph_data.init_point().a()};
   const auto& vehicle_state = frame_->vehicle_state();
   if (vehicle_state.gear() == canbus::Chassis::GEAR_REVERSE) {
     init_s[1] = std::max(-init_s[1], 0.0);
     init_s[2] = -init_s[2];
-    AINFO << "transfer reverse speed" << init_s[0] << "," << init_s[1] << ","
-          << init_s[2];
+    AINFO << "transfer reverse speed" << init_s[0] << ","
+          << init_s[1] << "," << init_s[2];
   }
   double delta_t = 0.1;
   double total_length = st_graph_data.path_length();
@@ -88,7 +89,8 @@ Status PiecewiseJerkSpeedOptimizer::Process(const PathData& path_data,
   print_debug.AddPoint("optimize_st_curve", 0, init_s[0]);
   print_debug.AddPoint("optimize_vt_curve", 0, init_s[1]);
   print_debug.AddPoint("optimize_at_curve", 0, init_s[2]);
-  // Update STBoundary
+
+  // Update STBoundary 根据障碍物决策和ST占用空间构建s的约束
   const double kEpsilon = 0.1;
   std::vector<std::pair<double, double>> s_bounds;
   for (int i = 0; i < num_of_knots; ++i) {
@@ -121,8 +123,7 @@ Status PiecewiseJerkSpeedOptimizer::Process(const PathData& path_data,
     print_debug.AddPoint("st_bounds_lower", curr_t, s_lower_bound);
     print_debug.AddPoint("st_bounds_upper", curr_t, s_upper_bound);
     if (s_lower_bound > s_upper_bound) {
-      const std::string msg =
-          "s_lower_bound larger than s_upper_bound on STGraph";
+      const std::string msg = "s_lower_bound larger than s_upper_bound on STGraph";
       AERROR << msg;
       speed_data->clear();
       print_debug.PrintToLog();
@@ -134,30 +135,29 @@ Status PiecewiseJerkSpeedOptimizer::Process(const PathData& path_data,
 
   // Update SpeedBoundary and ref_s
   std::vector<double> x_ref(num_of_knots, total_length);
-  std::vector<double> dx_ref(num_of_knots,
-                             reference_line_info_->GetCruiseSpeed());
+  std::vector<double> dx_ref(num_of_knots, reference_line_info_->GetCruiseSpeed());
   std::vector<double> dx_ref_weight(num_of_knots, config_.ref_v_weight());
   std::vector<double> penalty_dx;
   std::vector<std::pair<double, double>> s_dot_bounds;
   const SpeedLimit& speed_limit = st_graph_data.speed_limit();
+
   for (int i = 0; i < num_of_knots; ++i) {
     double curr_t = i * delta_t;
     // get path_s
     SpeedPoint sp;
-    reference_speed_data.EvaluateByTime(curr_t, &sp);
+    reference_speed_data.EvaluateByTime(curr_t, &sp); // dp速度结果
     const double path_s = sp.s();
     x_ref[i] = path_s;
     // get curvature
     PathPoint path_point = path_data.GetPathPointWithPathS(path_s);
-    penalty_dx.push_back(std::fabs(path_point.kappa()) *
-                         config_.kappa_penalty_weight());
+    penalty_dx.push_back(std::fabs(path_point.kappa()) * config_.kappa_penalty_weight());
     // get v_upper_bound
     const double v_lower_bound = 0.0;
     double v_upper_bound = FLAGS_planning_upper_speed_limit;
-    v_upper_bound =
-        std::fmin(speed_limit.GetSpeedLimitByS(path_s), v_upper_bound);
+    v_upper_bound = std::fmin(speed_limit.GetSpeedLimitByS(path_s), v_upper_bound);
     dx_ref[i] = std::fmin(v_upper_bound, dx_ref[i]);
     s_dot_bounds.emplace_back(v_lower_bound, std::fmax(v_upper_bound, 0.0));
+    
     print_debug.AddPoint("st_reference_line", curr_t, x_ref[i]);
     print_debug.AddPoint("st_penalty_dx", curr_t, penalty_dx.back());
     print_debug.AddPoint("vt_reference_line", curr_t, dx_ref[i]);
@@ -169,7 +169,10 @@ Status PiecewiseJerkSpeedOptimizer::Process(const PathData& path_data,
     print_debug.AddPoint("sv_boundary_upper", path_s, v_upper_bound);
   }
   AdjustInitStatus(s_dot_bounds, delta_t, init_s);
-  PiecewiseJerkSpeedProblem piecewise_jerk_problem(num_of_knots, delta_t,
+
+  // 构建速度规划任务
+  PiecewiseJerkSpeedProblem piecewise_jerk_problem(num_of_knots, 
+                                                   delta_t,
                                                    init_s);
   piecewise_jerk_problem.set_weight_ddx(config_.acc_weight());
   piecewise_jerk_problem.set_weight_dddx(config_.jerk_weight());
@@ -189,19 +192,18 @@ Status PiecewiseJerkSpeedOptimizer::Process(const PathData& path_data,
   if (!piecewise_jerk_problem.Optimize()) {
     const std::string msg = "Piecewise jerk speed optimizer failed!";
     AERROR << msg << ".try to fallback.";
-    piecewise_jerk_problem.set_dx_bounds(
-        0.0, std::fmax(FLAGS_planning_upper_speed_limit,
-                       st_graph_data.init_point().v()));
+    piecewise_jerk_problem.set_dx_bounds(0.0, std::fmax(FLAGS_planning_upper_speed_limit,
+                                                        st_graph_data.init_point().v()));
     if (!FLAGS_speed_optimize_fail_relax_velocity_constraint ||
         !piecewise_jerk_problem.Optimize()) {
       speed_data->clear();
       print_debug.AddPoint("optimize_st_curve", 0, init_s[0]);
       print_debug.AddPoint("optimize_vt_curve", 0, init_s[1]);
       print_debug.AddPoint("optimize_at_curve", 0, init_s[2]);
-      AINFO << "jerk_bound: " << FLAGS_longitudinal_jerk_lower_bound << ","
-            << FLAGS_longitudinal_jerk_upper_bound;
-      AINFO << "acc bound: " << veh_param.max_deceleration() << ","
-            << veh_param.max_acceleration();
+      AINFO << "jerk_bound: " << FLAGS_longitudinal_jerk_lower_bound 
+            << "," << FLAGS_longitudinal_jerk_upper_bound;
+      AINFO << "acc bound: " << veh_param.max_deceleration() 
+            << "," << veh_param.max_acceleration();
       print_debug.PrintToLog();
       return Status(ErrorCode::PLANNING_ERROR, msg);
     }
@@ -212,12 +214,13 @@ Status PiecewiseJerkSpeedOptimizer::Process(const PathData& path_data,
   const std::vector<double>& ds = piecewise_jerk_problem.opt_dx();
   const std::vector<double>& dds = piecewise_jerk_problem.opt_ddx();
   for (int i = 0; i < num_of_knots; ++i) {
-    ADEBUG << "For t[" << i * delta_t << "], s = " << s[i] << ", v = " << ds[i]
-           << ", a = " << dds[i];
+    ADEBUG << "For t[" << i * delta_t << "], s = " << s[i] 
+           << ", v = " << ds[i] << ", a = " << dds[i];
     print_debug.AddPoint("optimize_st_curve", i * delta_t, s[i]);
     print_debug.AddPoint("optimize_vt_curve", i * delta_t, ds[i]);
     print_debug.AddPoint("optimize_at_curve", i * delta_t, dds[i]);
   }
+  
   speed_data->clear();
   speed_data->AppendSpeedPoint(s[0], 0.0, ds[0], dds[0], 0.0);
   for (int i = 1; i < num_of_knots; ++i) {
@@ -228,20 +231,25 @@ Status PiecewiseJerkSpeedOptimizer::Process(const PathData& path_data,
     speed_data->AppendSpeedPoint(s[i], delta_t * i, ds[i], dds[i],
                                  (dds[i] - dds[i - 1]) / delta_t);
   }
+
+  // 填充速度点满足轨迹时间长度
   SpeedProfileGenerator::FillEnoughSpeedPoints(speed_data);
+
   RecordDebugInfo(*speed_data, st_graph_data.mutable_st_graph_debug());
   print_debug.PrintToLog();
   return Status::OK();
 }
-void PiecewiseJerkSpeedOptimizer::AdjustInitStatus(
-    const std::vector<std::pair<double, double>> s_dot_bound, double delta_t,
-    std::array<double, 3>& init_s) {
+
+void PiecewiseJerkSpeedOptimizer::AdjustInitStatus(const std::vector<std::pair<double, double>> s_dot_bound, 
+                                                   double delta_t,
+                                                   std::array<double, 3>& init_s) {
   double v_min = init_s[1];
   double v_max = init_s[1];
   double a_min = init_s[2];
   double a_max = init_s[2];
   double last_a_min = 0;
   double last_a_max = 0;
+
   for (size_t i = 1; i < s_dot_bound.size(); i++) {
     last_a_min = a_min;
     last_a_max = a_max;
@@ -249,6 +257,7 @@ void PiecewiseJerkSpeedOptimizer::AdjustInitStatus(
     a_max = a_max + delta_t * FLAGS_longitudinal_jerk_lower_bound;
     v_min = v_min + 0.5 * delta_t * (a_min + last_a_min);
     v_max = v_max + 0.5 * delta_t * (a_max + last_a_max);
+
     if (v_min < s_dot_bound[i].first || v_max > s_dot_bound[i].second) {
       AWARN << "init state not appropriate in" << i << "," << v_min << ","
             << v_max << "adjust acc to 0 in init state " << init_s[0] << ","

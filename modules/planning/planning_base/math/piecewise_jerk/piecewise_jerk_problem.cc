@@ -26,22 +26,18 @@ namespace {
 constexpr double kMaxVariableRange = 1.0e10;
 }  // namespace
 
-PiecewiseJerkProblem::PiecewiseJerkProblem(
-    const size_t num_of_knots, const double delta_s,
-    const std::array<double, 3>& x_init) {
+PiecewiseJerkProblem::PiecewiseJerkProblem(const size_t num_of_knots, const double delta_s,
+                                           const std::array<double, 3>& x_init) {
   CHECK_GE(num_of_knots, 2U);
-  num_of_knots_ = num_of_knots;
+  num_of_knots_ = num_of_knots;  // 200
 
   x_init_ = x_init;
-
   delta_s_ = delta_s;
 
   x_bounds_.resize(num_of_knots_,
                    std::make_pair(-kMaxVariableRange, kMaxVariableRange));
-
   dx_bounds_.resize(num_of_knots_,
                     std::make_pair(-kMaxVariableRange, kMaxVariableRange));
-
   ddx_bounds_.resize(num_of_knots_,
                      std::make_pair(-kMaxVariableRange, kMaxVariableRange));
 
@@ -49,38 +45,38 @@ PiecewiseJerkProblem::PiecewiseJerkProblem(
 }
 
 bool PiecewiseJerkProblem::FormulateProblem(OSQPData* data) {
-  // calculate kernel
+  // calculate kernel  P矩阵：代价函数
   std::vector<c_float> P_data;
   std::vector<c_int> P_indices;
   std::vector<c_int> P_indptr;
   CalculateKernel(&P_data, &P_indices, &P_indptr);
 
-  // calculate affine constraints
+  // calculate affine constraints A矩阵：约束矩阵以及上下边界lower_bounds和upper_bounds
   std::vector<c_float> A_data;
   std::vector<c_int> A_indices;
   std::vector<c_int> A_indptr;
   std::vector<c_float> lower_bounds;
   std::vector<c_float> upper_bounds;
-  CalculateAffineConstraint(&A_data, &A_indices, &A_indptr, &lower_bounds,
-                            &upper_bounds);
+  CalculateAffineConstraint(&A_data, &A_indices, &A_indptr, 
+                            &lower_bounds, &upper_bounds);
 
-  // calculate offset
+  // calculate offset q矩阵：一次项q向量
   std::vector<c_float> q;
   CalculateOffset(&q);
 
   CHECK_EQ(lower_bounds.size(), upper_bounds.size());
-
-  size_t kernel_dim = 3 * num_of_knots_;
-  size_t num_affine_constraint = lower_bounds.size();
+  
+  // 将矩阵都存储进OSQPData这个结构体里
+  size_t kernel_dim = 3 * num_of_knots_;               // 3n * 3n
+  size_t num_affine_constraint = lower_bounds.size();  //  n
 
   data->n = kernel_dim;
   data->m = num_affine_constraint;
-  data->P = csc_matrix(kernel_dim, kernel_dim, P_data.size(), CopyData(P_data),
-                       CopyData(P_indices), CopyData(P_indptr));
+  data->P = csc_matrix(kernel_dim, kernel_dim, P_data.size(), 
+                       CopyData(P_data), CopyData(P_indices), CopyData(P_indptr));
   data->q = CopyData(q);
-  data->A =
-      csc_matrix(num_affine_constraint, kernel_dim, A_data.size(),
-                 CopyData(A_data), CopyData(A_indices), CopyData(A_indptr));
+  data->A = csc_matrix(num_affine_constraint, kernel_dim, A_data.size(),
+                       CopyData(A_data), CopyData(A_indices), CopyData(A_indptr));
   data->l = CopyData(lower_bounds);
   data->u = CopyData(upper_bounds);
 
@@ -89,18 +85,24 @@ bool PiecewiseJerkProblem::FormulateProblem(OSQPData* data) {
 
 bool PiecewiseJerkProblem::Optimize(const int max_iter) {
   OSQPData* data = reinterpret_cast<OSQPData*>(c_malloc(sizeof(OSQPData)));
+
+  // 构建问题  (1/2) * x' * P * x + q' * x
   if (FormulateProblem(data)) {
     FreeData(data);
     return false;
   }
+
   OSQPSettings* settings = SolverDefaultSettings();
-  settings->max_iter = max_iter;
+  settings->max_iter = max_iter;                      // 4000
+
   OSQPWorkspace* osqp_work = nullptr;
   osqp_work = osqp_setup(data, settings);
   // osqp_setup(&osqp_work, data, settings);
-  osqp_solve(osqp_work);
-  auto status = osqp_work->info->status_val;
 
+  // 求解QP问题
+  osqp_solve(osqp_work);
+  
+  auto status = osqp_work->info->status_val;
   if (status < 0 || (status != 1 && status != 2)) {
     AERROR << "failed optimization status:\t" << osqp_work->info->status;
     osqp_cleanup(osqp_work);
@@ -122,8 +124,7 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter) {
   for (size_t i = 0; i < num_of_knots_; ++i) {
     x_.at(i) = osqp_work->solution->x[i] / scale_factor_[0];
     dx_.at(i) = osqp_work->solution->x[i + num_of_knots_] / scale_factor_[1];
-    ddx_.at(i) =
-        osqp_work->solution->x[i + 2 * num_of_knots_] / scale_factor_[2];
+    ddx_.at(i) = osqp_work->solution->x[i + 2 * num_of_knots_] / scale_factor_[2];
   }
 
   // Cleanup
@@ -133,10 +134,9 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter) {
   return true;
 }
 
-void PiecewiseJerkProblem::CalculateAffineConstraint(
-    std::vector<c_float>* A_data, std::vector<c_int>* A_indices,
-    std::vector<c_int>* A_indptr, std::vector<c_float>* lower_bounds,
-    std::vector<c_float>* upper_bounds) {
+void PiecewiseJerkProblem::CalculateAffineConstraint(std::vector<c_float>* A_data, std::vector<c_int>* A_indices,
+                                                     std::vector<c_int>* A_indptr, std::vector<c_float>* lower_bounds,
+                                                     std::vector<c_float>* upper_bounds) {
   // 3N params bounds on x, x', x''
   // 3(N-1) constraints on x, x', x''
   // 3 constraints on x_init_
@@ -146,76 +146,67 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
   lower_bounds->resize(num_of_constraints);
   upper_bounds->resize(num_of_constraints);
 
-  std::vector<std::vector<std::pair<c_int, c_float>>> variables(
-      num_of_variables);
+  std::vector<std::vector<std::pair<c_int, c_float>>> variables(num_of_variables);  // 3n * 6n
 
   int constraint_index = 0;
-  // set x, x', x'' bounds
+
+  // 不等式约束----边界约束
+  // set x, x', x'' bounds  对应矩阵的前3n行
   for (int i = 0; i < num_of_variables; ++i) {
     if (i < n) {
       variables[i].emplace_back(constraint_index, 1.0);
-      lower_bounds->at(constraint_index) =
-          x_bounds_[i].first * scale_factor_[0];
-      upper_bounds->at(constraint_index) =
-          x_bounds_[i].second * scale_factor_[0];
+      lower_bounds->at(constraint_index) = x_bounds_[i].first * scale_factor_[0];
+      upper_bounds->at(constraint_index) = x_bounds_[i].second * scale_factor_[0];
     } else if (i < 2 * n) {
       variables[i].emplace_back(constraint_index, 1.0);
-
-      lower_bounds->at(constraint_index) =
-          dx_bounds_[i - n].first * scale_factor_[1];
-      upper_bounds->at(constraint_index) =
-          dx_bounds_[i - n].second * scale_factor_[1];
+      lower_bounds->at(constraint_index) = dx_bounds_[i - n].first * scale_factor_[1];
+      upper_bounds->at(constraint_index) = dx_bounds_[i - n].second * scale_factor_[1];
     } else {
       variables[i].emplace_back(constraint_index, 1.0);
-      lower_bounds->at(constraint_index) =
-          ddx_bounds_[i - 2 * n].first * scale_factor_[2];
-      upper_bounds->at(constraint_index) =
-          ddx_bounds_[i - 2 * n].second * scale_factor_[2];
+      lower_bounds->at(constraint_index) = ddx_bounds_[i - 2 * n].first * scale_factor_[2];
+      upper_bounds->at(constraint_index) = ddx_bounds_[i - 2 * n].second * scale_factor_[2];
     }
     ++constraint_index;
   }
   CHECK_EQ(constraint_index, num_of_variables);
 
-  // x(i->i+1)''' = (x(i+1)'' - x(i)'') / delta_s
+  // 等式约束 --- 二阶连续性约束
+  // x(i->i+1)''' = (x(i+1)'' - x(i)'') / delta_s  对应公式12
   for (int i = 0; i + 1 < n; ++i) {
     variables[2 * n + i].emplace_back(constraint_index, -1.0);
     variables[2 * n + i + 1].emplace_back(constraint_index, 1.0);
-    lower_bounds->at(constraint_index) =
-        dddx_bound_.first * delta_s_ * scale_factor_[2];
-    upper_bounds->at(constraint_index) =
-        dddx_bound_.second * delta_s_ * scale_factor_[2];
+
+    lower_bounds->at(constraint_index) = dddx_bound_.first * delta_s_ * scale_factor_[2];
+    upper_bounds->at(constraint_index) = dddx_bound_.second * delta_s_ * scale_factor_[2];
     ++constraint_index;
   }
 
-  // x(i+1)' - x(i)' - 0.5 * delta_s * x(i)'' - 0.5 * delta_s * x(i+1)'' = 0
+  // x(i+1)' - x(i)' - 0.5 * delta_s * x(i)'' - 0.5 * delta_s * x(i+1)'' = 0  对应公式17
   for (int i = 0; i + 1 < n; ++i) {
     variables[n + i].emplace_back(constraint_index, -1.0 * scale_factor_[2]);
     variables[n + i + 1].emplace_back(constraint_index, 1.0 * scale_factor_[2]);
-    variables[2 * n + i].emplace_back(constraint_index,
-                                      -0.5 * delta_s_ * scale_factor_[1]);
-    variables[2 * n + i + 1].emplace_back(constraint_index,
-                                          -0.5 * delta_s_ * scale_factor_[1]);
+    variables[2 * n + i].emplace_back(constraint_index, -0.5 * delta_s_ * scale_factor_[1]);
+    variables[2 * n + i + 1].emplace_back(constraint_index, -0.5 * delta_s_ * scale_factor_[1]);
+
     lower_bounds->at(constraint_index) = 0.0;
     upper_bounds->at(constraint_index) = 0.0;
     ++constraint_index;
   }
 
   // x(i+1) - x(i) - delta_s * x(i)'
-  // - 1/3 * delta_s^2 * x(i)'' - 1/6 * delta_s^2 * x(i+1)''
+  // - 1/3 * delta_s^2 * x(i)'' - 1/6 * delta_s^2 * x(i+1)''  对应公式16
   auto delta_s_sq_ = delta_s_ * delta_s_;
   for (int i = 0; i + 1 < n; ++i) {
     variables[i].emplace_back(constraint_index,
                               -1.0 * scale_factor_[1] * scale_factor_[2]);
     variables[i + 1].emplace_back(constraint_index,
                                   1.0 * scale_factor_[1] * scale_factor_[2]);
-    variables[n + i].emplace_back(
-        constraint_index, -delta_s_ * scale_factor_[0] * scale_factor_[2]);
-    variables[2 * n + i].emplace_back(
-        constraint_index,
-        -delta_s_sq_ / 3.0 * scale_factor_[0] * scale_factor_[1]);
-    variables[2 * n + i + 1].emplace_back(
-        constraint_index,
-        -delta_s_sq_ / 6.0 * scale_factor_[0] * scale_factor_[1]);
+    variables[n + i].emplace_back(constraint_index, 
+                                  -delta_s_ * scale_factor_[0] * scale_factor_[2]);
+    variables[2 * n + i].emplace_back(constraint_index,
+                                      -delta_s_sq_ / 3.0 * scale_factor_[0] * scale_factor_[1]);
+    variables[2 * n + i + 1].emplace_back(constraint_index,
+                                          -delta_s_sq_ / 6.0 * scale_factor_[0] * scale_factor_[1]);
 
     lower_bounds->at(constraint_index) = 0.0;
     upper_bounds->at(constraint_index) = 0.0;
@@ -242,13 +233,13 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
 
   int ind_p = 0;
   for (int i = 0; i < num_of_variables; ++i) {
-    A_indptr->push_back(ind_p);
-    for (const auto& variable_nz : variables[i]) {
+    A_indptr->push_back(ind_p);                    // 将即上一列的非零元素数量推入 P_indptr 中，表示当前列的起始位置。
+    for (const auto& variable_nz : variables[i]) { // std::pair<c_int, c_float>
       // coefficient
       A_data->push_back(variable_nz.second);
 
       // constraint index
-      A_indices->push_back(variable_nz.first);
+      A_indices->push_back(variable_nz.first);    // 将当前非零元素的行索引存入 P_indices 中。
       ++ind_p;
     }
   }
@@ -259,8 +250,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
 
 OSQPSettings* PiecewiseJerkProblem::SolverDefaultSettings() {
   // Define Solver default settings
-  OSQPSettings* settings =
-      reinterpret_cast<OSQPSettings*>(c_malloc(sizeof(OSQPSettings)));
+  OSQPSettings* settings = reinterpret_cast<OSQPSettings*>(c_malloc(sizeof(OSQPSettings)));
   osqp_set_default_settings(settings);
   settings->polish = true;
   settings->verbose = FLAGS_enable_osqp_debug;
@@ -268,20 +258,17 @@ OSQPSettings* PiecewiseJerkProblem::SolverDefaultSettings() {
   return settings;
 }
 
-void PiecewiseJerkProblem::set_x_bounds(
-    std::vector<std::pair<double, double>> x_bounds) {
+void PiecewiseJerkProblem::set_x_bounds(std::vector<std::pair<double, double>> x_bounds) {
   CHECK_EQ(x_bounds.size(), num_of_knots_);
   x_bounds_ = std::move(x_bounds);
 }
 
-void PiecewiseJerkProblem::set_dx_bounds(
-    std::vector<std::pair<double, double>> dx_bounds) {
+void PiecewiseJerkProblem::set_dx_bounds(std::vector<std::pair<double, double>> dx_bounds) {
   CHECK_EQ(dx_bounds.size(), num_of_knots_);
   dx_bounds_ = std::move(dx_bounds);
 }
 
-void PiecewiseJerkProblem::set_ddx_bounds(
-    std::vector<std::pair<double, double>> ddx_bounds) {
+void PiecewiseJerkProblem::set_ddx_bounds(std::vector<std::pair<double, double>> ddx_bounds) {
   CHECK_EQ(ddx_bounds.size(), num_of_knots_);
   ddx_bounds_ = std::move(ddx_bounds);
 }
@@ -330,9 +317,8 @@ void PiecewiseJerkProblem::set_x_ref(std::vector<double> weight_x_ref_vec,
   has_x_ref_ = true;
 }
 
-void PiecewiseJerkProblem::set_end_state_ref(
-    const std::array<double, 3>& weight_end_state,
-    const std::array<double, 3>& end_state_ref) {
+void PiecewiseJerkProblem::set_end_state_ref(const std::array<double, 3>& weight_end_state,
+                                             const std::array<double, 3>& end_state_ref) {
   weight_end_state_ = weight_end_state;
   end_state_ref_ = end_state_ref;
   has_end_state_ref_ = true;

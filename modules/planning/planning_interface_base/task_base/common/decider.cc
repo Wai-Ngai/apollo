@@ -25,8 +25,8 @@
 namespace apollo {
 namespace planning {
 
-apollo::common::Status Decider::Execute(
-    Frame* frame, ReferenceLineInfo* reference_line_info) {
+apollo::common::Status Decider::Execute(Frame* frame, 
+                                        ReferenceLineInfo* reference_line_info) {
   Task::Execute(frame, reference_line_info);
   return Process(frame, reference_line_info);
 }

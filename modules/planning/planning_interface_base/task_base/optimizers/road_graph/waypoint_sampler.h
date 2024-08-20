@@ -50,9 +50,8 @@ class WaypointSampler {
     planning_debug_ = debug;
   }
 
-  virtual bool SamplePathWaypoints(
-      const common::TrajectoryPoint &init_point,
-      std::vector<std::vector<common::SLPoint>> *const points);
+  virtual bool SamplePathWaypoints(const common::TrajectoryPoint &init_point,
+                                   std::vector<std::vector<common::SLPoint>> *const points);
 
  protected:
   const WaypointSamplerConfig &config_;

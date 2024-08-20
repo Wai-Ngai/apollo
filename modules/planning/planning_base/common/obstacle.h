@@ -84,8 +84,7 @@ class Obstacle {
 
   common::TrajectoryPoint GetPointAtTime(const double time) const;
 
-  common::math::Box2d GetBoundingBox(
-      const common::TrajectoryPoint& point) const;
+  common::math::Box2d GetBoundingBox(const common::TrajectoryPoint& point) const;
 
   const common::math::Box2d& PerceptionBoundingBox() const {
     return perception_bounding_box_;
@@ -110,14 +109,12 @@ class Obstacle {
    * @param predictions The prediction results
    * @return obstacles The output obstacles saved in a list of unique_ptr.
    */
-  static std::list<std::unique_ptr<Obstacle>> CreateObstacles(
-      const prediction::PredictionObstacles& predictions);
+  static std::list<std::unique_ptr<Obstacle>> CreateObstacles(const prediction::PredictionObstacles& predictions);
 
-  static std::unique_ptr<Obstacle> CreateStaticVirtualObstacles(
-      const std::string& id, const common::math::Box2d& obstacle_box);
+  static std::unique_ptr<Obstacle> CreateStaticVirtualObstacles(const std::string& id, 
+                                                                const common::math::Box2d& obstacle_box);
 
-  static bool IsValidPerceptionObstacle(
-      const perception::PerceptionObstacle& obstacle);
+  static bool IsValidPerceptionObstacle(const perception::PerceptionObstacle& obstacle);
 
   static bool IsValidTrajectoryPoint(const common::TrajectoryPoint& point);
 
@@ -223,13 +220,13 @@ class Obstacle {
   void CheckLaneBlocking(const ReferenceLine& reference_line);
   bool IsLaneChangeBlocking() const { return is_lane_change_blocking_; }
   void SetLaneChangeBlocking(const bool is_distance_clear);
-  common::math::Polygon2d GetObstacleTrajectoryPolygon(
-      const common::TrajectoryPoint& point) const;
+
+  common::math::Polygon2d GetObstacleTrajectoryPolygon(const common::TrajectoryPoint& point) const;
 
  private:
   FRIEND_TEST(MergeLongitudinalDecision, AllDecisions);
-  static ObjectDecisionType MergeLongitudinalDecision(
-      const ObjectDecisionType& lhs, const ObjectDecisionType& rhs);
+  static ObjectDecisionType MergeLongitudinalDecision(const ObjectDecisionType& lhs, 
+                                                      const ObjectDecisionType& rhs);
   FRIEND_TEST(MergeLateralDecision, AllDecisions);
   static ObjectDecisionType MergeLateralDecision(const ObjectDecisionType& lhs,
                                                  const ObjectDecisionType& rhs);
@@ -237,8 +234,7 @@ class Obstacle {
   bool BuildTrajectoryStBoundary(const ReferenceLine& reference_line,
                                  const double adc_start_s,
                                  STBoundary* const st_boundary);
-  bool IsValidObstacle(
-      const perception::PerceptionObstacle& perception_obstacle);
+  bool IsValidObstacle(const perception::PerceptionObstacle& perception_obstacle);
 
  private:
   std::string id_;
@@ -276,8 +272,7 @@ class Obstacle {
   double min_radius_stop_distance_ = -1.0;
 
   struct ObjectTagCaseHash {
-    size_t operator()(
-        const planning::ObjectDecisionType::ObjectTagCase tag) const {
+    size_t operator()(const planning::ObjectDecisionType::ObjectTagCase tag) const {
       return static_cast<size_t>(tag);
     }
   };

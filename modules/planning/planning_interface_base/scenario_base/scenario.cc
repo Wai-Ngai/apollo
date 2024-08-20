@@ -46,30 +46,27 @@ bool Scenario::Init(std::shared_ptr<DependencyInjector> injector,
   injector_ = injector;
   // set scenario_type in PlanningContext
   auto* scenario = injector_->planning_context()
-                       ->mutable_planning_status()
-                       ->mutable_scenario();
+                            ->mutable_planning_status()
+                            ->mutable_scenario();
   scenario->Clear();
   scenario->set_scenario_type(name_);
 
   // Generate the default config path.
   int status;
   // Get the name of this class.
-  std::string class_name =
-      abi::__cxa_demangle(typeid(*this).name(), 0, 0, &status);
+  std::string class_name = abi::__cxa_demangle(typeid(*this).name(), 0, 0, &status);
 
   config_dir_ = apollo::cyber::plugin_manager::PluginManager::Instance()
-                    ->GetPluginClassHomePath<Scenario>(class_name);
+                ->GetPluginClassHomePath<Scenario>(class_name);
   config_dir_ += "/conf";
   AINFO << "config_dir : " << config_dir_;
   // Generate the default task config path from PluginManager.
   config_path_ = apollo::cyber::plugin_manager::PluginManager::Instance()
-                     ->GetPluginConfPath<Scenario>(class_name,
-                                                   "conf/scenario_conf.pb.txt");
+                 ->GetPluginConfPath<Scenario>(class_name, "conf/scenario_conf.pb.txt");
 
   // Load the pipeline config.
-  std::string pipeline_config_path =
-      apollo::cyber::plugin_manager::PluginManager::Instance()
-          ->GetPluginConfPath<Scenario>(class_name, "conf/pipeline.pb.txt");
+  std::string pipeline_config_path = apollo::cyber::plugin_manager::PluginManager::Instance()
+                                    ->GetPluginConfPath<Scenario>(class_name, "conf/pipeline.pb.txt");
   AINFO << "Load config path:" << pipeline_config_path;
   // Load the pipeline of scenario.
   if (!apollo::cyber::common::GetProtoFromFile(pipeline_config_path,
@@ -83,11 +80,10 @@ bool Scenario::Init(std::shared_ptr<DependencyInjector> injector,
   return true;
 }
 
-ScenarioResult Scenario::Process(
-    const common::TrajectoryPoint& planning_init_point, Frame* frame) {
+ScenarioResult Scenario::Process(const common::TrajectoryPoint& planning_init_point, 
+                                 Frame* frame) {
   if (current_stage_ == nullptr) {
-    current_stage_ = CreateStage(
-        *stage_pipeline_map_[scenario_pipeline_config_.stage(0).name()]);
+    current_stage_ = CreateStage(*stage_pipeline_map_[scenario_pipeline_config_.stage(0).name()]);
     if (nullptr == current_stage_) {
       AERROR << "Create stage " << scenario_pipeline_config_.stage(0).name()
              << " failed!";
@@ -100,8 +96,10 @@ ScenarioResult Scenario::Process(
     scenario_result_.SetScenarioStatus(ScenarioStatusType::STATUS_DONE);
     return scenario_result_;
   }
-  // 当前stage处理
+
+  // 当前stage处理，计算规划轨迹
   auto ret = current_stage_->Process(planning_init_point, frame);
+
   scenario_result_.SetStageResult(ret);
   switch (ret.GetStageStatus()) {
     case StageStatusType::ERROR: {
@@ -124,22 +122,21 @@ ScenarioResult Scenario::Process(
         }
         if (stage_pipeline_map_.find(next_stage) == stage_pipeline_map_.end()) {
           AERROR << "Failed to find config for stage: " << next_stage;
-          scenario_result_.SetScenarioStatus(
-              ScenarioStatusType::STATUS_UNKNOWN);
+          scenario_result_.SetScenarioStatus(ScenarioStatusType::STATUS_UNKNOWN);
           return scenario_result_;
         }
+
         // 创建并切换到下一个stage
         current_stage_ = CreateStage(*stage_pipeline_map_[next_stage]);
+
         if (current_stage_ == nullptr) {
           AWARN << "Current stage is a null pointer.";
-          scenario_result_.SetScenarioStatus(
-              ScenarioStatusType::STATUS_UNKNOWN);
+          scenario_result_.SetScenarioStatus(ScenarioStatusType::STATUS_UNKNOWN);
           return scenario_result_;
         }
       }
       if (current_stage_ != nullptr && !current_stage_->Name().empty()) {
-        scenario_result_.SetScenarioStatus(
-            ScenarioStatusType::STATUS_PROCESSING);
+        scenario_result_.SetScenarioStatus(ScenarioStatusType::STATUS_PROCESSING);
       } else {
         scenario_result_.SetScenarioStatus(ScenarioStatusType::STATUS_DONE);
       }
@@ -154,12 +151,10 @@ ScenarioResult Scenario::Process(
   return scenario_result_;
 }
 
-std::shared_ptr<Stage> Scenario::CreateStage(
-    const StagePipeline& stage_pipeline) {
-  auto stage_ptr =
-      apollo::cyber::plugin_manager::PluginManager::Instance()
-          ->CreateInstance<Stage>(
-              ConfigUtil::GetFullPlanningClassName(stage_pipeline.type()));
+std::shared_ptr<Stage> Scenario::CreateStage(const StagePipeline& stage_pipeline) {
+  // 创建stage，并调用stage的init()，初始化task_list_
+  auto stage_ptr = apollo::cyber::plugin_manager::PluginManager::Instance()
+                  ->CreateInstance<Stage>(ConfigUtil::GetFullPlanningClassName(stage_pipeline.type()));
   if (nullptr == stage_ptr ||
       !stage_ptr->Init(stage_pipeline, injector_, config_dir_, GetContext())) {
     AERROR << "Create stage " << stage_pipeline.name() << " of " << name_

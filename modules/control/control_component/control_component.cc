@@ -46,9 +46,8 @@ bool ControlComponent::Init() {
 
   AINFO << "Control init, starting ...";
 
-  ACHECK(
-      cyber::common::GetProtoFromFile(FLAGS_pipeline_file, &control_pipeline_))
-      << "Unable to load control pipeline file: " + FLAGS_pipeline_file;
+  ACHECK(cyber::common::GetProtoFromFile(FLAGS_pipeline_file, &control_pipeline_))
+         << "Unable to load control pipeline file: " + FLAGS_pipeline_file;
 
   AINFO << "ControlTask pipeline config file: " << FLAGS_pipeline_file
         << " is loaded.";
@@ -70,52 +69,41 @@ bool ControlComponent::Init() {
   chassis_reader_config.channel_name = FLAGS_chassis_topic;
   chassis_reader_config.pending_queue_size = FLAGS_chassis_pending_queue_size;
 
-  chassis_reader_ =
-      node_->CreateReader<Chassis>(chassis_reader_config, nullptr);
+  chassis_reader_ = node_->CreateReader<Chassis>(chassis_reader_config, nullptr);
   ACHECK(chassis_reader_ != nullptr);
 
   cyber::ReaderConfig planning_reader_config;
   planning_reader_config.channel_name = FLAGS_planning_trajectory_topic;
   planning_reader_config.pending_queue_size = FLAGS_planning_pending_queue_size;
 
-  trajectory_reader_ =
-      node_->CreateReader<ADCTrajectory>(planning_reader_config, nullptr);
+  trajectory_reader_ = node_->CreateReader<ADCTrajectory>(planning_reader_config, nullptr);
   ACHECK(trajectory_reader_ != nullptr);
 
   cyber::ReaderConfig planning_command_status_reader_config;
-  planning_command_status_reader_config.channel_name =
-      FLAGS_planning_command_status;
-  planning_command_status_reader_config.pending_queue_size =
-      FLAGS_planning_status_msg_pending_queue_size;
-  planning_command_status_reader_ =
-      node_->CreateReader<external_command::CommandStatus>(
-          planning_command_status_reader_config, nullptr);
+  planning_command_status_reader_config.channel_name = FLAGS_planning_command_status;
+  planning_command_status_reader_config.pending_queue_size = FLAGS_planning_status_msg_pending_queue_size;
+  planning_command_status_reader_ = node_->CreateReader<external_command::CommandStatus>(planning_command_status_reader_config, nullptr);
   ACHECK(planning_command_status_reader_ != nullptr);
 
   cyber::ReaderConfig localization_reader_config;
   localization_reader_config.channel_name = FLAGS_localization_topic;
-  localization_reader_config.pending_queue_size =
-      FLAGS_localization_pending_queue_size;
+  localization_reader_config.pending_queue_size = FLAGS_localization_pending_queue_size;
 
-  localization_reader_ = node_->CreateReader<LocalizationEstimate>(
-      localization_reader_config, nullptr);
+  localization_reader_ = node_->CreateReader<LocalizationEstimate>(localization_reader_config, nullptr);
   ACHECK(localization_reader_ != nullptr);
 
   cyber::ReaderConfig pad_msg_reader_config;
   pad_msg_reader_config.channel_name = FLAGS_pad_topic;
   pad_msg_reader_config.pending_queue_size = FLAGS_pad_msg_pending_queue_size;
 
-  pad_msg_reader_ =
-      node_->CreateReader<PadMessage>(pad_msg_reader_config, nullptr);
+  pad_msg_reader_ = node_->CreateReader<PadMessage>(pad_msg_reader_config, nullptr);
   ACHECK(pad_msg_reader_ != nullptr);
 
   if (!FLAGS_use_control_submodules) {
-    control_cmd_writer_ =
-        node_->CreateWriter<ControlCommand>(FLAGS_control_command_topic);
+    control_cmd_writer_ = node_->CreateWriter<ControlCommand>(FLAGS_control_command_topic);
     ACHECK(control_cmd_writer_ != nullptr);
   } else {
-    local_view_writer_ =
-        node_->CreateWriter<LocalView>(FLAGS_control_local_view_topic);
+    local_view_writer_ = node_->CreateWriter<LocalView>(FLAGS_control_local_view_topic);
     ACHECK(local_view_writer_ != nullptr);
   }
 
@@ -148,31 +136,26 @@ void ControlComponent::OnChassis(const std::shared_ptr<Chassis> &chassis) {
   latest_chassis_.CopyFrom(*chassis);
 }
 
-void ControlComponent::OnPlanning(
-    const std::shared_ptr<ADCTrajectory> &trajectory) {
+void ControlComponent::OnPlanning(const std::shared_ptr<ADCTrajectory> &trajectory) {
   ADEBUG << "Received chassis data: run trajectory callback.";
   std::lock_guard<std::mutex> lock(mutex_);
   latest_trajectory_.CopyFrom(*trajectory);
 }
 
-void ControlComponent::OnPlanningCommandStatus(
-    const std::shared_ptr<external_command::CommandStatus>
-        &planning_command_status) {
+void ControlComponent::OnPlanningCommandStatus(const std::shared_ptr<external_command::CommandStatus> &planning_command_status) {
   ADEBUG << "Received plannning command status data: run planning command "
             "status callback.";
   std::lock_guard<std::mutex> lock(mutex_);
   planning_command_status_.CopyFrom(*planning_command_status);
 }
 
-void ControlComponent::OnLocalization(
-    const std::shared_ptr<LocalizationEstimate> &localization) {
+void ControlComponent::OnLocalization(const std::shared_ptr<LocalizationEstimate> &localization) {
   ADEBUG << "Received control data: run localization message callback.";
   std::lock_guard<std::mutex> lock(mutex_);
   latest_localization_.CopyFrom(*localization);
 }
 
-void ControlComponent::OnMonitor(
-    const common::monitor::MonitorMessage &monitor_message) {
+void ControlComponent::OnMonitor(const common::monitor::MonitorMessage &monitor_message) {
   for (const auto &item : monitor_message.item()) {
     if (item.log_level() == common::monitor::MonitorMessageItem::FATAL) {
       estop_ = true;
@@ -181,17 +164,14 @@ void ControlComponent::OnMonitor(
   }
 }
 
-Status ControlComponent::ProduceControlCommand(
-    ControlCommand *control_command) {
+Status ControlComponent::ProduceControlCommand(ControlCommand *control_command) {
   Status status = CheckInput(&local_view_);
   // check data
   if (!status.ok()) {
     AERROR_EVERY(100) << "Control input data failed: "
                       << status.error_message();
-    control_command->mutable_engage_advice()->set_advice(
-        apollo::common::EngageAdvice::DISALLOW_ENGAGE);
-    control_command->mutable_engage_advice()->set_reason(
-        status.error_message());
+    control_command->mutable_engage_advice()->set_advice(apollo::common::EngageAdvice::DISALLOW_ENGAGE);
+    control_command->mutable_engage_advice()->set_reason(status.error_message());
     estop_ = true;
     estop_reason_ = status.error_message();
   } else {
@@ -205,24 +185,20 @@ Status ControlComponent::ProduceControlCommand(
       // latest_trajectory_.Clear();
       estop_ = true;
       status = status_ts;
-      if (local_view_.chassis().driving_mode() !=
-          apollo::canbus::Chassis::COMPLETE_AUTO_DRIVE) {
-        control_command->mutable_engage_advice()->set_advice(
-            apollo::common::EngageAdvice::DISALLOW_ENGAGE);
-        control_command->mutable_engage_advice()->set_reason(
-            status.error_message());
+      if (local_view_.chassis().driving_mode() != apollo::canbus::Chassis::COMPLETE_AUTO_DRIVE) {
+        control_command->mutable_engage_advice()->set_advice(apollo::common::EngageAdvice::DISALLOW_ENGAGE);
+        control_command->mutable_engage_advice()->set_reason(status.error_message());
       }
     } else {
-      control_command->mutable_engage_advice()->set_advice(
-          apollo::common::EngageAdvice::READY_TO_ENGAGE);
+      control_command->mutable_engage_advice()->set_advice(apollo::common::EngageAdvice::READY_TO_ENGAGE);
       estop_ = false;
     }
   }
 
   // check estop
   estop_ = FLAGS_enable_persistent_estop
-               ? estop_ || local_view_.trajectory().estop().is_estop()
-               : local_view_.trajectory().estop().is_estop();
+           ? estop_ || local_view_.trajectory().estop().is_estop()
+           : local_view_.trajectory().estop().is_estop();
 
   if (local_view_.trajectory().estop().is_estop()) {
     estop_ = true;
@@ -254,36 +230,32 @@ Status ControlComponent::ProduceControlCommand(
     }
 
     auto debug = control_command->mutable_debug()->mutable_input_debug();
-    debug->mutable_localization_header()->CopyFrom(
-        local_view_.localization().header());
+    debug->mutable_localization_header()->CopyFrom(local_view_.localization().header());
     debug->mutable_canbus_header()->CopyFrom(local_view_.chassis().header());
-    debug->mutable_trajectory_header()->CopyFrom(
-        local_view_.trajectory().header());
+    debug->mutable_trajectory_header()->CopyFrom(local_view_.trajectory().header());
 
     if (local_view_.trajectory().is_replan()) {
       latest_replan_trajectory_header_ = local_view_.trajectory().header();
     }
 
     if (latest_replan_trajectory_header_.has_sequence_num()) {
-      debug->mutable_latest_replan_trajectory_header()->CopyFrom(
-          latest_replan_trajectory_header_);
+      debug->mutable_latest_replan_trajectory_header()->CopyFrom(latest_replan_trajectory_header_);
     }
   }
 
   if (!local_view_.trajectory().trajectory_point().empty()) {
     // controller agent
-    Status status_compute = control_task_agent_.ComputeControlCommand(
-        &local_view_.localization(), &local_view_.chassis(),
-        &local_view_.trajectory(), control_command);
+    Status status_compute = control_task_agent_.ComputeControlCommand(&local_view_.localization(),
+                                                                      &local_view_.chassis(),
+                                                                      &local_view_.trajectory(), 
+                                                                      control_command);
     ADEBUG << "status_compute is " << status_compute;
 
     if (!status_compute.ok()) {
       AERROR << "Control main function failed"
-             << " with localization: "
-             << local_view_.localization().ShortDebugString()
+             << " with localization: " << local_view_.localization().ShortDebugString()
              << " with chassis: " << local_view_.chassis().ShortDebugString()
-             << " with trajectory: "
-             << local_view_.trajectory().ShortDebugString()
+             << " with trajectory: " << local_view_.trajectory().ShortDebugString()
              << " with cmd: " << control_command->ShortDebugString()
              << " status:" << status_compute.error_message();
       estop_ = true;
@@ -300,14 +272,12 @@ Status ControlComponent::ProduceControlCommand(
     control_command->set_throttle(0);
     control_command->set_brake(FLAGS_soft_estop_brake);
     control_command->set_gear_location(Chassis::GEAR_DRIVE);
-    previous_steering_command_ =
-        injector_->previous_control_command_mutable()->steering_target();
+    previous_steering_command_ = injector_->previous_control_command_mutable()->steering_target();
     control_command->set_steering_target(previous_steering_command_);
   }
   // check signal
   if (local_view_.trajectory().decision().has_vehicle_signal()) {
-    control_command->mutable_signal()->CopyFrom(
-        local_view_.trajectory().decision().vehicle_signal());
+    control_command->mutable_signal()->CopyFrom(local_view_.trajectory().decision().vehicle_signal());
   }
   return status;
 }
@@ -330,15 +300,13 @@ bool ControlComponent::Proc() {
     AERROR << "planning msg is not ready!";
   } else {
     // Check if new planning data received.
-    if (latest_trajectory_.header().sequence_num() !=
-        trajectory_msg->header().sequence_num()) {
+    if (latest_trajectory_.header().sequence_num() != trajectory_msg->header().sequence_num()) {
       OnPlanning(trajectory_msg);
     }
   }
 
   planning_command_status_reader_->Observe();
-  const auto &planning_status_msg =
-      planning_command_status_reader_->GetLatestObserved();
+  const auto &planning_status_msg = planning_command_status_reader_->GetLatestObserved();
   if (planning_status_msg != nullptr) {
     OnPlanningCommandStatus(planning_status_msg);
     ADEBUG << "Planning command status msg is \n"
@@ -374,22 +342,18 @@ bool ControlComponent::Proc() {
 
   // use control submodules
   if (FLAGS_use_control_submodules) {
-    local_view_.mutable_header()->set_lidar_timestamp(
-        local_view_.trajectory().header().lidar_timestamp());
-    local_view_.mutable_header()->set_camera_timestamp(
-        local_view_.trajectory().header().camera_timestamp());
-    local_view_.mutable_header()->set_radar_timestamp(
-        local_view_.trajectory().header().radar_timestamp());
+    local_view_.mutable_header()->set_lidar_timestamp(local_view_.trajectory().header().lidar_timestamp());
+    local_view_.mutable_header()->set_camera_timestamp(local_view_.trajectory().header().camera_timestamp());
+    local_view_.mutable_header()->set_radar_timestamp(local_view_.trajectory().header().radar_timestamp());
     common::util::FillHeader(FLAGS_control_local_view_topic, &local_view_);
 
     const auto end_time = Clock::Now();
 
     // measure latency
-    static apollo::common::LatencyRecorder latency_recorder(
-        FLAGS_control_local_view_topic);
-    latency_recorder.AppendLatencyRecord(
-        local_view_.trajectory().header().lidar_timestamp(), start_time,
-        end_time);
+    static apollo::common::LatencyRecorder latency_recorder(FLAGS_control_local_view_topic);
+    latency_recorder.AppendLatencyRecord(local_view_.trajectory().header().lidar_timestamp(), 
+                                         start_time,
+                                         end_time);
 
     local_view_writer_->Write(local_view_);
     return true;
@@ -414,11 +378,10 @@ bool ControlComponent::Proc() {
 
   injector_->set_control_process(true);
 
+  // 计算控制命令
   ControlCommand control_command;
-
   Status status;
-  if (local_view_.chassis().driving_mode() ==
-      apollo::canbus::Chassis::COMPLETE_AUTO_DRIVE) {
+  if (local_view_.chassis().driving_mode() == apollo::canbus::Chassis::COMPLETE_AUTO_DRIVE) {
     status = ProduceControlCommand(&control_command);
     ADEBUG << "Produce control command normal.";
   } else {
@@ -440,12 +403,9 @@ bool ControlComponent::Proc() {
   }
 
   // set header
-  control_command.mutable_header()->set_lidar_timestamp(
-      local_view_.trajectory().header().lidar_timestamp());
-  control_command.mutable_header()->set_camera_timestamp(
-      local_view_.trajectory().header().camera_timestamp());
-  control_command.mutable_header()->set_radar_timestamp(
-      local_view_.trajectory().header().radar_timestamp());
+  control_command.mutable_header()->set_lidar_timestamp(local_view_.trajectory().header().lidar_timestamp());
+  control_command.mutable_header()->set_camera_timestamp(local_view_.trajectory().header().camera_timestamp());
+  control_command.mutable_header()->set_radar_timestamp(local_view_.trajectory().header().radar_timestamp());
 
   common::util::FillHeader(node_->Name(), &control_command);
 
@@ -455,8 +415,7 @@ bool ControlComponent::Proc() {
     return true;
   }
 
-  if (fabs(control_command.debug().simple_lon_debug().vehicle_pitch()) <
-      kDoubleEpsilon) {
+  if (fabs(control_command.debug().simple_lon_debug().vehicle_pitch()) < kDoubleEpsilon) {
     injector_->vehicle_state()->Update(local_view_.localization(),
                                        local_view_.chassis());
     GetVehiclePitchAngle(&control_command);
@@ -467,25 +426,22 @@ bool ControlComponent::Proc() {
   ADEBUG << "total control time spend: " << time_diff_ms << " ms.";
 
   control_command.mutable_latency_stats()->set_total_time_ms(time_diff_ms);
-  control_command.mutable_latency_stats()->set_total_time_exceeded(
-      time_diff_ms > FLAGS_control_period * 1e3);
+  control_command.mutable_latency_stats()->set_total_time_exceeded(time_diff_ms > FLAGS_control_period * 1e3);
   ADEBUG << "control cycle time is: " << time_diff_ms << " ms.";
   status.Save(control_command.mutable_header()->mutable_status());
 
   // measure latency
   if (local_view_.trajectory().header().has_lidar_timestamp()) {
-    static apollo::common::LatencyRecorder latency_recorder(
-        FLAGS_control_command_topic);
-    latency_recorder.AppendLatencyRecord(
-        local_view_.trajectory().header().lidar_timestamp(), start_time,
-        end_time);
+    static apollo::common::LatencyRecorder latency_recorder(FLAGS_control_command_topic);
+    latency_recorder.AppendLatencyRecord(local_view_.trajectory().header().lidar_timestamp(), 
+                                         start_time,
+                                         end_time);
   }
 
   // save current control command
   injector_->Set_pervious_control_command(&control_command);
   injector_->previous_control_command_mutable()->CopyFrom(control_command);
-  injector_->previous_control_debug_mutable()->CopyFrom(
-      injector_->control_debug_info());
+  injector_->previous_control_debug_mutable()->CopyFrom(injector_->control_debug_info());
 
   control_cmd_writer_->Write(control_command);
   return true;
@@ -499,14 +455,12 @@ Status ControlComponent::CheckInput(LocalView *local_view) {
   if (!local_view->trajectory().estop().is_estop() &&
       local_view->trajectory().trajectory_point().empty()) {
     AWARN_EVERY(100) << "planning has no trajectory point. ";
-    const std::string msg =
-        absl::StrCat("planning has no trajectory point. planning_seq_num:",
-                     local_view->trajectory().header().sequence_num());
+    const std::string msg = absl::StrCat("planning has no trajectory point. planning_seq_num:",
+                                         local_view->trajectory().header().sequence_num());
     return Status(ErrorCode::CONTROL_COMPUTE_ERROR, msg);
   }
 
-  for (auto &trajectory_point :
-       *local_view->mutable_trajectory()->mutable_trajectory_point()) {
+  for (auto &trajectory_point : *local_view->mutable_trajectory()->mutable_trajectory_point()) {
     if (std::abs(trajectory_point.v()) < FLAGS_minimum_speed_resolution &&
         std::abs(trajectory_point.a()) < FLAGS_max_acceleration_when_stopped) {
       trajectory_point.set_v(0.0);
@@ -526,18 +480,15 @@ Status ControlComponent::CheckTimestamp(const LocalView &local_view) {
     return Status::OK();
   }
   double current_timestamp = Clock::NowInSeconds();
-  double localization_diff =
-      current_timestamp - local_view.localization().header().timestamp_sec();
-  if (localization_diff >
-      (FLAGS_max_localization_miss_num * FLAGS_localization_period)) {
+  double localization_diff = current_timestamp - local_view.localization().header().timestamp_sec();
+  if (localization_diff > (FLAGS_max_localization_miss_num * FLAGS_localization_period)) {
     AERROR << "Localization msg lost for " << std::setprecision(6)
            << localization_diff << "s";
     monitor_logger_buffer_.ERROR("Localization msg lost");
     return Status(ErrorCode::CONTROL_COMPUTE_ERROR, "Localization msg timeout");
   }
 
-  double chassis_diff =
-      current_timestamp - local_view.chassis().header().timestamp_sec();
+  double chassis_diff = current_timestamp - local_view.chassis().header().timestamp_sec();
   if (chassis_diff > (FLAGS_max_chassis_miss_num * FLAGS_chassis_period)) {
     AERROR << "Chassis msg lost for " << std::setprecision(6) << chassis_diff
            << "s";
@@ -545,10 +496,8 @@ Status ControlComponent::CheckTimestamp(const LocalView &local_view) {
     return Status(ErrorCode::CONTROL_COMPUTE_ERROR, "Chassis msg timeout");
   }
 
-  double trajectory_diff =
-      current_timestamp - local_view.trajectory().header().timestamp_sec();
-  if (trajectory_diff >
-      (FLAGS_max_planning_miss_num * FLAGS_trajectory_period)) {
+  double trajectory_diff = current_timestamp - local_view.trajectory().header().timestamp_sec();
+  if (trajectory_diff > (FLAGS_max_planning_miss_num * FLAGS_trajectory_period)) {
     AERROR << "Trajectory msg lost for " << std::setprecision(6)
            << trajectory_diff << "s";
     monitor_logger_buffer_.ERROR("Trajectory msg lost");
@@ -557,14 +506,14 @@ Status ControlComponent::CheckTimestamp(const LocalView &local_view) {
   return Status::OK();
 }
 
-void ControlComponent::ResetAndProduceZeroControlCommand(
-    ControlCommand *control_command) {
+void ControlComponent::ResetAndProduceZeroControlCommand(ControlCommand *control_command) {
   control_command->set_throttle(0.0);
   control_command->set_steering_target(0.0);
   control_command->set_steering_rate(0.0);
   control_command->set_speed(0.0);
   control_command->set_brake(0.0);
   control_command->set_gear_location(Chassis::GEAR_DRIVE);
+
   control_task_agent_.Reset();
   latest_trajectory_.mutable_trajectory_point()->Clear();
   latest_trajectory_.mutable_path_point()->Clear();
@@ -574,8 +523,8 @@ void ControlComponent::ResetAndProduceZeroControlCommand(
 void ControlComponent::GetVehiclePitchAngle(ControlCommand *control_command) {
   double vehicle_pitch = injector_->vehicle_state()->pitch() * 180 / M_PI;
   control_command->mutable_debug()
-      ->mutable_simple_lon_debug()
-      ->set_vehicle_pitch(vehicle_pitch + FLAGS_pitch_offset_deg);
+                 ->mutable_simple_lon_debug()
+                 ->set_vehicle_pitch(vehicle_pitch + FLAGS_pitch_offset_deg);
 }
 
 }  // namespace control

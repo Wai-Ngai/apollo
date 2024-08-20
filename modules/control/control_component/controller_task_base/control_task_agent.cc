@@ -39,13 +39,12 @@ Status ControlTaskAgent::Init(std::shared_ptr<DependencyInjector> injector,
 
   injector_ = injector;
   for (int i = 0; i < control_pipeline.controller_size(); i++) {
-    auto controller = PluginManager::Instance()->CreateInstance<ControlTask>(
-        "apollo::control::" + control_pipeline.controller(i).type());
+    auto controller = PluginManager::Instance()->CreateInstance<ControlTask>("apollo::control::" + 
+                                                                             control_pipeline.controller(i).type());
     if (!controller->Init(injector_).ok()) {
       AERROR << "Can not init controller " << controller->Name();
-      return Status(
-          ErrorCode::CONTROL_INIT_ERROR,
-          "Failed to init Controller:" + control_pipeline.controller(i).name());
+      return Status(ErrorCode::CONTROL_INIT_ERROR,
+                    "Failed to init Controller:" + control_pipeline.controller(i).name());
     }
     controller_list_.push_back(controller);
     AINFO << "Controller <" << controller->Name() << "> init done!";
@@ -53,14 +52,18 @@ Status ControlTaskAgent::Init(std::shared_ptr<DependencyInjector> injector,
   return Status::OK();
 }
 
-Status ControlTaskAgent::ComputeControlCommand(
-    const localization::LocalizationEstimate *localization,
-    const canbus::Chassis *chassis, const planning::ADCTrajectory *trajectory,
-    control::ControlCommand *cmd) {
+Status ControlTaskAgent::ComputeControlCommand(const localization::LocalizationEstimate *localization,
+                                               const canbus::Chassis *chassis, 
+                                               const planning::ADCTrajectory *trajectory,
+                                               control::ControlCommand *cmd) {
   for (auto &controller : controller_list_) {
     ADEBUG << "controller:" << controller->Name() << " processing ...";
+
     double start_timestamp = Clock::NowInSeconds();
+
+    // 计算控制命令
     controller->ComputeControlCommand(localization, chassis, trajectory, cmd);
+
     double end_timestamp = Clock::NowInSeconds();
     const double time_diff_ms = (end_timestamp - start_timestamp) * 1000;
 

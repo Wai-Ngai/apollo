@@ -49,6 +49,13 @@ namespace planning {
 
 class PiecewiseJerkPathProblem : public PiecewiseJerkProblem {
  public:
+ /**
+  * @brief 构造函数
+  * 
+  * @param num_of_knots 离散点数量：横向边界采样点的数量
+  * @param delta_s      离散点纵向间隔1.0m
+  * @param x_init       横向的初始状态d0,d0',d0''
+  */
   PiecewiseJerkPathProblem(const size_t num_of_knots, const double delta_s,
                            const std::array<double, 3>& x_init);
 
@@ -63,15 +70,27 @@ class PiecewiseJerkPathProblem : public PiecewiseJerkProblem {
   }
 
  protected:
+  /**
+   * @brief 构建二次规划问题的P矩阵，以CSC稀疏矩阵的格式储存到输入的3个指针数组里
+   * 
+   * @param P_data    P矩阵上面行列索引对应的元素值的数组
+   * @param P_indices P矩阵行索引数组
+   * @param P_indptr  P矩阵列索引数组
+   */
   void CalculateKernel(std::vector<c_float>* P_data,
                        std::vector<c_int>* P_indices,
                        std::vector<c_int>* P_indptr) override;
 
+  /**
+   * @brief 构建二次规划问题的q矩阵，构建结果储存到输入的指针q里
+   * 
+   * @param q 
+   */
   void CalculateOffset(std::vector<c_float>* q) override;
 
  private:
   InterPolatedPointVec extra_constraints_;
-  ADCVertexConstraints vertex_constraints_;
+  ADCVertexConstraints vertex_constraints_;  // 顶点约束
 };
 
 }  // namespace planning

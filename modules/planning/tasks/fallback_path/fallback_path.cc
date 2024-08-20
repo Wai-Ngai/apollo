@@ -40,8 +40,9 @@ bool FallbackPath::Init(const std::string& config_dir, const std::string& name,
   return Task::LoadConfig<FallbackPathConfig>(&config_);
 }
 
-apollo::common::Status FallbackPath::Process(
-    Frame* frame, ReferenceLineInfo* reference_line_info) {
+apollo::common::Status FallbackPath::Process(Frame* frame, 
+                                             ReferenceLineInfo* reference_line_info) {
+  // 前置task未生成路径时，生成备用路径。
   if (!reference_line_info->path_data().Empty() ||
       reference_line_info->IsChangeLanePath()) {
     return Status::OK();
@@ -75,14 +76,14 @@ bool FallbackPath::DecidePathBounds(std::vector<PathBoundary>* boundary) {
     return false;
   }
   // 2. Decide a rough boundary based on lane info and ADC's position
-  if (!PathBoundsDeciderUtil::GetBoundaryFromSelfLane(
-          *reference_line_info_, init_sl_state_, &path_bound)) {
+  if (!PathBoundsDeciderUtil::GetBoundaryFromSelfLane(*reference_line_info_, 
+                                                      init_sl_state_, &path_bound)) {
     AERROR << "Failed to decide a rough boundary based on self lane.";
     return false;
   }
-  if (!PathBoundsDeciderUtil::ExtendBoundaryByADC(
-          *reference_line_info_, init_sl_state_, config_.extend_buffer(),
-          &path_bound)) {
+  if (!PathBoundsDeciderUtil::ExtendBoundaryByADC(*reference_line_info_, 
+                                                  init_sl_state_, config_.extend_buffer(),
+                                                  &path_bound)) {
     AERROR << "Failed to decide a rough boundary based on adc.";
     return false;
   }
@@ -91,12 +92,13 @@ bool FallbackPath::DecidePathBounds(std::vector<PathBoundary>* boundary) {
   return true;
 }
 
-bool FallbackPath::OptimizePath(
-    const std::vector<PathBoundary>& path_boundaries,
-    std::vector<PathData>* candidate_path_data) {
+bool FallbackPath::OptimizePath(const std::vector<PathBoundary>& path_boundaries,
+                                std::vector<PathData>* candidate_path_data) {
   const auto& config = config_.path_optimizer_config();
   const ReferenceLine& reference_line = reference_line_info_->reference_line();
   std::array<double, 3> end_state = {0.0, 0.0, 0.0};
+
+
   for (const auto& path_boundary : path_boundaries) {
     size_t path_boundary_size = path_boundary.boundary().size();
     if (path_boundary_size <= 1U) {
@@ -107,25 +109,27 @@ bool FallbackPath::OptimizePath(
     std::vector<std::pair<double, double>> ddl_bounds;
     PathOptimizerUtil::CalculateAccBound(path_boundary, reference_line,
                                          &ddl_bounds);
-    const double jerk_bound = PathOptimizerUtil::EstimateJerkBoundary(
-        std::fmax(init_sl_state_.first[1], 1e-12));
+
+    const double jerk_bound = PathOptimizerUtil::EstimateJerkBoundary(std::fmax(init_sl_state_.first[1], 1e-12));
+
     std::vector<double> ref_l(path_boundary_size, 0);
     std::vector<double> weight_ref_l(path_boundary_size,
                                      config.path_reference_l_weight());
-    bool res_opt = PathOptimizerUtil::OptimizePath(
-        init_sl_state_, end_state, ref_l, weight_ref_l, path_boundary,
-        ddl_bounds, jerk_bound, config, &opt_l, &opt_dl, &opt_ddl);
+    
+    bool res_opt = PathOptimizerUtil::OptimizePath(init_sl_state_, end_state, 
+                                                   ref_l, weight_ref_l, path_boundary,
+                                                   ddl_bounds, jerk_bound, config, 
+                                                   &opt_l, &opt_dl, &opt_ddl);
+    
     if (res_opt) {
-      auto frenet_frame_path = PathOptimizerUtil::ToPiecewiseJerkPath(
-          opt_l, opt_dl, opt_ddl, path_boundary.delta_s(),
-          path_boundary.start_s());
+      auto frenet_frame_path = PathOptimizerUtil::ToPiecewiseJerkPath(opt_l, opt_dl, opt_ddl, 
+                                                                      path_boundary.delta_s(),
+                                                                      path_boundary.start_s());
       PathData path_data;
       path_data.SetReferenceLine(&reference_line);
       path_data.SetFrenetPath(std::move(frenet_frame_path));
       if (FLAGS_use_front_axe_center_in_path_planning) {
-        auto discretized_path = DiscretizedPath(
-            PathOptimizerUtil::ConvertPathPointRefFromFrontAxeToRearAxe(
-                path_data));
+        auto discretized_path = DiscretizedPath(PathOptimizerUtil::ConvertPathPointRefFromFrontAxeToRearAxe(path_data));
         path_data.SetDiscretizedPath(discretized_path);
       }
       path_data.set_path_label(path_boundary.label());

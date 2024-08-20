@@ -121,8 +121,7 @@ Obstacle::Obstacle(const std::string& id,
   }
 }
 
-common::TrajectoryPoint Obstacle::GetPointAtTime(
-    const double relative_time) const {
+common::TrajectoryPoint Obstacle::GetPointAtTime(const double relative_time) const {
   const auto& points = trajectory_.trajectory_point();
   if (points.size() < 2) {
     common::TrajectoryPoint point;
@@ -143,21 +142,20 @@ common::TrajectoryPoint Obstacle::GetPointAtTime(
       return p.relative_time() < time;
     };
 
-    auto it_lower =
-        std::lower_bound(points.begin(), points.end(), relative_time, comp);
+    auto it_lower = std::lower_bound(points.begin(), points.end(), relative_time, comp);
 
     if (it_lower == points.begin()) {
       return *points.begin();
     } else if (it_lower == points.end()) {
       return *points.rbegin();
     }
-    return common::math::InterpolateUsingLinearApproximation(
-        *(it_lower - 1), *it_lower, relative_time);
+    return common::math::InterpolateUsingLinearApproximation(*(it_lower - 1), 
+                                                             *it_lower, 
+                                                             relative_time);
   }
 }
 
-common::math::Box2d Obstacle::GetBoundingBox(
-    const common::TrajectoryPoint& point) const {
+common::math::Box2d Obstacle::GetBoundingBox(const common::TrajectoryPoint& point) const {
   return common::math::Box2d({point.path_point().x(), point.path_point().y()},
                              point.path_point().theta(),
                              perception_obstacle_.length(),
@@ -194,8 +192,7 @@ bool Obstacle::IsValidPerceptionObstacle(const PerceptionObstacle& obstacle) {
   return true;
 }
 
-std::list<std::unique_ptr<Obstacle>> Obstacle::CreateObstacles(
-    const prediction::PredictionObstacles& predictions) {
+std::list<std::unique_ptr<Obstacle>> Obstacle::CreateObstacles(const prediction::PredictionObstacles& predictions) {
   std::list<std::unique_ptr<Obstacle>> obstacles;
   for (const auto& prediction_obstacle : predictions.prediction_obstacle()) {
     if (!IsValidPerceptionObstacle(prediction_obstacle.perception_obstacle())) {
@@ -203,8 +200,7 @@ std::list<std::unique_ptr<Obstacle>> Obstacle::CreateObstacles(
              << prediction_obstacle.perception_obstacle().DebugString();
       continue;
     }
-    const auto perception_id =
-        std::to_string(prediction_obstacle.perception_obstacle().id());
+    const auto perception_id = std::to_string(prediction_obstacle.perception_obstacle().id());
     if (prediction_obstacle.trajectory().empty()) {
       obstacles.emplace_back(
           new Obstacle(perception_id, prediction_obstacle.perception_obstacle(),
@@ -229,8 +225,7 @@ std::list<std::unique_ptr<Obstacle>> Obstacle::CreateObstacles(
         continue;
       }
 
-      const std::string obstacle_id =
-          absl::StrCat(perception_id, "_", trajectory_index);
+      const std::string obstacle_id = absl::StrCat(perception_id, "_", trajectory_index);
       obstacles.emplace_back(
           new Obstacle(obstacle_id, prediction_obstacle.perception_obstacle(),
                        trajectory, prediction_obstacle.priority().priority(),
@@ -241,8 +236,8 @@ std::list<std::unique_ptr<Obstacle>> Obstacle::CreateObstacles(
   return obstacles;
 }
 
-std::unique_ptr<Obstacle> Obstacle::CreateStaticVirtualObstacles(
-    const std::string& id, const common::math::Box2d& obstacle_box) {
+std::unique_ptr<Obstacle> Obstacle::CreateStaticVirtualObstacles(const std::string& id, 
+                                                                 const common::math::Box2d& obstacle_box) {
   // create a "virtual" perception_obstacle
   perception::PerceptionObstacle perception_obstacle;
   // simulator needs a valid integer
@@ -258,8 +253,7 @@ std::unique_ptr<Obstacle> Obstacle::CreateStaticVirtualObstacles(
   perception_obstacle.set_length(obstacle_box.length());
   perception_obstacle.set_width(obstacle_box.width());
   perception_obstacle.set_height(FLAGS_virtual_stop_wall_height);
-  perception_obstacle.set_type(
-      perception::PerceptionObstacle::UNKNOWN_UNMOVABLE);
+  perception_obstacle.set_type(perception::PerceptionObstacle::UNKNOWN_UNMOVABLE);
   perception_obstacle.set_tracking_time(1.0);
 
   std::vector<common::math::Vec2d> corner_points;
@@ -269,8 +263,7 @@ std::unique_ptr<Obstacle> Obstacle::CreateStaticVirtualObstacles(
     point->set_x(corner_point.x());
     point->set_y(corner_point.y());
   }
-  auto* obstacle =
-      new Obstacle(id, perception_obstacle, ObstaclePriority::NORMAL, true);
+  auto* obstacle = new Obstacle(id, perception_obstacle, ObstaclePriority::NORMAL, true);
   obstacle->is_virtual_ = true;
   return std::unique_ptr<Obstacle>(obstacle);
 }
@@ -290,8 +283,7 @@ void Obstacle::SetPerceptionSlBoundary(const SLBoundary& sl_boundary) {
   sl_boundary_ = sl_boundary;
 }
 
-double Obstacle::MinRadiusStopDistance(
-    const common::VehicleParam& vehicle_param) const {
+double Obstacle::MinRadiusStopDistance(const common::VehicleParam& vehicle_param) const {
   if (min_radius_stop_distance_ > 0) {
     return min_radius_stop_distance_;
   }
@@ -765,22 +757,19 @@ void Obstacle::SetLaneChangeBlocking(const bool is_distance_clear) {
 
 // input: obstacle trajectory point
 // ouput: obstacle polygon
-common::math::Polygon2d Obstacle::GetObstacleTrajectoryPolygon(
-    const common::TrajectoryPoint& point) const {
-  double delta_heading =
-      point.path_point().theta() - perception_obstacle_.theta();
+common::math::Polygon2d Obstacle::GetObstacleTrajectoryPolygon(const common::TrajectoryPoint& point) const {
+  double delta_heading = point.path_point().theta() - perception_obstacle_.theta();
   double cos_delta_heading = cos(delta_heading);
   double sin_delta_heading = sin(delta_heading);
+
   std::vector<common::math::Vec2d> polygon_point;
   polygon_point.reserve(perception_polygon_.points().size());
 
   for (auto& iter : perception_polygon_.points()) {
     double relative_x = iter.x() - perception_obstacle_.position().x();
     double relative_y = iter.y() - perception_obstacle_.position().y();
-    double x = relative_x * cos_delta_heading - relative_y * sin_delta_heading +
-               point.path_point().x();
-    double y = relative_x * sin_delta_heading + relative_y * cos_delta_heading +
-               point.path_point().y();
+    double x = relative_x * cos_delta_heading - relative_y * sin_delta_heading + point.path_point().x();
+    double y = relative_x * sin_delta_heading + relative_y * cos_delta_heading + point.path_point().y();
     polygon_point.emplace_back(x, y);
   }
 
@@ -797,7 +786,8 @@ void Obstacle::PrintPolygonCurve() const {
   for (const auto& p : perception_polygon_.points()) {
     print_curve.AddPoint(id_ + "_ObsPolygon", p.x(), p.y());
   }
-  print_curve.AddPoint(id_ + "_ObsPolygon", perception_polygon_.points()[0].x(),
+  print_curve.AddPoint(id_ + "_ObsPolygon", 
+                       perception_polygon_.points()[0].x(),
                        perception_polygon_.points()[0].y());
   print_curve.PrintToLog();
 }

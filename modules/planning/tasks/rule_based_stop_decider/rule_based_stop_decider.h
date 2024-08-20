@@ -27,15 +27,15 @@
 namespace apollo {
 namespace planning {
 
+// 用于产生基于规则的停车策略
 class RuleBasedStopDecider : public Decider {
  public:
   bool Init(const std::string& config_dir, const std::string& name,
             const std::shared_ptr<DependencyInjector>& injector) override;
 
  private:
-  apollo::common::Status Process(
-      Frame* const frame,
-      ReferenceLineInfo* const reference_line_info) override;
+  apollo::common::Status Process(Frame* const frame,
+                                 ReferenceLineInfo* const reference_line_info) override;
 
   // @brief Rule-based stop at path end
   void AddPathEndStop(Frame* const frame,

@@ -33,9 +33,9 @@ Status SpeedOptimizer::Execute(Frame* frame,
                                ReferenceLineInfo* reference_line_info) {
   Task::Execute(frame, reference_line_info);
 
-  auto ret =
-      Process(reference_line_info->path_data(), frame->PlanningStartPoint(),
-              reference_line_info->mutable_speed_data());
+  // 最终会调用速度规划类的Process函数
+  auto ret = Process(reference_line_info->path_data(), frame->PlanningStartPoint(),
+                     reference_line_info->mutable_speed_data());  // 传入要计算的速度轨迹，经过dp和qp得到最终的速度
 
   RecordDebugInfo(reference_line_info->speed_data());
   return ret;
@@ -45,8 +45,7 @@ void SpeedOptimizer::RecordDebugInfo(const SpeedData& speed_data) {
   auto* debug = reference_line_info_->mutable_debug();
   auto ptr_speed_plan = debug->mutable_planning_data()->add_speed_plan();
   ptr_speed_plan->set_name(Name());
-  ptr_speed_plan->mutable_speed_point()->CopyFrom(
-      {speed_data.begin(), speed_data.end()});
+  ptr_speed_plan->mutable_speed_point()->CopyFrom({speed_data.begin(), speed_data.end()});
 }
 
 void SpeedOptimizer::RecordDebugInfo(const SpeedData& speed_data,
@@ -56,8 +55,7 @@ void SpeedOptimizer::RecordDebugInfo(const SpeedData& speed_data,
     return;
   }
   st_graph_debug->set_name(Name());
-  st_graph_debug->mutable_speed_profile()->CopyFrom(
-      {speed_data.begin(), speed_data.end()});
+  st_graph_debug->mutable_speed_profile()->CopyFrom({speed_data.begin(), speed_data.end()});
 }
 
 }  // namespace planning

@@ -43,9 +43,9 @@ class TrajectoryFallbackTask : public Task {
   void GenerateFallbackPathProfile(const ReferenceLineInfo* reference_line_info,
                                    PathData* path_data);
 
-  bool RetrieveLastFramePathProfile(
-      const ReferenceLineInfo* reference_line_info, const Frame* frame,
-      PathData* path_data);
+  bool RetrieveLastFramePathProfile(const ReferenceLineInfo* reference_line_info, 
+                                    const Frame* frame,
+                                    PathData* path_data);
   /**
    * @brief Modify the deceleration before stopping so that control module can
    * follow up.

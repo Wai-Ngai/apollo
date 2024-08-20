@@ -64,9 +64,8 @@ class StGraphData {
 
   planning_internal::STGraphDebug* mutable_st_graph_debug();
 
-  bool SetSTDrivableBoundary(
-      const std::vector<std::tuple<double, double, double>>& s_boundary,
-      const std::vector<std::tuple<double, double, double>>& v_obs_info);
+  bool SetSTDrivableBoundary(const std::vector<std::tuple<double, double, double>>& s_boundary,
+                             const std::vector<std::tuple<double, double, double>>& v_obs_info);
 
   const STDrivableBoundary& st_drivable_boundary() const;
 

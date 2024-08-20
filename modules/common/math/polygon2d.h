@@ -37,7 +37,7 @@ namespace math {
 
 /**
  * @class Polygon2d
- * @brief The class of polygon in 2-D.
+ * @brief The class of polygon in 2-D. 2维多边形
  */
 class Polygon2d {
  public:
@@ -193,18 +193,15 @@ class Polygon2d {
 
   /**
    * @brief Check if a line segment has overlap with this polygon.
-   * @param line_segment The target line segment. To check if it has
-   *        overlap with this polygon.
-   * @return Whether the target line segment has overlap with this
-   *         polygon or not.
+   * @param line_segment The target line segment. To check if it has overlap with this polygon.
+   * @return Whether the target line segment has overlap with this polygon or not.
    */
   bool HasOverlap(const LineSegment2d &line_segment) const;
 
   /**
    * @brief Get the overlap of a line segment and this polygon. If they have
    *        overlap, output the two ends of the overlapped line segment.
-   * @param line_segment The target line segment. To get its overlap with
-   *         this polygon.
+   * @param line_segment The target line segment. To get its overlap with this polygon.
    * @param first First end of the overlapped line segment.
    * @param second Second end of the overlapped line segment.
    * @return If the target line segment has overlap with this polygon.
@@ -225,10 +222,8 @@ class Polygon2d {
 
   /**
    * @brief Get all overlapped line segments of a line segment and this polygon.
-   *        There are possibly multiple overlapped line segments if this
-   *        polygon is not convex.
-   * @param line_segment The target line segment. To get its all overlapped
-   *        line segments with this polygon.
+   *        There are possibly multiple overlapped line segments if this polygon is not convex.
+   * @param line_segment The target line segment. To get its all overlapped line segments with this polygon.
    * @return A group of overlapped line segments.
    */
   std::vector<LineSegment2d> GetAllOverlaps(
@@ -236,8 +231,8 @@ class Polygon2d {
 
   /**
    * @brief Check if this polygon has overlap with another polygon.
-   * @param polygon The target polygon. To check if it has overlap
-   *        with this polygon.
+   * 
+   * @param polygon The target polygon. To check if it has overlap with this polygon.
    * @return If this polygon has overlap with another polygon.
    */
   bool HasOverlap(const Polygon2d &polygon) const;
@@ -245,10 +240,8 @@ class Polygon2d {
   // Only compute overlaps between two convex polygons.
   /**
    * @brief Compute the overlap of this polygon and the other polygon if any.
-   *        Note: this function only works for computing overlap between
-   *        two convex polygons.
-   * @param other_polygon The target polygon. To compute its overlap with
-   *        this polygon.
+   *        Note: this function only works for computing overlap between two convex polygons.
+   * @param other_polygon The target polygon. To compute its overlap with this polygon.
    * @param overlap_polygon The overlapped polygon.
    * @param If there is an overlapped polygon.
    */
@@ -257,13 +250,10 @@ class Polygon2d {
 
   // Only compute intersection over union ratio between two convex polygons.
   /**
-   * @brief Compute intersection over union ratio of this polygon and the other
-   * polygon. Note: this function only works for computing overlap
-   * between two convex polygons.
-   * @param other_polygon The target polygon. To compute its overlap with
-   *        this polygon.
-   * @return A value between 0.0 and 1.0, meaning no intersection to fully
-   * overlaping
+   * @brief Compute intersection over union ratio of this polygon and the other polygon.
+   *        Note: this function only works for computing overlap between two convex polygons.
+   * @param other_polygon The target polygon. To compute its overlap with this polygon.
+   * @return A value between 0.0 and 1.0, meaning no intersection to fully overlaping
    */
   double ComputeIoU(const Polygon2d &other_polygon) const;
 

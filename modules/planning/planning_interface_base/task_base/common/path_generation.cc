@@ -28,10 +28,10 @@
 namespace apollo {
 namespace planning {
 
-apollo::common::Status PathGeneration::Execute(
-    Frame* frame, ReferenceLineInfo* reference_line_info) {
+apollo::common::Status PathGeneration::Execute(Frame* frame, 
+                                               ReferenceLineInfo* reference_line_info) {
   Task::Execute(frame, reference_line_info);
-  return Process(frame, reference_line_info);
+  return Process(frame, reference_line_info);  // 调用子类的Process()函数
 }
 
 apollo::common::Status PathGeneration::Execute(Frame* frame) {
@@ -39,9 +39,9 @@ apollo::common::Status PathGeneration::Execute(Frame* frame) {
   return Process(frame);
 }
 
-void PathGeneration::RecordDebugInfo(
-    const PathBound& path_boundaries, const std::string& debug_name,
-    ReferenceLineInfo* const reference_line_info) {
+void PathGeneration::RecordDebugInfo(const PathBound& path_boundaries, 
+                                     const std::string& debug_name,
+                                     ReferenceLineInfo* const reference_line_info) {
   // Sanity checks.
   if (path_boundaries.empty()) {
     AINFO << "path boundary is empty!";
@@ -94,9 +94,8 @@ void PathGeneration::RecordDebugInfo(
        right_path_data.discretized_path().end()});
 }
 
-void PathGeneration::RecordDebugInfo(
-    const PathData& path_data, const std::string& debug_name,
-    ReferenceLineInfo* const reference_line_info) {
+void PathGeneration::RecordDebugInfo(const PathData& path_data, const std::string& debug_name,
+                                     ReferenceLineInfo* const reference_line_info) {
   const auto& path_points = path_data.discretized_path();
   auto* ptr_optimized_path =
       reference_line_info->mutable_debug()->mutable_planning_data()->add_path();
@@ -104,22 +103,17 @@ void PathGeneration::RecordDebugInfo(
   ptr_optimized_path->mutable_path_point()->CopyFrom(
       {path_points.begin(), path_points.end()});
 }
+
 void PathGeneration::GetStartPointSLState() {
   const ReferenceLine& reference_line = reference_line_info_->reference_line();
   common::TrajectoryPoint planning_start_point = frame_->PlanningStartPoint();
-  if (FLAGS_use_front_axe_center_in_path_planning) {
-    double front_to_rear_axe_distance =
-        apollo::common::VehicleConfigHelper::GetConfig()
-            .vehicle_param()
-            .wheel_base();
-    planning_start_point.mutable_path_point()->set_x(
-        planning_start_point.path_point().x() +
-        front_to_rear_axe_distance *
-            std::cos(planning_start_point.path_point().theta()));
-    planning_start_point.mutable_path_point()->set_y(
-        planning_start_point.path_point().y() +
-        front_to_rear_axe_distance *
-            std::sin(planning_start_point.path_point().theta()));
+
+  if (FLAGS_use_front_axe_center_in_path_planning) { // 是否使用前轴中心作为规划
+    double front_to_rear_axe_distance = apollo::common::VehicleConfigHelper::GetConfig().vehicle_param().wheel_base();
+    planning_start_point.mutable_path_point()->set_x(planning_start_point.path_point().x() +
+                                                     front_to_rear_axe_distance * std::cos(planning_start_point.path_point().theta()));
+    planning_start_point.mutable_path_point()->set_y(planning_start_point.path_point().y() +
+                                                     front_to_rear_axe_distance * std::sin(planning_start_point.path_point().theta()));
   }
   ADEBUG << std::fixed << "Plan at the starting point: x = "
          << planning_start_point.path_point().x()
@@ -128,7 +122,7 @@ void PathGeneration::GetStartPointSLState() {
 
   // Initialize some private variables.
   // ADC s/l info.
-  init_sl_state_ = reference_line.ToFrenetFrame(planning_start_point);
+  init_sl_state_ = reference_line.ToFrenetFrame(planning_start_point); // 将规划起点笛卡尔坐标转换为frenet坐标
 }
 
 bool PathGeneration::GetSLBoundary(const PathData& path_data, int point_index,

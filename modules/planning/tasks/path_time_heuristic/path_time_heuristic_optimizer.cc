@@ -32,9 +32,8 @@ namespace planning {
 using apollo::common::ErrorCode;
 using apollo::common::Status;
 
-bool PathTimeHeuristicOptimizer::Init(
-    const std::string& config_dir, const std::string& name,
-    const std::shared_ptr<DependencyInjector>& injector) {
+bool PathTimeHeuristicOptimizer::Init(const std::string& config_dir, const std::string& name,
+                                      const std::shared_ptr<DependencyInjector>& injector) {
   if (!SpeedOptimizer::Init(config_dir, name, injector)) {
     return false;
   }
@@ -42,17 +41,17 @@ bool PathTimeHeuristicOptimizer::Init(
   return SpeedOptimizer::LoadConfig<SpeedHeuristicOptimizerConfig>(&config_);
 }
 
-bool PathTimeHeuristicOptimizer::SearchPathTimeGraph(
-    SpeedData* speed_data) const {
-  const auto& dp_st_speed_optimizer_config =
-      reference_line_info_->IsChangeLanePath()
-          ? config_.lane_change_speed_config()
-          : config_.default_speed_config();
+bool PathTimeHeuristicOptimizer::SearchPathTimeGraph(SpeedData* speed_data) const {
+  const auto& dp_st_speed_optimizer_config = reference_line_info_->IsChangeLanePath()
+                                             ? config_.lane_change_speed_config()
+                                             : config_.default_speed_config();
 
-  GriddedPathTimeGraph st_graph(
-      reference_line_info_->st_graph_data(), dp_st_speed_optimizer_config,
-      reference_line_info_->path_decision()->obstacles().Items(), init_point_);
-
+  // 构建ST栅格图
+  GriddedPathTimeGraph st_graph(reference_line_info_->st_graph_data(), 
+                                dp_st_speed_optimizer_config,
+                                reference_line_info_->path_decision()->obstacles().Items(), 
+                                init_point_);
+  // ST栅格图搜素
   if (!st_graph.Search(speed_data).ok()) {
     AERROR << "failed to search graph with dynamic programming.";
     return false;
@@ -60,9 +59,9 @@ bool PathTimeHeuristicOptimizer::SearchPathTimeGraph(
   return true;
 }
 
-Status PathTimeHeuristicOptimizer::Process(
-    const PathData& path_data, const common::TrajectoryPoint& init_point,
-    SpeedData* const speed_data) {
+Status PathTimeHeuristicOptimizer::Process(const PathData& path_data, 
+                                           const common::TrajectoryPoint& init_point,
+                                           SpeedData* const speed_data) {
   init_point_ = init_point;
 
   if (path_data.discretized_path().empty()) {
@@ -72,16 +71,15 @@ Status PathTimeHeuristicOptimizer::Process(
   }
 
   if (!SearchPathTimeGraph(speed_data)) {
-    const std::string msg = absl::StrCat(
-        Name(), ": Failed to search graph with dynamic programming.");
+    const std::string msg = absl::StrCat(Name(), 
+                                         ": Failed to search graph with dynamic programming.");
     AERROR << msg;
     RecordDebugInfo(*speed_data, reference_line_info_->mutable_st_graph_data()
-                                     ->mutable_st_graph_debug());
+                                                     ->mutable_st_graph_debug());
     return Status(ErrorCode::PLANNING_ERROR, msg);
   }
-  RecordDebugInfo(
-      *speed_data,
-      reference_line_info_->mutable_st_graph_data()->mutable_st_graph_debug());
+  RecordDebugInfo(*speed_data,
+                  reference_line_info_->mutable_st_graph_data()->mutable_st_graph_debug());
   return Status::OK();
 }
 

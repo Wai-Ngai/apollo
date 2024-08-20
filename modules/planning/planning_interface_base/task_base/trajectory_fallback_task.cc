@@ -32,16 +32,16 @@ constexpr double kSpeedOptimizationFallbackCost = 2e4;
 
 using apollo::common::Status;
 
-apollo::common::Status TrajectoryFallbackTask::Execute(
-    Frame* frame, ReferenceLineInfo* reference_line_info) {
+apollo::common::Status TrajectoryFallbackTask::Execute(Frame* frame, 
+                                                       ReferenceLineInfo* reference_line_info) {
   Task::Execute(frame, reference_line_info);
   // Generate fallback path.
   GenerateFallbackPath(frame, reference_line_info);
 
   if (reference_line_info->speed_data().empty()) {
     AERROR << "Speed fallback due to algorithm failure";
-    *reference_line_info->mutable_speed_data() = GenerateFallbackSpeed(
-        injector_->ego_info(), FLAGS_speed_fallback_distance);
+    *reference_line_info->mutable_speed_data() = GenerateFallbackSpeed(injector_->ego_info(), 
+                                                                       FLAGS_speed_fallback_distance);
     AmendSpeedDataForControl(reference_line_info->mutable_speed_data());
   }
 
@@ -53,8 +53,8 @@ apollo::common::Status TrajectoryFallbackTask::Execute(
   return Status::OK();
 }
 
-void TrajectoryFallbackTask::GenerateFallbackPath(
-    Frame* frame, ReferenceLineInfo* reference_line_info) {
+void TrajectoryFallbackTask::GenerateFallbackPath(Frame* frame, 
+                                                  ReferenceLineInfo* reference_line_info) {
   // path and speed fall back
   if (reference_line_info->path_data().Empty()) {
     AERROR << "Path fallback due to algorithm failure";
@@ -67,11 +67,9 @@ void TrajectoryFallbackTask::GenerateFallbackPath(
   }
 
   if (reference_line_info->trajectory_type() != ADCTrajectory::PATH_FALLBACK) {
-    if (!RetrieveLastFramePathProfile(
-            reference_line_info, frame,
-            reference_line_info->mutable_path_data())) {
-      const auto& candidate_path_data =
-          reference_line_info->GetCandidatePathData();
+    if (!RetrieveLastFramePathProfile(reference_line_info, frame,
+                                      reference_line_info->mutable_path_data())) {
+      const auto& candidate_path_data = reference_line_info->GetCandidatePathData();
       for (const auto& path_data : candidate_path_data) {
         if (path_data.path_label().find("self") != std::string::npos) {
           *reference_line_info->mutable_path_data() = path_data;
@@ -83,8 +81,8 @@ void TrajectoryFallbackTask::GenerateFallbackPath(
   }
 }
 
-void TrajectoryFallbackTask::GenerateFallbackPathProfile(
-    const ReferenceLineInfo* reference_line_info, PathData* path_data) {
+void TrajectoryFallbackTask::GenerateFallbackPathProfile(const ReferenceLineInfo* reference_line_info, 
+                                                         PathData* path_data) {
   const double unit_s = 1.0;
   const auto& reference_line = reference_line_info->reference_line();
 
@@ -106,9 +104,9 @@ void TrajectoryFallbackTask::GenerateFallbackPathProfile(
 
     const double max_s = 100.0;
     for (double s = 0; s < max_s; s += unit_s) {
-      path_points.push_back(PointFactory::ToPathPoint(
-          adc_traversed_x, adc_traversed_y, 0.0, s, adc_point_heading,
-          adc_point_kappa, adc_point_dkappa));
+      path_points.push_back(PointFactory::ToPathPoint(adc_traversed_x, adc_traversed_y, 
+                                                      0.0, s, adc_point_heading,
+                                                      adc_point_kappa, adc_point_dkappa));
       adc_traversed_x += unit_s * std::cos(adc_point_heading);
       adc_traversed_y += unit_s * std::sin(adc_point_heading);
     }
@@ -118,8 +116,7 @@ void TrajectoryFallbackTask::GenerateFallbackPathProfile(
 
   // Generate a fallback path along the reference line direction
   const auto adc_s = adc_point_s_l.s();
-  const auto& adc_ref_point =
-      reference_line.GetReferencePoint(adc_point_x, adc_point_y);
+  const auto& adc_ref_point = reference_line.GetReferencePoint(adc_point_x, adc_point_y);
   const double dx = adc_point_x - adc_ref_point.x();
   const double dy = adc_point_y - adc_ref_point.y();
 
@@ -127,16 +124,16 @@ void TrajectoryFallbackTask::GenerateFallbackPathProfile(
   const double max_s = reference_line.Length();
   for (double s = adc_s; s < max_s; s += unit_s) {
     const auto& ref_point = reference_line.GetReferencePoint(s);
-    path_points.push_back(PointFactory::ToPathPoint(
-        ref_point.x() + dx, ref_point.y() + dy, 0.0, s - adc_s,
-        ref_point.heading(), ref_point.kappa(), ref_point.dkappa()));
+    path_points.push_back(PointFactory::ToPathPoint(ref_point.x() + dx, ref_point.y() + dy, 
+                                                    0.0, s - adc_s,
+                                                    ref_point.heading(), ref_point.kappa(), ref_point.dkappa()));
   }
   path_data->SetDiscretizedPath(DiscretizedPath(std::move(path_points)));
 }
 
-bool TrajectoryFallbackTask::RetrieveLastFramePathProfile(
-    const ReferenceLineInfo* reference_line_info, const Frame* frame,
-    PathData* path_data) {
+bool TrajectoryFallbackTask::RetrieveLastFramePathProfile(const ReferenceLineInfo* reference_line_info, 
+                                                          const Frame* frame,
+                                                          PathData* path_data) {
   const auto* ptr_last_frame = injector_->frame_history()->Latest();
   if (ptr_last_frame == nullptr) {
     AERROR
@@ -144,13 +141,10 @@ bool TrajectoryFallbackTask::RetrieveLastFramePathProfile(
     return false;
   }
 
-  const auto& last_frame_discretized_path =
-      ptr_last_frame->current_frame_planned_path();
+  const auto& last_frame_discretized_path = ptr_last_frame->current_frame_planned_path();
 
   path_data->SetDiscretizedPath(last_frame_discretized_path);
-  const auto adc_frenet_frame_point_ =
-      reference_line_info->reference_line().GetFrenetPoint(
-          frame->PlanningStartPoint().path_point());
+  const auto adc_frenet_frame_point_ = reference_line_info->reference_line().GetFrenetPoint(frame->PlanningStartPoint().path_point());
 
   bool trim_success = path_data->LeftTrimWithRefS(adc_frenet_frame_point_);
   if (!trim_success) {
@@ -162,11 +156,9 @@ bool TrajectoryFallbackTask::RetrieveLastFramePathProfile(
   return true;
 }
 
-void TrajectoryFallbackTask::AmendSpeedDataForControl(
-    SpeedData* speed_data_ptr) {
-  // Iterate the speed data with reverse order to modify the deceleration before
-  // stopping. If the value of deceleration is not big enough, control module
-  // may not stop the vehicle in time.
+void TrajectoryFallbackTask::AmendSpeedDataForControl(SpeedData* speed_data_ptr) {
+  // Iterate the speed data with reverse order to modify the deceleration before stopping.
+  // If the value of deceleration is not big enough, control module may not stop the vehicle in time.
   SpeedData& speed_data = *speed_data_ptr;
   const int speed_data_num = speed_data.size();
   int modify_index = speed_data_num - 1;

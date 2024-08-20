@@ -1051,7 +1051,7 @@ bool Path::GetRoadWidth(const double s, double* road_left_width,
     return false;
   }
 
-  *road_left_width = GetSample(road_left_width_, s);
+  *road_left_width = GetSample(road_left_width_, s);    // 变道的时候，road_left_width_ = 6.02左右
   *road_right_width = GetSample(road_right_width_, s);
   return true;
 }
@@ -1068,7 +1068,7 @@ double Path::GetSample(const std::vector<double>& samples,
   if (idx >= num_sample_points_ - 1) {
     return samples.back();
   }
-  const double ratio = (s - idx * kSampleDistance) / kSampleDistance;
+  const double ratio = (s - idx * kSampleDistance) / kSampleDistance;  // 计算插值比例，返回插值结果
   return samples[idx] * (1.0 - ratio) + samples[idx + 1] * ratio;
 }
 

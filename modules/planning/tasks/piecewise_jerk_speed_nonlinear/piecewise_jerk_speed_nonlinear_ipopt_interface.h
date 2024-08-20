@@ -35,11 +35,10 @@ namespace planning {
 
 class PiecewiseJerkSpeedNonlinearIpoptInterface : public Ipopt::TNLP {
  public:
-  PiecewiseJerkSpeedNonlinearIpoptInterface(
-      const double s_init, const double s_dot_init, const double s_ddot_init,
-      const double delta_t, const int num_of_points, const double s_max_,
-      const double s_dot_max, const double s_ddot_min, const double s_ddot_max,
-      const double s_dddot_min, const double s_dddot_max);
+  PiecewiseJerkSpeedNonlinearIpoptInterface(const double s_init, const double s_dot_init, const double s_ddot_init,
+                                            const double delta_t, const int num_of_points, const double s_max_,
+                                            const double s_dot_max, const double s_ddot_min, const double s_ddot_max,
+                                            const double s_dddot_min, const double s_dddot_max);
 
   virtual ~PiecewiseJerkSpeedNonlinearIpoptInterface() = default;
 
@@ -60,11 +59,9 @@ class PiecewiseJerkSpeedNonlinearIpoptInterface : public Ipopt::TNLP {
 
   void set_speed_limit_curve(const PiecewiseJerkTrajectory1d &v_bound_f);
 
-  void set_safety_bounds(
-      const std::vector<std::pair<double, double>> &safety_bounds);
+  void set_safety_bounds(const std::vector<std::pair<double, double>> &safety_bounds);
 
-  void set_soft_safety_bounds(
-      const std::vector<std::pair<double, double>> &soft_safety_bounds);
+  void set_soft_safety_bounds(const std::vector<std::pair<double, double>> &soft_safety_bounds);
 
   void set_w_target_state(const double w_target_s, const double w_target_v,
                           const double w_target_a);

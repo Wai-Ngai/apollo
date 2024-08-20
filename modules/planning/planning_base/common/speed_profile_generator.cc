@@ -45,17 +45,16 @@ void SpeedProfileGenerator::FillEnoughSpeedPoints(SpeedData* const speed_data) {
   }
   for (double t = last_point_t + FLAGS_fallback_time_unit;
        t < FLAGS_fallback_total_time; t += FLAGS_fallback_time_unit) {
-    speed_data->AppendSpeedPoint(last_point_s, t, 0.0, 0.0, 0.0);
+    speed_data->AppendSpeedPoint(last_point_s, t, 0.0, 0.0, 0.0); // 规划时间不足t，后面的全部填充0。是否合理
   }
 }
 
-SpeedData SpeedProfileGenerator::GenerateFixedDistanceCreepProfile(
-    const double distance, const double max_speed) {
+SpeedData SpeedProfileGenerator::GenerateFixedDistanceCreepProfile(const double distance, 
+                                                                   const double max_speed) {
   static constexpr double kConstDeceleration = -0.8;  // (~3sec to fully stop)
   static constexpr double kProceedingSpeed = 2.23;    // (5mph proceeding speed)
   const double proceeding_speed = std::fmin(max_speed, kProceedingSpeed);
-  const double distance_to_start_deceleration =
-      proceeding_speed * proceeding_speed / kConstDeceleration / 2;
+  const double distance_to_start_deceleration = proceeding_speed * proceeding_speed / kConstDeceleration / 2;
   bool is_const_deceleration_mode = distance < distance_to_start_deceleration;
 
   double a = kConstDeceleration;

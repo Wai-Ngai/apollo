@@ -36,8 +36,7 @@ class FallbackPath : public PathGeneration {
             const std::shared_ptr<DependencyInjector>& injector) override;
 
  private:
-  apollo::common::Status Process(
-      Frame* frame, ReferenceLineInfo* reference_line_info) override;
+  apollo::common::Status Process(Frame* frame, ReferenceLineInfo* reference_line_info) override;
 
   /**
    * @brief Calculate all path boundaries

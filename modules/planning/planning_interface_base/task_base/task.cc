@@ -41,17 +41,15 @@ bool Task::Init(const std::string& config_dir, const std::string& name,
                 const std::shared_ptr<DependencyInjector>& injector) {
   injector_ = injector;
   name_ = name;
-  config_path_ =
-      config_dir + "/" + ConfigUtil::TransformToPathName(name) + ".pb.txt";
+  config_path_ = config_dir + "/" + ConfigUtil::TransformToPathName(name) + ".pb.txt";
 
   // Get the name of this class.
   int status;
-  std::string class_name =
-      abi::__cxa_demangle(typeid(*this).name(), 0, 0, &status);
+  std::string class_name = abi::__cxa_demangle(typeid(*this).name(), 0, 0, &status);
+  
   // Generate the default task config path from PluginManager.
-  default_config_path_ =
-      apollo::cyber::plugin_manager::PluginManager::Instance()
-          ->GetPluginConfPath<Task>(class_name, "conf/default_conf.pb.txt");
+  default_config_path_ = apollo::cyber::plugin_manager::PluginManager::Instance()
+                         ->GetPluginConfPath<Task>(class_name, "conf/default_conf.pb.txt");
   return true;
 }
 

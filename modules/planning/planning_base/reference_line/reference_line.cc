@@ -227,30 +227,39 @@ ReferenceLine::ToFrenetFrame(const common::TrajectoryPoint& traj_point) const {
 
   common::SLPoint sl_point;
   XYToSL(traj_point.path_point().theta(),
-         {traj_point.path_point().x(), traj_point.path_point().y()}, &sl_point);
+         {traj_point.path_point().x(), traj_point.path_point().y()},
+         &sl_point);
 
   std::array<double, 3> s_condition;
   std::array<double, 3> l_condition;
   ReferencePoint ref_point = GetReferencePoint(sl_point.s());
-  CartesianFrenetConverter::cartesian_to_frenet(
-      sl_point.s(), ref_point.x(), ref_point.y(), ref_point.heading(),
-      ref_point.kappa(), ref_point.dkappa(), traj_point.path_point().x(),
-      traj_point.path_point().y(), traj_point.v(), traj_point.a(),
-      traj_point.path_point().theta(), traj_point.path_point().kappa(),
-      &s_condition, &l_condition);
+
+  CartesianFrenetConverter::cartesian_to_frenet(sl_point.s(), ref_point.x(), ref_point.y(), 
+                                                ref_point.heading(), ref_point.kappa(), ref_point.dkappa(), 
+                                                traj_point.path_point().x(), traj_point.path_point().y(),
+                                                traj_point.v(), traj_point.a(),
+                                                traj_point.path_point().theta(), traj_point.path_point().kappa(),
+                                                &s_condition, &l_condition);
   AINFO << "planning_start_point x,y,the,k" << std::fixed
-        << traj_point.path_point().x() << "," << traj_point.path_point().y()
-        << "," << traj_point.path_point().theta() << ","
-        << traj_point.path_point().kappa() << "," << traj_point.v() << ","
+        << traj_point.path_point().x() << "," 
+        << traj_point.path_point().y() << "," 
+        << traj_point.path_point().theta() << ","
+        << traj_point.path_point().kappa() << "," 
+        << traj_point.v() << ","
         << traj_point.a();
-  AINFO << "ref point x y the ka dka" << std::fixed << ref_point.x() << ","
-        << ref_point.y() << "," << ref_point.heading() << ","
-        << ref_point.kappa() << "," << ref_point.dkappa();
+  AINFO << "ref point x y the ka dka" << std::fixed 
+        << ref_point.x() << ","
+        << ref_point.y() << "," 
+        << ref_point.heading() << ","
+        << ref_point.kappa() << "," 
+        << ref_point.dkappa();
   return std::make_pair(s_condition, l_condition);
 }
 
 ReferencePoint ReferenceLine::GetNearestReferencePoint(const double s) const {
   const auto& accumulated_s = map_path_.accumulated_s();
+
+  // 边界检查
   if (s < accumulated_s.front() - 1e-2) {
     AWARN << "The requested s: " << s << " < 0.";
     return reference_points_.front();
@@ -260,12 +269,15 @@ ReferencePoint ReferenceLine::GetNearestReferencePoint(const double s) const {
           << " > reference line length: " << accumulated_s.back();
     return reference_points_.back();
   }
-  auto it_lower =
-      std::lower_bound(accumulated_s.begin(), accumulated_s.end(), s);
+
+  // 找到第一个不小于 s 的点。返回一个迭代器
+  auto it_lower = std::lower_bound(accumulated_s.begin(), accumulated_s.end(), s);
   if (it_lower == accumulated_s.begin()) {
     return reference_points_.front();
   }
-  auto index = std::distance(accumulated_s.begin(), it_lower);
+
+  // 计算最接近 s 的累积距离的index
+  auto index = std::distance(accumulated_s.begin(), it_lower); // 计算迭代器 it_lower 相对于 accumulated_s.begin() 的偏移量
   if (std::fabs(accumulated_s[index - 1] - s) <
       std::fabs(accumulated_s[index] - s)) {
     return reference_points_[index - 1];
@@ -453,9 +465,8 @@ bool ReferenceLine::XYToSL(const double heading,
   return true;
 }
 
-ReferencePoint ReferenceLine::InterpolateWithMatchedIndex(
-    const ReferencePoint& p0, const double s0, const ReferencePoint& p1,
-    const double s1, const InterpolatedIndex& index) const {
+ReferencePoint ReferenceLine::InterpolateWithMatchedIndex(const ReferencePoint& p0, const double s0, const ReferencePoint& p1,
+                                                         const double s1, const InterpolatedIndex& index) const {
   if (std::fabs(s0 - s1) < common::math::kMathEpsilon) {
     return p0;
   }

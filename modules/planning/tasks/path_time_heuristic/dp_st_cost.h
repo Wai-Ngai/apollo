@@ -43,22 +43,28 @@ class DpStCost {
            const STDrivableBoundary& st_drivable_boundary,
            const common::TrajectoryPoint& init_point);
 
+  // 障碍物代价
   double GetObstacleCost(const StGraphPoint& point);
 
+  // 距离终点代价
   double GetSpatialPotentialCost(const StGraphPoint& point);
 
+  // 参考线代价
   double GetReferenceCost(const STPoint& point,
                           const STPoint& reference_point) const;
 
+  // 速度代价
   double GetSpeedCost(const STPoint& first, const STPoint& second,
                       const double speed_limit,
                       const double cruise_speed) const;
 
+  // 加速度代价
   double GetAccelCostByTwoPoints(const double pre_speed, const STPoint& first,
                                  const STPoint& second);
   double GetAccelCostByThreePoints(const STPoint& first, const STPoint& second,
                                    const STPoint& third);
 
+  // 加加速度代价
   double GetJerkCostByTwoPoints(const double pre_speed, const double pre_acc,
                                 const STPoint& pre_point,
                                 const STPoint& curr_point);
@@ -75,8 +81,7 @@ class DpStCost {
   double JerkCost(const double jerk);
 
   void AddToKeepClearRange(const std::vector<const Obstacle*>& obstacles);
-  static void SortAndMergeRange(
-      std::vector<std::pair<double, double>>* keep_clear_range_);
+  static void SortAndMergeRange(std::vector<std::pair<double, double>>* keep_clear_range_);
   bool InKeepClearRange(double s) const;
 
   const DpStSpeedOptimizerConfig& config_;

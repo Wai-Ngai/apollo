@@ -33,8 +33,7 @@ namespace planning {
 
 /**
  * @class PathTimeHeuristicOptimizer
- * @brief PathTimeHeuristicOptimizer does ST graph speed planning with dynamic
- * programming algorithm.
+ * @brief PathTimeHeuristicOptimizer does ST graph speed planning with dynamic programming algorithm.
  */
 class PathTimeHeuristicOptimizer : public SpeedOptimizer {
  public:
@@ -54,8 +53,7 @@ class PathTimeHeuristicOptimizer : public SpeedOptimizer {
   SpeedHeuristicOptimizerConfig config_;
 };
 
-CYBER_PLUGIN_MANAGER_REGISTER_PLUGIN(
-    apollo::planning::PathTimeHeuristicOptimizer, Task)
+CYBER_PLUGIN_MANAGER_REGISTER_PLUGIN(apollo::planning::PathTimeHeuristicOptimizer, Task)
 
 }  // namespace planning
 }  // namespace apollo

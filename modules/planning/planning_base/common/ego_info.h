@@ -52,8 +52,7 @@ class EgoInfo {
 
   common::math::Box2d ego_box() const { return ego_box_; }
 
-  void CalculateFrontObstacleClearDistance(
-      const std::vector<const Obstacle*>& obstacles);
+  void CalculateFrontObstacleClearDistance(const std::vector<const Obstacle*>& obstacles);
 
  private:
   FRIEND_TEST(EgoInfoTest, EgoInfoSimpleTest);
@@ -65,9 +64,8 @@ class EgoInfo {
   void set_start_point(const common::TrajectoryPoint& start_point) {
     start_point_ = start_point;
     const auto& param = ego_vehicle_config_.vehicle_param();
-    start_point_.set_a(
-        std::fmax(std::fmin(start_point_.a(), param.max_acceleration()),
-                  param.max_deceleration()));
+    start_point_.set_a(std::fmax(std::fmin(start_point_.a(), param.max_acceleration()),
+                                 param.max_deceleration()));
   }
 
   void CalculateEgoBox(const common::VehicleState& vehicle_state);

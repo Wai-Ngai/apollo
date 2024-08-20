@@ -51,8 +51,7 @@ namespace {
 constexpr double kStraightForwardLineCost = 10.0;
 }  // namespace
 
-void LaneFollowStage::RecordObstacleDebugInfo(
-    ReferenceLineInfo* reference_line_info) {
+void LaneFollowStage::RecordObstacleDebugInfo(ReferenceLineInfo* reference_line_info) {
   if (!FLAGS_enable_record_debug) {
     ADEBUG << "Skip record debug info";
     return;
@@ -63,8 +62,8 @@ void LaneFollowStage::RecordObstacleDebugInfo(
   for (const auto obstacle : path_decision->obstacles().Items()) {
     auto obstacle_debug = ptr_debug->mutable_planning_data()->add_obstacle();
     obstacle_debug->set_id(obstacle->Id());
-    obstacle_debug->mutable_sl_boundary()->CopyFrom(
-        obstacle->PerceptionSLBoundary());
+    obstacle_debug->mutable_sl_boundary()->CopyFrom(obstacle->PerceptionSLBoundary());
+
     const auto& decider_tags = obstacle->decider_tags();
     const auto& decisions = obstacle->decisions();
     if (decider_tags.size() != decisions.size()) {
@@ -92,6 +91,8 @@ StageResult LaneFollowStage::Process(const TrajectoryPoint& planning_start_point
 
   unsigned int count = 0;
   StageResult result;
+
+  // 遍历所有参考线，基于每条参考线分别进行轨迹规划
   for (auto& reference_line_info : *frame->mutable_reference_line_info()) {
     // TODO(SHU): need refactor
     if (count++ == frame->mutable_reference_line_info()->size()) {
@@ -104,16 +105,17 @@ StageResult LaneFollowStage::Process(const TrajectoryPoint& planning_start_point
       reference_line_info.SetDrivable(false);
       break;
     }
-    // 调用父类函数：基于参考线的规划函数
+    // 调用基于参考线的规划函数
     result = PlanOnReferenceLine(planning_start_point, frame, &reference_line_info);
 
     if (!result.HasError()) {
-      if (!reference_line_info.IsChangeLanePath()) {
+      if (!reference_line_info.IsChangeLanePath()) { // 非变道参考线
         ADEBUG << "reference line is NOT lane change ref.";
-        has_drivable_reference_line = true;
+        has_drivable_reference_line = true;          // 将把这条参考线路标记为可驾驶，并继续处理下一条参考线路
         continue;
       }
-      if (reference_line_info.Cost() < kStraightForwardLineCost) {
+      // 检查这条参考线路的代价（Cost）是否小于不进行车道变更的代价
+      if (reference_line_info.Cost() < kStraightForwardLineCost) { 
         // If the path and speed optimization succeed on target lane while
         // under smart lane-change or IsClearToChangeLane under older version
         has_drivable_reference_line = true;
@@ -128,13 +130,15 @@ StageResult LaneFollowStage::Process(const TrajectoryPoint& planning_start_point
   }
 
   return has_drivable_reference_line
-             ? result.SetStageStatus(StageStatusType::RUNNING)
-             : result.SetStageStatus(StageStatusType::ERROR);
+         ? result.SetStageStatus(StageStatusType::RUNNING)
+         : result.SetStageStatus(StageStatusType::ERROR);
 }
 
-StageResult LaneFollowStage::PlanOnReferenceLine(
-    const TrajectoryPoint& planning_start_point, Frame* frame,
-    ReferenceLineInfo* reference_line_info) {
+StageResult LaneFollowStage::PlanOnReferenceLine(const TrajectoryPoint& planning_start_point, 
+                                                 Frame* frame,
+                                                 ReferenceLineInfo* reference_line_info) {
+  
+  // 是否变换车道。如果不是，增加一个路径成本
   if (!reference_line_info->IsChangeLanePath()) {
     reference_line_info->AddCost(kStraightForwardLineCost);
   }
@@ -142,16 +146,14 @@ StageResult LaneFollowStage::PlanOnReferenceLine(
   ADEBUG << "Current reference_line_info is IsChangeLanePath: "
          << reference_line_info->IsChangeLanePath();
   
-  // 顺序执行task任务
+  // 顺序执行每一个task任务
   StageResult ret;
   for (auto task : task_list_) {
     const double start_timestamp = Clock::NowInSeconds();
     const auto start_planning_perf_timestamp =
-        std::chrono::duration<double>(
-            std::chrono::system_clock::now().time_since_epoch())
-            .count();
+        std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-    // 调用task的执行函数
+    // 执行每一个任务，调用task的执行函数
     ret.SetTaskStatus(task->Execute(frame, reference_line_info));
 
     const double end_timestamp = Clock::NowInSeconds();
@@ -162,11 +164,8 @@ StageResult LaneFollowStage::PlanOnReferenceLine(
     RecordDebugInfo(reference_line_info, task->Name(), time_diff_ms);
 
     const auto end_planning_perf_timestamp =
-        std::chrono::duration<double>(
-            std::chrono::system_clock::now().time_since_epoch())
-            .count();
-    const auto plnning_perf_ms =
-        (end_planning_perf_timestamp - start_planning_perf_timestamp) * 1000;
+        std::chrono::duration<double>( std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto plnning_perf_ms = (end_planning_perf_timestamp - start_planning_perf_timestamp) * 1000;
     AINFO << "Planning Perf: task name [" << task->Name() << "], "
           << plnning_perf_ms << " ms.";
 
@@ -192,10 +191,11 @@ StageResult LaneFollowStage::PlanOnReferenceLine(
     fallback_task_->Execute(frame, reference_line_info);
   }
 
+  // 路径和速度信息组合成一条轨迹
   DiscretizedTrajectory trajectory;
-  if (!reference_line_info->CombinePathAndSpeedProfile(
-          planning_start_point.relative_time(),
-          planning_start_point.path_point().s(), &trajectory)) {
+  if (!reference_line_info->CombinePathAndSpeedProfile(planning_start_point.relative_time(),
+                                                       planning_start_point.path_point().s(), 
+                                                       &trajectory)) {
     const std::string msg = "Fail to aggregate planning trajectory.";
     AERROR << msg;
     return ret.SetStageStatus(StageStatusType::ERROR, msg);
@@ -203,35 +203,32 @@ StageResult LaneFollowStage::PlanOnReferenceLine(
 
   // determine if there is a destination on reference line.
   double dest_stop_s = -1.0;
-  for (const auto* obstacle :
-       reference_line_info->path_decision()->obstacles().Items()) {
+  for (const auto* obstacle : reference_line_info->path_decision()->obstacles().Items()) {
     if (obstacle->LongitudinalDecision().has_stop() &&
-        obstacle->LongitudinalDecision().stop().reason_code() ==
-            STOP_REASON_DESTINATION) {
+        obstacle->LongitudinalDecision().stop().reason_code() == STOP_REASON_DESTINATION) {
+      // 目的地在这条参考线上，记录下目的地的位置s
       SLPoint dest_sl = GetStopSL(obstacle->LongitudinalDecision().stop(),
                                   reference_line_info->reference_line());
       dest_stop_s = dest_sl.s();
     }
   }
 
-  for (const auto* obstacle :
-       reference_line_info->path_decision()->obstacles().Items()) {
+  for (const auto* obstacle : reference_line_info->path_decision()->obstacles().Items()) {
     if (obstacle->IsVirtual()) {
       continue;
     }
     if (!obstacle->IsStatic()) {
       continue;
     }
-    if (obstacle->LongitudinalDecision().has_stop()) {
+    if (obstacle->LongitudinalDecision().has_stop()) { // 静态障碍物且有停止决策
       bool add_stop_obstacle_cost = false;
       if (dest_stop_s < 0.0) {
         add_stop_obstacle_cost = true;
-      } else {
+      } else { // 检查这个障碍物的停止点是否在目标点之前。如果是，那增加一个障碍物成本
         SLPoint stop_sl = GetStopSL(obstacle->LongitudinalDecision().stop(),
                                     reference_line_info->reference_line());
         if (stop_sl.s() < dest_stop_s &&
-            (dest_stop_s - reference_line_info->AdcSlBoundary().end_s()) <
-                20.0) {
+            (dest_stop_s - reference_line_info->AdcSlBoundary().end_s()) < 20.0) {
           add_stop_obstacle_cost = true;
         }
       }
@@ -243,8 +240,7 @@ StageResult LaneFollowStage::PlanOnReferenceLine(
   }
 
   if (FLAGS_enable_trajectory_check) {
-    if (ConstraintChecker::ValidTrajectory(trajectory) !=
-        ConstraintChecker::Result::VALID) {
+    if (ConstraintChecker::ValidTrajectory(trajectory) != ConstraintChecker::Result::VALID) {
       const std::string msg = "Current planning trajectory is not valid.";
       AERROR << msg;
       return ret.SetStageStatus(StageStatusType::ERROR, msg);

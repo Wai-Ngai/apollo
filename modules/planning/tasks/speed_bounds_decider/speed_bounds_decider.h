@@ -43,9 +43,8 @@ class SpeedBoundsDecider : public Decider {
 
   double SetSpeedFallbackDistance(PathDecision* const path_decision);
 
-  void RecordSTGraphDebug(
-      const StGraphData& st_graph_data,
-      planning_internal::STGraphDebug* st_graph_debug) const;
+  void RecordSTGraphDebug(const StGraphData& st_graph_data,
+                          planning_internal::STGraphDebug* st_graph_debug) const;
 
   SpeedBoundsDeciderConfig config_;
 };

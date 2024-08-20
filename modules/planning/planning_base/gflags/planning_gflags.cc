@@ -31,10 +31,9 @@ DEFINE_bool(enable_scenario_side_pass_multiple_parked_obstacles, true,
 DEFINE_bool(enable_force_pull_over_open_space_parking_test, false,
             "enable force_pull_over_open_space_parking_test");
 
-DEFINE_string(
-    traffic_rule_config_filename,
-    "modules/planning/planning_component/conf/traffic_rule_config.pb.txt",
-    "Traffic rule config filename");
+DEFINE_string(traffic_rule_config_filename,
+              "modules/planning/planning_component/conf/traffic_rule_config.pb.txt",
+              "Traffic rule config filename");
 
 DEFINE_string(smoother_config_filename,
               "/apollo/modules/planning/planning_component/conf/"
@@ -95,15 +94,12 @@ DEFINE_double(planning_upper_speed_limit, 31.3,
 DEFINE_double(trajectory_time_length, 8.0, "Trajectory time length");
 
 // planning trajectory output time density control
-DEFINE_double(
-    trajectory_time_min_interval, 0.02,
-    "(seconds) Trajectory time interval when publish. The is the min value.");
-DEFINE_double(
-    trajectory_time_max_interval, 0.1,
-    "(seconds) Trajectory time interval when publish. The is the max value.");
-DEFINE_double(
-    trajectory_time_high_density_period, 1.0,
-    "(seconds) Keep high density in the next this amount of seconds. ");
+DEFINE_double(trajectory_time_min_interval, 0.02,
+              "(seconds) Trajectory time interval when publish. The is the min value.");
+DEFINE_double(trajectory_time_max_interval, 0.1,
+              "(seconds) Trajectory time interval when publish. The is the max value.");
+DEFINE_double(trajectory_time_high_density_period, 1.0,
+              "(seconds) Keep high density in the next this amount of seconds. ");
 
 DEFINE_bool(enable_trajectory_check, false,
             "Enable sanity check for planning trajectory.");
@@ -189,11 +185,9 @@ DEFINE_bool(align_prediction_time, false,
 
 // Trajectory
 
-// according to DMV's rule, turn signal should be on within 200 ft from
-// intersection.
-DEFINE_double(
-    turn_signal_distance, 100.00,
-    "In meters. If there is a turn within this distance, use turn signal");
+// according to DMV's rule, turn signal should be on within 200 ft from intersection.
+DEFINE_double(turn_signal_distance, 100.00,
+              "In meters. If there is a turn within this distance, use turn signal");
 
 DEFINE_int32(trajectory_point_num_for_debug, 10,
              "number of output trajectory points for debugging");
@@ -235,23 +229,17 @@ DEFINE_uint64(num_sample_follow_per_timestamp, 3,
 // Lattice Evaluate Parameters
 DEFINE_double(weight_lon_objective, 10.0, "Weight of longitudinal travel cost");
 DEFINE_double(weight_lon_jerk, 1.0, "Weight of longitudinal jerk cost");
-DEFINE_double(weight_lon_collision, 5.0,
-              "Weight of longitudinal collision cost");
+DEFINE_double(weight_lon_collision, 5.0, "Weight of longitudinal collision cost");
 DEFINE_double(weight_lat_offset, 2.0, "Weight of lateral offset cost");
 DEFINE_double(weight_lat_comfort, 10.0, "Weight of lateral comfort cost");
-DEFINE_double(weight_centripetal_acceleration, 1.5,
-              "Weight of centripetal acceleration");
-DEFINE_double(cost_non_priority_reference_line, 5.0,
-              "The cost of planning on non-priority reference line.");
-DEFINE_double(weight_same_side_offset, 1.0,
-              "Weight of same side lateral offset cost");
-DEFINE_double(weight_opposite_side_offset, 10.0,
-              "Weight of opposite side lateral offset cost");
+DEFINE_double(weight_centripetal_acceleration, 1.5, "Weight of centripetal acceleration");
+DEFINE_double(cost_non_priority_reference_line, 5.0, "The cost of planning on non-priority reference line.");
+DEFINE_double(weight_same_side_offset, 1.0, "Weight of same side lateral offset cost");
+DEFINE_double(weight_opposite_side_offset, 10.0, "Weight of opposite side lateral offset cost");
 DEFINE_double(weight_dist_travelled, 10.0, "Weight of travelled distance cost");
 DEFINE_double(weight_target_speed, 1.0, "Weight of target speed cost");
 DEFINE_double(lat_offset_bound, 3.0, "The bound of lateral offset");
-DEFINE_double(lon_collision_yield_buffer, 1.0,
-              "Longitudinal collision buffer for yield");
+DEFINE_double(lon_collision_yield_buffer, 1.0, "Longitudinal collision buffer for yield");
 DEFINE_double(lon_collision_overtake_buffer, 5.0,
               "Longitudinal collision buffer for overtake");
 DEFINE_double(lon_collision_cost_std, 0.5,
@@ -281,9 +269,8 @@ DEFINE_double(weight_lateral_second_order_derivative, 1000.0,
 DEFINE_double(weight_lateral_third_order_derivative, 1000.0,
               "weight for lateral third order derivative "
               "in lateral trajectory optimization");
-DEFINE_double(
-    weight_lateral_obstacle_distance, 0.0,
-    "weight for lateral obstacle distance in lateral trajectory optimization");
+DEFINE_double(weight_lateral_obstacle_distance, 0.0,
+              "weight for lateral obstacle distance in lateral trajectory optimization");
 DEFINE_double(lateral_third_order_derivative_max, 0.1,
               "the maximal allowance for lateral third order derivative");
 DEFINE_double(max_s_lateral_optimization, 60.0,
@@ -294,8 +281,7 @@ DEFINE_double(bound_buffer, 0.1, "buffer to boundary for lateral optimization");
 DEFINE_double(nudge_buffer, 0.3, "buffer to nudge for lateral optimization");
 
 DEFINE_double(fallback_total_time, 3.0, "total fallback trajectory time");
-DEFINE_double(fallback_time_unit, 0.1,
-              "fallback trajectory unit time in seconds");
+DEFINE_double(fallback_time_unit, 0.1, "fallback trajectory unit time in seconds");
 
 DEFINE_double(speed_bump_speed_limit, 4.4704,
               "the speed limit when passing a speed bump, m/s. The default "
@@ -318,21 +304,18 @@ DEFINE_string(planner_open_space_config_filename,
 DEFINE_bool(use_dual_variable_warm_start, true,
             "whether or not enable dual variable warm start ");
 
-DEFINE_bool(
-    enable_smoother_failsafe, false,
-    "whether to use warm start result as final output when smoother fails");
+DEFINE_bool(enable_smoother_failsafe, false,
+            "whether to use warm start result as final output when smoother fails");
 
 DEFINE_bool(use_s_curve_speed_smooth, false,
             "Whether use s-curve (piecewise_jerk) for smoothing Hybrid Astar "
             "speed/acceleration.");
 
-DEFINE_bool(
-    use_iterative_anchoring_smoother, false,
-    "Whether use iterative_anchoring_smoother for open space planning ");
+DEFINE_bool(use_iterative_anchoring_smoother, false,
+            "Whether use iterative_anchoring_smoother for open space planning ");
 
-DEFINE_bool(
-    enable_parallel_trajectory_smoothing, false,
-    "Whether to partition the trajectory first and do smoothing in parallel");
+DEFINE_bool(enable_parallel_trajectory_smoothing, false,
+            "Whether to partition the trajectory first and do smoothing in parallel");
 
 DEFINE_bool(enable_osqp_debug, false,
             "True to turn on OSQP verbose debug output in log.");
@@ -343,15 +326,13 @@ DEFINE_bool(enable_record_debug, true,
 DEFINE_bool(enable_print_curve, false,
             "True to enable print curve info into log");
 
-DEFINE_double(
-    default_front_clear_distance, 300.0,
-    "default front clear distance value in case there is no obstacle around.");
+DEFINE_double(default_front_clear_distance, 300.0,
+              "default front clear distance value in case there is no obstacle around.");
 
 DEFINE_bool(enable_rss_info, true, "enable rss_info in trajectory_pb");
 
-DEFINE_bool(
-    enable_planning_smoother, false,
-    "True to enable planning smoother among different planning cycles.");
+DEFINE_bool(enable_planning_smoother, false,
+            "True to enable planning smoother among different planning cycles.");
 DEFINE_double(smoother_stop_distance, 10.0,
               "(unit: meter) for ADC stop, if it is close to the stop point "
               "within this threshold, current planning will be smoothed.");
@@ -419,23 +400,19 @@ DEFINE_bool(speed_optimize_fail_relax_velocity_constraint, true,
 DEFINE_bool(check_collision_freespace_obstacle_vertices, false,
             "Detect vehicle collisions with map projection obstacles");
 
-DEFINE_double(
-    near_stop_speed, 0.5,
-    "Set deceleration as near_stop_deceleration when vehicle speed is smaller "
-    "than this value before stopping so that control can keep up.");
+DEFINE_double(near_stop_speed, 0.5,
+             "Set deceleration as near_stop_deceleration when vehicle speed is smaller "
+             "than this value before stopping so that control can keep up.");
 
-DEFINE_double(
-    near_stop_deceleration, -1.0,
-    "Set deceleration as near_stop_deceleration when vehicle deceleration is "
-    "smaller than this value before stopping so that control can keep up.");
+DEFINE_double(near_stop_deceleration, -1.0,
+              "Set deceleration as near_stop_deceleration when vehicle deceleration is "
+              "smaller than this value before stopping so that control can keep up.");
 
-DEFINE_double(
-    referfece_line_max_forward_heading_diff, 3.1415926536 / 2,
-    "max angle difference between the forward reference line and ego heading");
+DEFINE_double(referfece_line_max_forward_heading_diff, 3.1415926536 / 2,
+              "max angle difference between the forward reference line and ego heading");
 
-DEFINE_double(
-    referfece_line_max_backward_heading_diff, 3.1415926536 / 6,
-    "max angle difference between the backward reference line and ego heading");
+DEFINE_double(referfece_line_max_backward_heading_diff, 3.1415926536 / 6,
+              "max angle difference between the backward reference line and ego heading");
 
 // Nudge decisider
 DEFINE_bool(enable_nudge_decider, true, "Enable use nudge decider");

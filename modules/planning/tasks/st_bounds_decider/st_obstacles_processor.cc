@@ -139,8 +139,7 @@ Status STObstaclesProcessor::MapObstaclesToSTBoundaries(
       // Obstacle doesn't appear on ST-Graph.
       continue;
     }
-    auto boundary =
-        STBoundary::CreateInstanceAccurate(lower_points, upper_points);
+    auto boundary = STBoundary::CreateInstanceAccurate(lower_points, upper_points);
     boundary.set_id(obs_ptr->Id());
     if (is_caution_obstacle) {
       boundary.set_obstacle_road_right_ending_t(obs_caution_end_t);
@@ -155,8 +154,7 @@ Status STObstaclesProcessor::MapObstaclesToSTBoundaries(
            upper_points.back().t() > obs_caution_end_t) {
       upper_points.pop_back();
     }
-    auto alternative_boundary =
-        STBoundary::CreateInstanceAccurate(lower_points, upper_points);
+    auto alternative_boundary = STBoundary::CreateInstanceAccurate(lower_points, upper_points);
     alternative_boundary.set_id(obs_ptr->Id());
     obs_id_to_alternative_st_boundary_[obs_ptr->Id()] = alternative_boundary;
     ADEBUG << "Obstacle " << obs_ptr->Id()
@@ -165,8 +163,7 @@ Status STObstaclesProcessor::MapObstaclesToSTBoundaries(
 
     // Store all Keep-Clear zone together.
     if (obs_item_ptr->Id().find("KC") != std::string::npos) {
-      candidate_clear_zones_.push_back(
-          make_tuple(obs_ptr->Id(), boundary, obs_ptr));
+      candidate_clear_zones_.push_back(make_tuple(obs_ptr->Id(), boundary, obs_ptr));
       continue;
     }
 
@@ -174,16 +171,13 @@ Status STObstaclesProcessor::MapObstaclesToSTBoundaries(
     if (obs_ptr->Trajectory().trajectory_point().empty()) {
       // Obstacle is static.
       if (std::get<0>(closest_stop_obstacle) == "NULL" ||
-          std::get<1>(closest_stop_obstacle).bottom_left_point().s() >
-              boundary.bottom_left_point().s()) {
+          std::get<1>(closest_stop_obstacle).bottom_left_point().s() > boundary.bottom_left_point().s()) {
         // If this static obstacle is closer for ADC to stop, record it.
-        closest_stop_obstacle =
-            std::make_tuple(obs_ptr->Id(), boundary, obs_ptr);
+        closest_stop_obstacle = std::make_tuple(obs_ptr->Id(), boundary, obs_ptr);
       }
     } else {
       // Obstacle is dynamic.
-      if (boundary.bottom_left_point().s() - adc_path_init_s_ <
-              kSIgnoreThreshold &&
+      if (boundary.bottom_left_point().s() - adc_path_init_s_ < kSIgnoreThreshold &&
           boundary.bottom_left_point().t() > kTIgnoreThreshold) {
         // Ignore obstacles that are behind.
         // TODO(jiacheng): don't ignore if ADC is in dangerous segments.
@@ -274,8 +268,7 @@ STObstaclesProcessor::GetAllSTBoundaries() {
   return obs_id_to_st_boundary_;
 }
 
-bool STObstaclesProcessor::GetLimitingSpeedInfo(
-    double t, std::pair<double, double>* const limiting_speed_info) {
+bool STObstaclesProcessor::GetLimitingSpeedInfo(double t, std::pair<double, double>* const limiting_speed_info) {
   if (obs_id_to_decision_.empty()) {
     // If no obstacle, then no speed limits.
     return false;
@@ -308,10 +301,8 @@ bool STObstaclesProcessor::GetLimitingSpeedInfo(
   return s_min <= s_max;
 }
 
-bool STObstaclesProcessor::GetSBoundsFromDecisions(
-    double t, std::vector<std::pair<double, double>>* const available_s_bounds,
-    std::vector<std::vector<std::pair<std::string, ObjectDecisionType>>>* const
-        available_obs_decisions) {
+bool STObstaclesProcessor::GetSBoundsFromDecisions(double t, std::vector<std::pair<double, double>>* const available_s_bounds,
+                                                  std::vector<std::vector<std::pair<std::string, ObjectDecisionType>>>* const available_obs_decisions) {
   // Sanity checks.
   available_s_bounds->clear();
   available_obs_decisions->clear();
@@ -351,8 +342,7 @@ bool STObstaclesProcessor::GetSBoundsFromDecisions(
     auto obs_st_boundary = obs_id_to_st_boundary_[obs_id];
     if (obs_decision.has_overtake() &&
         obs_st_boundary.min_t() <= t - kOvertakenObsCautionTime &&
-        obs_st_boundary.obstacle_road_right_ending_t() <=
-            t - kOvertakenObsCautionTime) {
+        obs_st_boundary.obstacle_road_right_ending_t() <= t - kOvertakenObsCautionTime) {
       obs_id_to_remove.push_back(obs_id_to_decision_pair.first);
     }
   }
@@ -361,10 +351,8 @@ bool STObstaclesProcessor::GetSBoundsFromDecisions(
     // Change the displayed st-boundary to the alternative one:
     if (obs_id_to_alternative_st_boundary_.count(obs_id) > 0) {
       Obstacle* obs_ptr = path_decision_->Find(obs_id);
-      obs_id_to_st_boundary_[obs_id] =
-          obs_id_to_alternative_st_boundary_[obs_id];
-      obs_id_to_st_boundary_[obs_id].SetBoundaryType(
-          STBoundary::BoundaryType::OVERTAKE);
+      obs_id_to_st_boundary_[obs_id] = obs_id_to_alternative_st_boundary_[obs_id];
+      obs_id_to_st_boundary_[obs_id].SetBoundaryType(STBoundary::BoundaryType::OVERTAKE);
       obs_ptr->set_path_st_boundary(obs_id_to_alternative_st_boundary_[obs_id]);
     }
   }
@@ -401,18 +389,14 @@ bool STObstaclesProcessor::GetSBoundsFromDecisions(
     if (std::get<0>(obs_t_edge) == 1) {
       if (std::get<2>(obs_t_edge) >= s_max) {
         ADEBUG << "  Apparently, it should be yielded.";
-        obs_id_to_decision_[std::get<4>(obs_t_edge)] =
-            DetermineObstacleDecision(std::get<2>(obs_t_edge),
-                                      std::get<3>(obs_t_edge), s_max);
-        obs_id_to_st_boundary_[std::get<4>(obs_t_edge)].SetBoundaryType(
-            STBoundary::BoundaryType::YIELD);
+        obs_id_to_decision_[std::get<4>(obs_t_edge)] = DetermineObstacleDecision(std::get<2>(obs_t_edge),
+                                                                                 std::get<3>(obs_t_edge), s_max);
+        obs_id_to_st_boundary_[std::get<4>(obs_t_edge)].SetBoundaryType(STBoundary::BoundaryType::YIELD);
       } else if (std::get<3>(obs_t_edge) <= s_min) {
         ADEBUG << "  Apparently, it should be overtaken.";
-        obs_id_to_decision_[std::get<4>(obs_t_edge)] =
-            DetermineObstacleDecision(std::get<2>(obs_t_edge),
-                                      std::get<3>(obs_t_edge), s_min);
-        obs_id_to_st_boundary_[std::get<4>(obs_t_edge)].SetBoundaryType(
-            STBoundary::BoundaryType::OVERTAKE);
+        obs_id_to_decision_[std::get<4>(obs_t_edge)] = DetermineObstacleDecision(std::get<2>(obs_t_edge),
+                                                                                 std::get<3>(obs_t_edge), s_min);
+        obs_id_to_st_boundary_[std::get<4>(obs_t_edge)].SetBoundaryType(STBoundary::BoundaryType::OVERTAKE);
       } else {
         ADEBUG << "  It should be further analyzed.";
         ambiguous_t_edges.push_back(obs_t_edge);
@@ -431,10 +415,9 @@ bool STObstaclesProcessor::GetSBoundsFromDecisions(
       std::string obs_id = std::get<4>(obs_t_edge);
       double obs_s_min = std::get<2>(obs_t_edge);
       double obs_s_max = std::get<3>(obs_t_edge);
-      obs_decisions.emplace_back(
-          obs_id,
-          DetermineObstacleDecision(obs_s_min, obs_s_max,
-                                    (s_gap.first + s_gap.second) / 2.0));
+      obs_decisions.emplace_back(obs_id,
+                                 DetermineObstacleDecision(obs_s_min, obs_s_max,
+                                                          (s_gap.first + s_gap.second) / 2.0));
     }
     available_obs_decisions->push_back(obs_decisions);
   }
@@ -442,26 +425,22 @@ bool STObstaclesProcessor::GetSBoundsFromDecisions(
   return true;
 }
 
-void STObstaclesProcessor::SetObstacleDecision(
-    const std::string& obs_id, const ObjectDecisionType& obs_decision) {
+void STObstaclesProcessor::SetObstacleDecision(const std::string& obs_id, 
+                                               const ObjectDecisionType& obs_decision) {
   obs_id_to_decision_[obs_id] = obs_decision;
   ObjectStatus object_status;
   object_status.mutable_motion_type()->mutable_dynamic();
   if (obs_decision.has_yield() || obs_decision.has_stop()) {
-    obs_id_to_st_boundary_[obs_id].SetBoundaryType(
-        STBoundary::BoundaryType::YIELD);
+    obs_id_to_st_boundary_[obs_id].SetBoundaryType(STBoundary::BoundaryType::YIELD);
     object_status.mutable_decision_type()->mutable_yield();
   } else if (obs_decision.has_overtake()) {
-    obs_id_to_st_boundary_[obs_id].SetBoundaryType(
-        STBoundary::BoundaryType::OVERTAKE);
+    obs_id_to_st_boundary_[obs_id].SetBoundaryType(STBoundary::BoundaryType::OVERTAKE);
     object_status.mutable_decision_type()->mutable_overtake();
   }
   history_->mutable_history_status()->SetObjectStatus(obs_id, object_status);
 }
 
-void STObstaclesProcessor::SetObstacleDecision(
-    const std::vector<std::pair<std::string, ObjectDecisionType>>&
-        obstacle_decisions) {
+void STObstaclesProcessor::SetObstacleDecision(const std::vector<std::pair<std::string, ObjectDecisionType>>& obstacle_decisions) {
   for (auto obs_decision : obstacle_decisions) {
     SetObstacleDecision(obs_decision.first, obs_decision.second);
   }
@@ -470,10 +449,10 @@ void STObstaclesProcessor::SetObstacleDecision(
 ///////////////////////////////////////////////////////////////////////////////
 // Private helper functions.
 
-bool STObstaclesProcessor::ComputeObstacleSTBoundary(
-    const Obstacle& obstacle, std::vector<STPoint>* const lower_points,
-    std::vector<STPoint>* const upper_points, bool* const is_caution_obstacle,
-    double* const obs_caution_end_t) {
+bool STObstaclesProcessor::ComputeObstacleSTBoundary(const Obstacle& obstacle, std::vector<STPoint>* const lower_points,
+                                                     std::vector<STPoint>* const upper_points, 
+                                                     bool* const is_caution_obstacle,
+                                                     double* const obs_caution_end_t) {
   lower_points->clear();
   upper_points->clear();
   *is_caution_obstacle = false;
@@ -546,18 +525,17 @@ bool STObstaclesProcessor::ComputeObstacleSTBoundary(
   return (!lower_points->empty() && !upper_points->empty());
 }
 
-bool STObstaclesProcessor::GetOverlappingS(
-    const std::vector<PathPoint>& adc_path_points,
-    const Box2d& obstacle_instance, const double adc_l_buffer,
-    std::pair<double, double>* const overlapping_s) {
+bool STObstaclesProcessor::GetOverlappingS(const std::vector<PathPoint>& adc_path_points,
+                                           const Box2d& obstacle_instance, const double adc_l_buffer,
+                                           std::pair<double, double>* const overlapping_s) {
   // Locate the possible range to search in details.
-  int pt_before_idx = GetSBoundingPathPointIndex(
-      adc_path_points, obstacle_instance, vehicle_param_.front_edge_to_center(),
-      true, 0, static_cast<int>(adc_path_points.size()) - 2);
+  int pt_before_idx = GetSBoundingPathPointIndex(adc_path_points, obstacle_instance, 
+                                                 vehicle_param_.front_edge_to_center(),
+                                                 true, 0, static_cast<int>(adc_path_points.size()) - 2);
   ADEBUG << "The index before is " << pt_before_idx;
-  int pt_after_idx = GetSBoundingPathPointIndex(
-      adc_path_points, obstacle_instance, vehicle_param_.back_edge_to_center(),
-      false, 0, static_cast<int>(adc_path_points.size()) - 2);
+  int pt_after_idx = GetSBoundingPathPointIndex(adc_path_points, obstacle_instance, 
+                                                vehicle_param_.back_edge_to_center(),
+                                                false, 0, static_cast<int>(adc_path_points.size()) - 2);
   ADEBUG << "The index after is " << pt_after_idx;
   if (pt_before_idx == static_cast<int>(adc_path_points.size()) - 2) {
     return false;
@@ -603,10 +581,10 @@ bool STObstaclesProcessor::GetOverlappingS(
   return true;
 }
 
-int STObstaclesProcessor::GetSBoundingPathPointIndex(
-    const std::vector<PathPoint>& adc_path_points,
-    const Box2d& obstacle_instance, const double s_thresh, const bool is_before,
-    const int start_idx, const int end_idx) {
+int STObstaclesProcessor::GetSBoundingPathPointIndex(const std::vector<PathPoint>& adc_path_points,
+                                                     const Box2d& obstacle_instance, 
+                                                     const double s_thresh, const bool is_before,
+                                                     const int start_idx, const int end_idx) {
   if (start_idx == end_idx) {
     if (IsPathPointAwayFromObstacle(adc_path_points[start_idx],
                                     adc_path_points[start_idx + 1],
@@ -645,9 +623,8 @@ int STObstaclesProcessor::GetSBoundingPathPointIndex(
   }
 }
 
-bool STObstaclesProcessor::IsPathPointAwayFromObstacle(
-    const PathPoint& path_point, const PathPoint& direction_point,
-    const Box2d& obs_box, const double s_thresh, const bool is_before) {
+bool STObstaclesProcessor::IsPathPointAwayFromObstacle(const PathPoint& path_point, const PathPoint& direction_point,
+                                                       const Box2d& obs_box, const double s_thresh, const bool is_before) {
   Vec2d path_pt(path_point.x(), path_point.y());
   Vec2d dir_pt(direction_point.x(), direction_point.y());
   LineSegment2d path_dir_lineseg(path_pt, dir_pt);
@@ -670,9 +647,8 @@ bool STObstaclesProcessor::IsPathPointAwayFromObstacle(
   return true;
 }
 
-bool STObstaclesProcessor::IsADCOverlappingWithObstacle(
-    const PathPoint& adc_path_point, const Box2d& obs_box,
-    const double l_buffer) const {
+bool STObstaclesProcessor::IsADCOverlappingWithObstacle(const PathPoint& adc_path_point, const Box2d& obs_box,
+                                                        const double l_buffer) const {
   // Convert reference point from center of rear axis to center of ADC.
   Vec2d ego_center_map_frame((vehicle_param_.front_edge_to_center() -
                               vehicle_param_.back_edge_to_center()) *
@@ -736,8 +712,8 @@ std::vector<std::pair<double, double>> STObstaclesProcessor::FindSGaps(
   return s_gaps;
 }
 
-ObjectDecisionType STObstaclesProcessor::DetermineObstacleDecision(
-    const double obs_s_min, const double obs_s_max, const double s) const {
+ObjectDecisionType STObstaclesProcessor::DetermineObstacleDecision(const double obs_s_min, 
+                                                                   const double obs_s_max, const double s) const {
   ObjectDecisionType decision;
   if (s <= obs_s_min) {
     decision.mutable_yield()->set_distance_s(0.0);
@@ -747,8 +723,7 @@ ObjectDecisionType STObstaclesProcessor::DetermineObstacleDecision(
   return decision;
 }
 
-bool STObstaclesProcessor::IsSWithinADCLowRoadRightSegment(
-    const double s) const {
+bool STObstaclesProcessor::IsSWithinADCLowRoadRightSegment(const double s) const {
   for (const auto& seg : adc_low_road_right_segments_) {
     if (s >= seg.first && s <= seg.second) {
       return true;

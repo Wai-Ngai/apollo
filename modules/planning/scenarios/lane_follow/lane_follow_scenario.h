@@ -44,6 +44,7 @@ class LaneFollowScenario : public Scenario {
    */
   ScenarioContext* GetContext() override { return nullptr; }
 
+  // 判断other_scenario是否能够转移到当前的LaneFollowScenario中
   bool IsTransferable(const Scenario* other_scenario,
                       const Frame& frame) override;
 };

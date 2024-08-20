@@ -159,16 +159,16 @@ bool RouteSegments::IsConnectedSegment(const RouteSegments &other) const {
   if (empty() || other.empty()) {
     return false;
   }
-  if (IsWaypointOnSegment(other.FirstWaypoint())) {
+  if (IsWaypointOnSegment(other.FirstWaypoint())) {  // segments整个路径的起点在prev_segment段内
     return true;
   }
-  if (IsWaypointOnSegment(other.LastWaypoint())) {
+  if (IsWaypointOnSegment(other.LastWaypoint())) {  // segments整个路径的终点在prev_segment段内
     return true;
   }
-  if (other.IsWaypointOnSegment(FirstWaypoint())) {
+  if (other.IsWaypointOnSegment(FirstWaypoint())) { // prev_segment路径段的起点落在segments路径上
     return true;
   }
-  if (other.IsWaypointOnSegment(LastWaypoint())) {
+  if (other.IsWaypointOnSegment(LastWaypoint())) {  // prev_segment路径段的终点落在segments路径上
     return true;
   }
   return false;

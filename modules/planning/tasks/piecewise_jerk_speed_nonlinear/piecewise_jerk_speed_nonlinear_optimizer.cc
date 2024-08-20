@@ -48,24 +48,23 @@ PiecewiseJerkSpeedNonlinearOptimizer::PiecewiseJerkSpeedNonlinearOptimizer()
       smoothed_speed_limit_(0.0, 0.0, 0.0),
       smoothed_path_curvature_(0.0, 0.0, 0.0) {}
 
-bool PiecewiseJerkSpeedNonlinearOptimizer::Init(
-    const std::string& config_dir, const std::string& name,
-    const std::shared_ptr<DependencyInjector>& injector) {
+bool PiecewiseJerkSpeedNonlinearOptimizer::Init(const std::string& config_dir, 
+                                                const std::string& name,
+                                                const std::shared_ptr<DependencyInjector>& injector) {
   if (!SpeedOptimizer::Init(config_dir, name, injector)) {
     return false;
   }
   // Load the config_ this task.
-  if (SpeedOptimizer::LoadConfig<PiecewiseJerkNonlinearSpeedOptimizerConfig>(
-          &config_)) {
+  if (SpeedOptimizer::LoadConfig<PiecewiseJerkNonlinearSpeedOptimizerConfig>(&config_)) {
     AERROR << "Failed to load config of PiecewiseJerkSpeedNonlinearOptimizer "
            << Name();
   }
   return true;
 }
 
-Status PiecewiseJerkSpeedNonlinearOptimizer::Process(
-    const PathData& path_data, const TrajectoryPoint& init_point,
-    SpeedData* const speed_data) {
+Status PiecewiseJerkSpeedNonlinearOptimizer::Process(const PathData& path_data, 
+                                                     const TrajectoryPoint& init_point,
+                                                     SpeedData* const speed_data) {
   if (speed_data == nullptr) {
     const std::string msg = "Null speed_data pointer";
     AERROR << msg;
@@ -82,8 +81,7 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::Process(
     return Status::OK();
   }
 
-  const auto problem_setups_status =
-      SetUpStatesAndBounds(path_data, *speed_data);
+  const auto problem_setups_status = SetUpStatesAndBounds(path_data, *speed_data);
   if (!problem_setups_status.ok()) {
     speed_data->clear();
     return problem_setups_status;
@@ -95,8 +93,7 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::Process(
 
   const auto qp_start = std::chrono::system_clock::now();
 
-  const auto qp_smooth_status =
-      OptimizeByQP(speed_data, &distance, &velocity, &acceleration);
+  const auto qp_smooth_status = OptimizeByQP(speed_data, &distance, &velocity, &acceleration);
 
   const auto qp_end = std::chrono::system_clock::now();
   std::chrono::duration<double> qp_diff = qp_end - qp_start;
@@ -115,8 +112,7 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::Process(
     const auto path_curvature_smooth_status = SmoothPathCurvature(path_data);
 
     const auto curvature_smooth_end = std::chrono::system_clock::now();
-    std::chrono::duration<double> curvature_smooth_diff =
-        curvature_smooth_end - curvature_smooth_start;
+    std::chrono::duration<double> curvature_smooth_diff = curvature_smooth_end - curvature_smooth_start;
     ADEBUG << "path curvature smoothing for nlp optimization takes "
            << curvature_smooth_diff.count() * 1000.0 << " ms";
 
@@ -130,8 +126,7 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::Process(
     const auto speed_limit_smooth_status = SmoothSpeedLimit();
 
     const auto speed_limit_smooth_end = std::chrono::system_clock::now();
-    std::chrono::duration<double> speed_limit_smooth_diff =
-        speed_limit_smooth_end - speed_limit_smooth_start;
+    std::chrono::duration<double> speed_limit_smooth_diff = speed_limit_smooth_end - speed_limit_smooth_start;
     ADEBUG << "speed limit smoothing for nlp optimization takes "
            << speed_limit_smooth_diff.count() * 1000.0 << " ms";
 
@@ -142,8 +137,7 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::Process(
 
     const auto nlp_start = std::chrono::system_clock::now();
 
-    const auto nlp_smooth_status =
-        OptimizeByNLP(&distance, &velocity, &acceleration);
+    const auto nlp_smooth_status = OptimizeByNLP(&distance, &velocity, &acceleration);
 
     const auto nlp_end = std::chrono::system_clock::now();
     std::chrono::duration<double> nlp_diff = nlp_end - nlp_start;
@@ -157,13 +151,11 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::Process(
 
     // Record speed_constraint
     StGraphData* st_graph_data = reference_line_info_->mutable_st_graph_data();
-    auto* speed_constraint =
-        st_graph_data->mutable_st_graph_debug()->mutable_speed_constraint();
+    auto* speed_constraint = st_graph_data->mutable_st_graph_debug()->mutable_speed_constraint();
     for (int i = 0; i < num_of_knots_; ++i) {
       double t = i * delta_t_;
       speed_constraint->add_t(t);
-      speed_constraint->add_upper_bound(
-          smoothed_speed_limit_.Evaluate(0, distance[i]));
+      speed_constraint->add_upper_bound(smoothed_speed_limit_.Evaluate(0, distance[i]));
     }
   }
 
@@ -175,9 +167,9 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::Process(
     if (velocity[i] < 0.0) {
       break;
     }
-    speed_data->AppendSpeedPoint(
-        distance[i], delta_t_ * i, velocity[i], acceleration[i],
-        (acceleration[i] - acceleration[i - 1]) / delta_t_);
+    speed_data->AppendSpeedPoint(distance[i], delta_t_ * i, 
+                                 velocity[i], acceleration[i],
+                                 (acceleration[i] - acceleration[i - 1]) / delta_t_);
   }
   SpeedProfileGenerator::FillEnoughSpeedPoints(speed_data);
 
@@ -186,11 +178,10 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::Process(
   return Status::OK();
 }
 
-Status PiecewiseJerkSpeedNonlinearOptimizer::SetUpStatesAndBounds(
-    const PathData& path_data, const SpeedData& speed_data) {
+Status PiecewiseJerkSpeedNonlinearOptimizer::SetUpStatesAndBounds(const PathData& path_data, 
+                                                                  const SpeedData& speed_data) {
   // Set st problem dimensions
-  const StGraphData& st_graph_data =
-      *reference_line_info_->mutable_st_graph_data();
+  const StGraphData& st_graph_data = *reference_line_info_->mutable_st_graph_data();
   // TODO(Jinyun): move to confs
   delta_t_ = 0.1;
   total_length_ = st_graph_data.path_length();
@@ -207,8 +198,7 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::SetUpStatesAndBounds(
                          st_graph_data.init_point().v());
 
   // Set s_ddot boundary
-  const auto& veh_param =
-      common::VehicleConfigHelper::GetConfig().vehicle_param();
+  const auto& veh_param = common::VehicleConfigHelper::GetConfig().vehicle_param();
   s_ddot_max_ = veh_param.max_acceleration();
   s_ddot_min_ = -1.0 * std::abs(veh_param.max_deceleration());
 
@@ -222,6 +212,7 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::SetUpStatesAndBounds(
   if (config_.use_soft_bound_in_nonlinear_speed_opt()) {
     s_bounds_.clear();
     s_soft_bounds_.clear();
+
     // TODO(Jinyun): move to confs
     for (int i = 0; i < num_of_knots_; ++i) {
       double curr_t = i * delta_t_;
@@ -229,12 +220,14 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::SetUpStatesAndBounds(
       double s_upper_bound = total_length_;
       double s_soft_lower_bound = 0.0;
       double s_soft_upper_bound = total_length_;
+
       for (const STBoundary* boundary : st_graph_data.st_boundaries()) {
         double s_lower = 0.0;
         double s_upper = 0.0;
         if (!boundary->GetUnblockSRange(curr_t, &s_upper, &s_lower)) {
           continue;
         }
+
         SpeedPoint sp;
         switch (boundary->boundary_type()) {
           case STBoundary::BoundaryType::STOP:
@@ -243,18 +236,15 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::SetUpStatesAndBounds(
             s_soft_upper_bound = std::fmin(s_soft_upper_bound, s_upper);
             break;
           case STBoundary::BoundaryType::FOLLOW:
-            s_upper_bound =
-                std::fmin(s_upper_bound, s_upper);
+            s_upper_bound = std::fmin(s_upper_bound, s_upper);
             if (!speed_data.EvaluateByTime(curr_t, &sp)) {
               const std::string msg =
                   "rough speed profile estimation for soft follow fence failed";
               AERROR << msg;
               return Status(ErrorCode::PLANNING_ERROR, msg);
             }
-            s_soft_upper_bound =
-                std::fmin(s_soft_upper_bound,
-                          s_upper -
-                              std::min(7.0, 2.5 * sp.v()));
+            s_soft_upper_bound = std::fmin(s_soft_upper_bound,
+                                           s_upper - std::min(7.0, 2.5 * sp.v()));
             break;
           case STBoundary::BoundaryType::OVERTAKE:
             s_lower_bound = std::fmax(s_lower_bound, s_lower);
@@ -385,8 +375,7 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::SmoothSpeedLimit() {
   return Status::OK();
 }
 
-Status PiecewiseJerkSpeedNonlinearOptimizer::SmoothPathCurvature(
-    const PathData& path_data) {
+Status PiecewiseJerkSpeedNonlinearOptimizer::SmoothPathCurvature(const PathData& path_data) {
   // using piecewise_jerk_path to fit a curve of path kappa profile
   // TODO(Jinyun): move smooth configs to gflags
   const auto& cartesian_path = path_data.discretized_path();
@@ -431,8 +420,9 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::SmoothPathCurvature(
   opt_dx = piecewise_jerk_problem.opt_dx();
   opt_ddx = piecewise_jerk_problem.opt_ddx();
 
-  PiecewiseJerkTrajectory1d smoothed_path_curvature(
-      opt_x.front(), opt_dx.front(), opt_ddx.front());
+  PiecewiseJerkTrajectory1d smoothed_path_curvature(opt_x.front(), 
+                                                    opt_dx.front(), 
+                                                    opt_ddx.front());
 
   for (size_t i = 1; i < opt_ddx.size(); ++i) {
     double j = (opt_ddx[i] - opt_ddx[i - 1]) / delta_s;
@@ -448,14 +438,12 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::SmoothPathCurvature(
   return Status::OK();
 }
 
-Status PiecewiseJerkSpeedNonlinearOptimizer::OptimizeByQP(
-    SpeedData* const speed_data, std::vector<double>* distance,
-    std::vector<double>* velocity, std::vector<double>* acceleration) {
+Status PiecewiseJerkSpeedNonlinearOptimizer::OptimizeByQP(SpeedData* const speed_data, std::vector<double>* distance,
+                                                          std::vector<double>* velocity, std::vector<double>* acceleration) {
   std::array<double, 3> init_states = {s_init_, s_dot_init_, s_ddot_init_};
   PiecewiseJerkSpeedProblem piecewise_jerk_problem(num_of_knots_, delta_t_,
                                                    init_states);
-  piecewise_jerk_problem.set_dx_bounds(
-      0.0, std::fmax(FLAGS_planning_upper_speed_limit, init_states[1]));
+  piecewise_jerk_problem.set_dx_bounds(0.0, std::fmax(FLAGS_planning_upper_speed_limit, init_states[1]));
   piecewise_jerk_problem.set_ddx_bounds(s_ddot_min_, s_ddot_max_);
   piecewise_jerk_problem.set_dddx_bound(s_dddot_min_, s_dddot_max_);
   piecewise_jerk_problem.set_x_bounds(s_bounds_);
@@ -499,16 +487,17 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::OptimizeByQP(
   return Status::OK();
 }
 
-Status PiecewiseJerkSpeedNonlinearOptimizer::OptimizeByNLP(
-    std::vector<double>* distance, std::vector<double>* velocity,
-    std::vector<double>* acceleration) {
+Status PiecewiseJerkSpeedNonlinearOptimizer::OptimizeByNLP(std::vector<double>* distance, std::vector<double>* velocity,
+                                                           std::vector<double>* acceleration) {
   static std::mutex mutex_tnlp;
   UNIQUE_LOCK_MULTITHREAD(mutex_tnlp);
+
   // Set optimizer instance
   auto ptr_interface = new PiecewiseJerkSpeedNonlinearIpoptInterface(
       s_init_, s_dot_init_, s_ddot_init_, delta_t_, num_of_knots_,
       total_length_, s_dot_max_, s_ddot_min_, s_ddot_max_, s_dddot_min_,
       s_dddot_max_);
+      
   PrintCurves debug;
   ptr_interface->set_safety_bounds(s_bounds_);
   for (size_t i = 0; i < s_bounds_.size(); i++) {
@@ -523,8 +512,7 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::OptimizeByNLP(
         warm_start_acceleration.empty() ||
         warm_start_distance.size() != warm_start_velocity.size() ||
         warm_start_velocity.size() != warm_start_acceleration.size()) {
-      const std::string msg =
-          "Piecewise jerk speed nonlinear optimizer warm start invalid!";
+      const std::string msg = "Piecewise jerk speed nonlinear optimizer warm start invalid!";
       AERROR << msg;
       return Status(ErrorCode::PLANNING_ERROR, msg);
     }
@@ -545,8 +533,7 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::OptimizeByNLP(
   } else {
     std::vector<double> spatial_potantial(num_of_knots_, total_length_);
     ptr_interface->set_reference_spatial_distance(spatial_potantial);
-    ptr_interface->set_w_reference_spatial_distance(
-        config_.s_potential_weight());
+    ptr_interface->set_w_reference_spatial_distance(config_.s_potential_weight());
   }
 
   if (config_.use_soft_bound_in_nonlinear_speed_opt()) {
@@ -569,8 +556,7 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::OptimizeByNLP(
 
   Ipopt::ApplicationReturnStatus status = app->Initialize();
   if (status != Ipopt::Solve_Succeeded) {
-    const std::string msg =
-        "Piecewise jerk speed nonlinear optimizer failed during initialization";
+    const std::string msg = "Piecewise jerk speed nonlinear optimizer failed during initialization";
     AERROR << msg;
     return Status(ErrorCode::PLANNING_ERROR, msg);
   }
@@ -592,8 +578,7 @@ Status PiecewiseJerkSpeedNonlinearOptimizer::OptimizeByNLP(
     ADEBUG << "*** The final value of the objective function is " << final_obj
            << '.';
   } else {
-    const auto& ipopt_return_status =
-        IpoptReturnStatus_Name(static_cast<IpoptReturnStatus>(status));
+    const auto& ipopt_return_status = IpoptReturnStatus_Name(static_cast<IpoptReturnStatus>(status));
     if (ipopt_return_status.empty()) {
       AERROR << "Solver ends with unknown failure code: "
              << static_cast<int>(status);

@@ -82,10 +82,10 @@ class MPCController : public ControlTask {
    * @param cmd control command
    * @return Status computation status
    */
-  common::Status ComputeControlCommand(
-      const localization::LocalizationEstimate *localization,
-      const canbus::Chassis *chassis, const planning::ADCTrajectory *trajectory,
-      ControlCommand *cmd) override;
+  common::Status ComputeControlCommand(const localization::LocalizationEstimate *localization,
+                                       const canbus::Chassis *chassis, 
+                                       const planning::ADCTrajectory *trajectory,
+                                       ControlCommand *cmd) override;
 
   /**
    * @brief reset MPC Controller
@@ -124,9 +124,8 @@ class MPCController : public ControlTask {
                                  const double preview_time, const double ts,
                                  SimpleMPCDebug *debug);
 
-  void GetPathRemain(
-      const planning::ADCTrajectory *planning_published_trajectory,
-      SimpleMPCDebug *debug);
+  void GetPathRemain(const planning::ADCTrajectory *planning_published_trajectory,
+                     SimpleMPCDebug *debug);
 
   bool LoadControlConf();
 
@@ -185,7 +184,7 @@ class MPCController : public ControlTask {
   // lateral error, lateral error rate, heading error, heading error rate,
   // station error, velocity error,
   const int basic_state_size_ = 6;
-
+  // 两个控制参数 方向盘转角和加速度
   const int controls_ = 2;
 
   const int horizon_ = 10;
@@ -248,13 +247,13 @@ class MPCController : public ControlTask {
 
   common::DigitalFilter digital_filter_pitch_angle_;
 
-  std::unique_ptr<Interpolation1D> lat_err_interpolation_;
+  std::unique_ptr<Interpolation1D> lat_err_interpolation_;         // 车速越大，Q矩阵中横向误差的权重系数就越小
 
-  std::unique_ptr<Interpolation1D> heading_err_interpolation_;
+  std::unique_ptr<Interpolation1D> heading_err_interpolation_;     // 车速越大，Q矩阵中航向误差的权重系数就越小，低速偏重于横向误差，高速偏重于航向误差。
 
-  std::unique_ptr<Interpolation1D> feedforwardterm_interpolation_;
+  std::unique_ptr<Interpolation1D> feedforwardterm_interpolation_; // 前馈项的增益表
 
-  std::unique_ptr<Interpolation1D> steer_weight_interpolation_;
+  std::unique_ptr<Interpolation1D> steer_weight_interpolation_;    // 控制量的增益表，R矩阵中控制量的惩罚系数 x 这个根据车速插值出来的ratio，车速越高，控制量的惩罚系数越大，ratio越大
 
   // for logging purpose
   std::ofstream mpc_log_file_;

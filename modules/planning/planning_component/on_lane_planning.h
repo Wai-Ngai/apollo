@@ -33,8 +33,7 @@ namespace planning {
 /**
  * @class planning
  *
- * @brief Planning module main class. It processes GPS and IMU as input,
- * to generate planning info.
+ * @brief Planning module main class. It processes GPS and IMU as input, to generate planning info.
  */
 class OnLanePlanning : public PlanningBase {
  public:
@@ -73,17 +72,24 @@ class OnLanePlanning : public PlanningBase {
                                       const double curr_timestamp) const;
 
   void ExportReferenceLineDebug(planning_internal::Debug* debug);
+ 
   bool CheckPlanningConfig(const PlanningConfig& config);
+  
   void GenerateStopTrajectory(ADCTrajectory* ptr_trajectory_pb);
+  
   void ExportFailedLaneChangeSTChart(const planning_internal::Debug& debug_info,
                                      planning_internal::Debug* debug_chart);
+  
   void ExportOnLaneChart(const planning_internal::Debug& debug_info,
                          planning_internal::Debug* debug_chart);
+  
   void ExportOpenSpaceChart(const planning_internal::Debug& debug_info,
                             const ADCTrajectory& trajectory_pb,
                             planning_internal::Debug* debug_chart);
+  
   void AddOpenSpaceOptimizerResult(const planning_internal::Debug& debug_info,
                                    planning_internal::Debug* debug_chart);
+  
   void AddPartitionedTrajectory(const planning_internal::Debug& debug_info,
                                 planning_internal::Debug* debug_chart);
 

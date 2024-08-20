@@ -44,6 +44,10 @@ namespace planning {
  *
  * Given the x, x', x'' at P(start),  The goal is to find x0, x1, ... x(k-1)
  * which makes the line P(start), P0, P(1) ... P(k-1) "smooth".
+ * 
+ *  二次规划 (1/2) * x' * P * x + q' * x
+ * s.t.   Ax <= ub
+ * 
  */
 
 class PiecewiseJerkProblem {
@@ -54,22 +58,18 @@ class PiecewiseJerkProblem {
   virtual ~PiecewiseJerkProblem() = default;
 
   void set_x_bounds(std::vector<std::pair<double, double>> x_bounds);
-
   void set_x_bounds(const double x_lower_bound, const double x_upper_bound);
 
   void set_dx_bounds(std::vector<std::pair<double, double>> dx_bounds);
-
   void set_dx_bounds(const double dx_lower_bound, const double dx_upper_bound);
 
   void set_ddx_bounds(std::vector<std::pair<double, double>> ddx_bounds);
-
   void set_ddx_bounds(const double ddx_lower_bound,
                       const double ddx_upper_bound);
 
   void set_dddx_bound(const double dddx_bound) {
     set_dddx_bound(-dddx_bound, dddx_bound);
   }
-
   void set_dddx_bound(const double dddx_lower_bound,
                       const double dddx_upper_bound) {
     dddx_bound_.first = dddx_lower_bound;
@@ -132,6 +132,7 @@ class PiecewiseJerkProblem {
 
   virtual OSQPSettings* SolverDefaultSettings();
 
+  // 问题建模
   bool FormulateProblem(OSQPData* data);
 
   void FreeData(OSQPData* data);

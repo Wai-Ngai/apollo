@@ -39,8 +39,9 @@ bool ScenarioManager::Init(const std::shared_ptr<DependencyInjector>& injector,
   injector_ = injector;
   for (int i = 0; i < planner_config.scenario_size(); i++) {
     auto scenario = PluginManager::Instance()->CreateInstance<Scenario>(
-        ConfigUtil::GetFullPlanningClassName(
-            planner_config.scenario(i).type()));
+                                               ConfigUtil::GetFullPlanningClassName(
+                                                   planner_config.scenario(i).type()));
+    // 分别调用每个场景的init()函数
     ACHECK(scenario->Init(injector_, planner_config.scenario(i).name()))
         << "Can not init scenario" << planner_config.scenario(i).name();
     scenario_list_.push_back(scenario);
@@ -61,8 +62,7 @@ void ScenarioManager::Update(const common::TrajectoryPoint& ego_point,
   // 场景切换：遍历场景列表，判断场景切换条件IsTransferable。场景列表中需要将优先级高的场景放在前面。
   for (auto scenario : scenario_list_) {
     if (current_scenario_.get() == scenario.get() &&
-        current_scenario_->GetStatus() ==
-            ScenarioStatusType::STATUS_PROCESSING) {
+        current_scenario_->GetStatus() == ScenarioStatusType::STATUS_PROCESSING) {
       // The previous scenario has higher priority
       return;
     }

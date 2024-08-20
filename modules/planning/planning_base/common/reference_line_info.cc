@@ -369,8 +369,7 @@ void ReferenceLineInfo::SetTrajectory(const DiscretizedTrajectory& trajectory) {
   discretized_trajectory_ = trajectory;
 }
 
-bool ReferenceLineInfo::AddObstacleHelper(
-    const std::shared_ptr<Obstacle>& obstacle) {
+bool ReferenceLineInfo::AddObstacleHelper(const std::shared_ptr<Obstacle>& obstacle) {
   return AddObstacle(obstacle.get()) != nullptr;
 }
 
@@ -519,9 +518,8 @@ const RSSInfo& ReferenceLineInfo::rss_info() const { return rss_info_; }
 
 RSSInfo* ReferenceLineInfo::mutable_rss_info() { return &rss_info_; }
 
-bool ReferenceLineInfo::CombinePathAndSpeedProfile(
-    const double relative_time, const double start_s,
-    DiscretizedTrajectory* ptr_discretized_trajectory) {
+bool ReferenceLineInfo::CombinePathAndSpeedProfile(const double relative_time, const double start_s,
+                                                   DiscretizedTrajectory* ptr_discretized_trajectory) {
   ACHECK(ptr_discretized_trajectory != nullptr);
   // use varied resolution to reduce data load but also provide enough data
   // point for control module
@@ -747,8 +745,7 @@ void ReferenceLineInfo::SetTurnSignalBasedOnLaneTurnType(
   }
 }
 
-void ReferenceLineInfo::SetTurnSignal(
-    const VehicleSignal::TurnSignal& turn_signal) {
+void ReferenceLineInfo::SetTurnSignal(const VehicleSignal::TurnSignal& turn_signal) {
   vehicle_signal_.set_turn_signal(turn_signal);
 }
 
@@ -756,8 +753,7 @@ void ReferenceLineInfo::SetEmergencyLight() {
   vehicle_signal_.set_emergency_light(true);
 }
 
-void ReferenceLineInfo::ExportVehicleSignal(
-    common::VehicleSignal* vehicle_signal) const {
+void ReferenceLineInfo::ExportVehicleSignal(common::VehicleSignal* vehicle_signal) const {
   CHECK_NOTNULL(vehicle_signal);
   *vehicle_signal = vehicle_signal_;
   SetTurnSignalBasedOnLaneTurnType(vehicle_signal);
@@ -785,8 +781,8 @@ double ReferenceLineInfo::SDistanceToDestination() const {
   return stop_s - adc_sl_boundary_.end_s();
 }
 
-void ReferenceLineInfo::ExportDecision(
-    DecisionResult* decision_result, PlanningContext* planning_context) const {
+void ReferenceLineInfo::ExportDecision(DecisionResult* decision_result, 
+                                       PlanningContext* planning_context) const {
   MakeDecision(decision_result, planning_context);
   ExportVehicleSignal(decision_result->mutable_vehicle_signal());
   auto* main_decision = decision_result->mutable_main_decision();
@@ -816,8 +812,8 @@ void ReferenceLineInfo::MakeDecision(DecisionResult* decision_result,
   SetObjectDecisions(decision_result->mutable_object_decision());
 }
 
-void ReferenceLineInfo::MakeMainMissionCompleteDecision(
-    DecisionResult* decision_result, PlanningContext* planning_context) const {
+void ReferenceLineInfo::MakeMainMissionCompleteDecision(DecisionResult* decision_result, 
+                                                        PlanningContext* planning_context) const {
   if (!decision_result->main_decision().has_stop()) {
     return;
   }
@@ -843,8 +839,7 @@ void ReferenceLineInfo::MakeMainMissionCompleteDecision(
   }
 }
 
-int ReferenceLineInfo::MakeMainStopDecision(
-    DecisionResult* decision_result) const {
+int ReferenceLineInfo::MakeMainStopDecision(DecisionResult* decision_result) const {
   double min_stop_line_s = std::numeric_limits<double>::infinity();
   const Obstacle* stop_obstacle = nullptr;
   const ObjectStop* stop_decision = nullptr;
@@ -895,8 +890,7 @@ int ReferenceLineInfo::MakeMainStopDecision(
   return 0;
 }
 
-void ReferenceLineInfo::SetObjectDecisions(
-    ObjectDecisions* object_decisions) const {
+void ReferenceLineInfo::SetObjectDecisions(ObjectDecisions* object_decisions) const {
   for (const auto obstacle : path_decision_.obstacles().Items()) {
     if (!obstacle->HasNonIgnoreDecision()) {
       continue;
@@ -917,8 +911,8 @@ void ReferenceLineInfo::SetObjectDecisions(
   }
 }
 
-void ReferenceLineInfo::ExportEngageAdvice(
-    EngageAdvice* engage_advice, PlanningContext* planning_context) const {
+void ReferenceLineInfo::ExportEngageAdvice(EngageAdvice* engage_advice, 
+                                           PlanningContext* planning_context) const {
   static EngageAdvice prev_advice;
   static constexpr double kMaxAngleDiff = M_PI / 6.0;
 
@@ -926,8 +920,7 @@ void ReferenceLineInfo::ExportEngageAdvice(
   if (!IsDrivable()) {
     prev_advice.set_reason("Reference line not drivable");
   } else if (!is_on_reference_line_) {
-    const auto& scenario_type =
-        planning_context->planning_status().scenario().scenario_type();
+    const auto& scenario_type = planning_context->planning_status().scenario().scenario_type();
     if (scenario_type == "PARK_AND_GO" || IsChangeLanePath()) {
       // note: when is_on_reference_line_ is FALSE
       //   (1) always engage while in PARK_AND_GO scenario
@@ -939,10 +932,8 @@ void ReferenceLineInfo::ExportEngageAdvice(
     }
   } else {
     // check heading
-    auto ref_point =
-        reference_line_.GetReferencePoint(adc_sl_boundary_.end_s());
-    if (common::math::AngleDiff(vehicle_state_.heading(), ref_point.heading()) <
-        kMaxAngleDiff) {
+    auto ref_point = reference_line_.GetReferencePoint(adc_sl_boundary_.end_s());
+    if (common::math::AngleDiff(vehicle_state_.heading(), ref_point.heading()) < kMaxAngleDiff) {
       engage = true;
     } else {
       prev_advice.set_reason("Vehicle heading is not aligned");
@@ -950,8 +941,7 @@ void ReferenceLineInfo::ExportEngageAdvice(
   }
 
   if (engage) {
-    if (vehicle_state_.driving_mode() !=
-        Chassis::DrivingMode::Chassis_DrivingMode_COMPLETE_AUTO_DRIVE) {
+    if (vehicle_state_.driving_mode() != Chassis::DrivingMode::Chassis_DrivingMode_COMPLETE_AUTO_DRIVE) {
       // READY_TO_ENGAGE when in non-AUTO mode
       prev_advice.set_advice(EngageAdvice::READY_TO_ENGAGE);
     } else {
@@ -967,19 +957,16 @@ void ReferenceLineInfo::ExportEngageAdvice(
   engage_advice->CopyFrom(prev_advice);
 }
 
-void ReferenceLineInfo::MakeEStopDecision(
-    DecisionResult* decision_result) const {
+void ReferenceLineInfo::MakeEStopDecision(DecisionResult* decision_result) const {
   decision_result->Clear();
 
-  MainEmergencyStop* main_estop =
-      decision_result->mutable_main_decision()->mutable_estop();
+  MainEmergencyStop* main_estop = decision_result->mutable_main_decision()->mutable_estop();
   main_estop->set_reason_code(MainEmergencyStop::ESTOP_REASON_INTERNAL_ERR);
   main_estop->set_reason("estop reason to be added");
   main_estop->mutable_cruise_to_stop();
 
   // set object decisions
-  ObjectDecisions* object_decisions =
-      decision_result->mutable_object_decision();
+  ObjectDecisions* object_decisions = decision_result->mutable_object_decision();
   for (const auto obstacle : path_decision_.obstacles().Items()) {
     auto* object_decision = object_decisions->add_decision();
     object_decision->set_id(obstacle->Id());
@@ -1010,8 +997,7 @@ hdmap::Lane::LaneTurn ReferenceLineInfo::GetPathTurnType(const double s) const {
   return hdmap::Lane::NO_TURN;
 }
 
-bool ReferenceLineInfo::GetIntersectionRightofWayStatus(
-    const hdmap::PathOverlap& pnc_junction_overlap) const {
+bool ReferenceLineInfo::GetIntersectionRightofWayStatus(const hdmap::PathOverlap& pnc_junction_overlap) const {
   if (GetPathTurnType(pnc_junction_overlap.start_s) != hdmap::Lane::NO_TURN) {
     return false;
   }
@@ -1020,11 +1006,9 @@ bool ReferenceLineInfo::GetIntersectionRightofWayStatus(
   return true;
 }
 
-int ReferenceLineInfo::GetPnCJunction(
-    const double s, hdmap::PathOverlap* pnc_junction_overlap) const {
+int ReferenceLineInfo::GetPnCJunction(const double s, hdmap::PathOverlap* pnc_junction_overlap) const {
   CHECK_NOTNULL(pnc_junction_overlap);
-  const std::vector<hdmap::PathOverlap>& pnc_junction_overlaps =
-      reference_line_.map_path().pnc_junction_overlaps();
+  const std::vector<hdmap::PathOverlap>& pnc_junction_overlaps = reference_line_.map_path().pnc_junction_overlaps();
 
   static constexpr double kError = 1.0;  // meter
   for (const auto& overlap : pnc_junction_overlaps) {
@@ -1052,13 +1036,11 @@ int ReferenceLineInfo::GetJunction(const double s,
   return 0;
 }
 
-void ReferenceLineInfo::SetBlockingObstacle(
-    const std::string& blocking_obstacle_id) {
+void ReferenceLineInfo::SetBlockingObstacle(const std::string& blocking_obstacle_id) {
   blocking_obstacle_ = path_decision_.Find(blocking_obstacle_id);
 }
 
-std::vector<common::SLPoint> ReferenceLineInfo::GetAllStopDecisionSLPoint()
-    const {
+std::vector<common::SLPoint> ReferenceLineInfo::GetAllStopDecisionSLPoint() const {
   std::vector<common::SLPoint> result;
   for (const auto* obstacle : path_decision_.obstacles().Items()) {
     const auto& object_decision = obstacle->LongitudinalDecision();
@@ -1085,12 +1067,11 @@ std::vector<common::SLPoint> ReferenceLineInfo::GetAllStopDecisionSLPoint()
   return result;
 }
 
-hdmap::PathOverlap* ReferenceLineInfo::GetOverlapOnReferenceLine(
-    const std::string& overlap_id, const OverlapType& overlap_type) const {
+hdmap::PathOverlap* ReferenceLineInfo::GetOverlapOnReferenceLine(const std::string& overlap_id, 
+                                                                 const OverlapType& overlap_type) const {
   if (overlap_type == ReferenceLineInfo::SIGNAL) {
     // traffic_light_overlap
-    const auto& traffic_light_overlaps =
-        reference_line_.map_path().signal_overlaps();
+    const auto& traffic_light_overlaps = reference_line_.map_path().signal_overlaps();
     for (const auto& traffic_light_overlap : traffic_light_overlaps) {
       if (traffic_light_overlap.object_id == overlap_id) {
         return const_cast<hdmap::PathOverlap*>(&traffic_light_overlap);
@@ -1098,8 +1079,7 @@ hdmap::PathOverlap* ReferenceLineInfo::GetOverlapOnReferenceLine(
     }
   } else if (overlap_type == ReferenceLineInfo::STOP_SIGN) {
     // stop_sign_overlap
-    const auto& stop_sign_overlaps =
-        reference_line_.map_path().stop_sign_overlaps();
+    const auto& stop_sign_overlaps = reference_line_.map_path().stop_sign_overlaps();
     for (const auto& stop_sign_overlap : stop_sign_overlaps) {
       if (stop_sign_overlap.object_id == overlap_id) {
         return const_cast<hdmap::PathOverlap*>(&stop_sign_overlap);
@@ -1107,8 +1087,7 @@ hdmap::PathOverlap* ReferenceLineInfo::GetOverlapOnReferenceLine(
     }
   } else if (overlap_type == ReferenceLineInfo::PNC_JUNCTION) {
     // pnc_junction_overlap
-    const auto& pnc_junction_overlaps =
-        reference_line_.map_path().pnc_junction_overlaps();
+    const auto& pnc_junction_overlaps = reference_line_.map_path().pnc_junction_overlaps();
     for (const auto& pnc_junction_overlap : pnc_junction_overlaps) {
       if (pnc_junction_overlap.object_id == overlap_id) {
         return const_cast<hdmap::PathOverlap*>(&pnc_junction_overlap);
@@ -1116,8 +1095,7 @@ hdmap::PathOverlap* ReferenceLineInfo::GetOverlapOnReferenceLine(
     }
   } else if (overlap_type == ReferenceLineInfo::YIELD_SIGN) {
     // yield_sign_overlap
-    const auto& yield_sign_overlaps =
-        reference_line_.map_path().yield_sign_overlaps();
+    const auto& yield_sign_overlaps = reference_line_.map_path().yield_sign_overlaps();
     for (const auto& yield_sign_overlap : yield_sign_overlaps) {
       if (yield_sign_overlap.object_id == overlap_id) {
         return const_cast<hdmap::PathOverlap*>(&yield_sign_overlap);
@@ -1125,8 +1103,7 @@ hdmap::PathOverlap* ReferenceLineInfo::GetOverlapOnReferenceLine(
     }
   } else if (overlap_type == ReferenceLineInfo::JUNCTION) {
     // yield_sign_overlap
-    const auto& junction_overlaps =
-        reference_line_.map_path().junction_overlaps();
+    const auto& junction_overlaps = reference_line_.map_path().junction_overlaps();
     for (const auto& junction_overlap : junction_overlaps) {
       if (junction_overlap.object_id == overlap_id) {
         return const_cast<hdmap::PathOverlap*>(&junction_overlap);

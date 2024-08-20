@@ -37,8 +37,7 @@ namespace planning {
 
 using apollo::cyber::Clock;
 
-Stage::Stage()
-    : next_stage_(""), context_(nullptr), injector_(nullptr), name_("") {}
+Stage::Stage() : next_stage_(""), context_(nullptr), injector_(nullptr), name_("") {}
 
 bool Stage::Init(const StagePipeline& config,
                  const std::shared_ptr<DependencyInjector>& injector,
@@ -49,18 +48,19 @@ bool Stage::Init(const StagePipeline& config,
   name_ = config.name();
   context_ = context;
   injector_->planning_context()
-      ->mutable_planning_status()
-      ->mutable_scenario()
-      ->set_stage_type(name_);
+           ->mutable_planning_status()
+           ->mutable_scenario()
+           ->set_stage_type(name_);
+
   std::string path_name = ConfigUtil::TransformToPathName(name_);
   std::string task_config_dir = config_dir + "/" + path_name;
-  // Load task plugin.
+
+  // Load task plugin. 遍历配置文件，填充任务列表 task_list_
   for (int i = 0; i < pipeline_config_.task_size(); ++i) {
     auto task = pipeline_config_.task(i);
     auto task_type = task.type();
     auto task_ptr = apollo::cyber::plugin_manager::PluginManager::Instance()
-                        ->CreateInstance<Task>(
-                            ConfigUtil::GetFullPlanningClassName(task_type));
+                    ->CreateInstance<Task>(ConfigUtil::GetFullPlanningClassName(task_type));
     if (nullptr == task_ptr) {
       AERROR << "Create task " << task.name() << " of " << name_ << " failed!";
       return false;
@@ -72,6 +72,7 @@ bool Stage::Init(const StagePipeline& config,
       return false;
     }
   }
+
   // Load trajectory fallback task.
   // If fallback task is not set, use "FastStopTrajectoryFallback" as default.
   std::string fallback_task_type = "FastStopTrajectoryFallback";
@@ -80,10 +81,8 @@ bool Stage::Init(const StagePipeline& config,
     fallback_task_type = pipeline_config_.fallback_task().type();
     fallback_task_name = pipeline_config_.fallback_task().name();
   }
-  fallback_task_ =
-      apollo::cyber::plugin_manager::PluginManager::Instance()
-          ->CreateInstance<Task>(
-              ConfigUtil::GetFullPlanningClassName(fallback_task_type));
+  fallback_task_ = apollo::cyber::plugin_manager::PluginManager::Instance()
+                  ->CreateInstance<Task>(ConfigUtil::GetFullPlanningClassName(fallback_task_type));
   if (nullptr == fallback_task_) {
     AERROR << "Create fallback task " << fallback_task_name << " of " << name_
            << " failed!";
@@ -98,8 +97,8 @@ bool Stage::Init(const StagePipeline& config,
 
 const std::string& Stage::Name() const { return name_; }
 
-StageResult Stage::ExecuteTaskOnReferenceLine(
-    const common::TrajectoryPoint& planning_start_point, Frame* frame) {
+StageResult Stage::ExecuteTaskOnReferenceLine(const common::TrajectoryPoint& planning_start_point, 
+                                              Frame* frame) {
   StageResult stage_result;
   if (frame->reference_line_info().empty()) {
     AERROR << "referenceline is empty in stage" << name_;
@@ -144,9 +143,9 @@ StageResult Stage::ExecuteTaskOnReferenceLine(
       fallback_task_->Execute(frame, &reference_line_info);
     }
     DiscretizedTrajectory trajectory;
-    if (!reference_line_info.CombinePathAndSpeedProfile(
-            planning_start_point.relative_time(),
-            planning_start_point.path_point().s(), &trajectory)) {
+    if (!reference_line_info.CombinePathAndSpeedProfile(planning_start_point.relative_time(),
+                                                        planning_start_point.path_point().s(), 
+                                                        &trajectory)) {
       AERROR << "Fail to aggregate planning trajectory."
              << reference_line_info.IsChangeLanePath();
       reference_line_info.SetDrivable(false);
@@ -159,8 +158,8 @@ StageResult Stage::ExecuteTaskOnReferenceLine(
   return stage_result;
 }
 
-StageResult Stage::ExecuteTaskOnReferenceLineForOnlineLearning(
-    const common::TrajectoryPoint& planning_start_point, Frame* frame) {
+StageResult Stage::ExecuteTaskOnReferenceLineForOnlineLearning(const common::TrajectoryPoint& planning_start_point, 
+                                                               Frame* frame) {
   // online learning mode
   for (auto& reference_line_info : *frame->mutable_reference_line_info()) {
     reference_line_info.SetDrivable(false);
@@ -169,8 +168,7 @@ StageResult Stage::ExecuteTaskOnReferenceLineForOnlineLearning(
   StageResult stage_result;
   // FIXME(all): current only pick up the first reference line to use
   // learning model trajectory
-  auto& picked_reference_line_info =
-      frame->mutable_reference_line_info()->front();
+  auto& picked_reference_line_info = frame->mutable_reference_line_info()->front();
   for (auto task : task_list_) {
     const double start_timestamp = Clock::NowInSeconds();
 
@@ -190,11 +188,11 @@ StageResult Stage::ExecuteTaskOnReferenceLineForOnlineLearning(
     }
   }
 
-  const std::vector<common::TrajectoryPoint>& adc_future_trajectory_points =
-      picked_reference_line_info.trajectory();
+  const std::vector<common::TrajectoryPoint>& adc_future_trajectory_points = picked_reference_line_info.trajectory();
   DiscretizedTrajectory trajectory;
-  if (picked_reference_line_info.AdjustTrajectoryWhichStartsFromCurrentPos(
-          planning_start_point, adc_future_trajectory_points, &trajectory)) {
+  if (picked_reference_line_info.AdjustTrajectoryWhichStartsFromCurrentPos(planning_start_point, 
+                                                                           adc_future_trajectory_points, 
+                                                                           &trajectory)) {
     picked_reference_line_info.SetTrajectory(trajectory);
     picked_reference_line_info.SetDrivable(true);
     picked_reference_line_info.SetCost(0);
@@ -233,23 +231,17 @@ StageResult Stage::ExecuteTaskOnOpenSpace(Frame* frame) {
     auto& gear = frame->open_space_info().fallback_trajectory().second;
     PublishableTrajectory publishable_trajectory(Clock::NowInSeconds(),
                                                  trajectory);
-    auto publishable_traj_and_gear =
-        std::make_pair(std::move(publishable_trajectory), gear);
+    auto publishable_traj_and_gear = std::make_pair(std::move(publishable_trajectory), gear);
 
-    *(frame->mutable_open_space_info()->mutable_publishable_trajectory_data()) =
-        std::move(publishable_traj_and_gear);
+    *(frame->mutable_open_space_info()->mutable_publishable_trajectory_data()) = std::move(publishable_traj_and_gear);
   } else {
-    auto& trajectory =
-        frame->open_space_info().chosen_partitioned_trajectory().first;
-    auto& gear =
-        frame->open_space_info().chosen_partitioned_trajectory().second;
+    auto& trajectory = frame->open_space_info().chosen_partitioned_trajectory().first;
+    auto& gear = frame->open_space_info().chosen_partitioned_trajectory().second;
     PublishableTrajectory publishable_trajectory(Clock::NowInSeconds(),
                                                  trajectory);
-    auto publishable_traj_and_gear =
-        std::make_pair(std::move(publishable_trajectory), gear);
+    auto publishable_traj_and_gear = std::make_pair(std::move(publishable_trajectory), gear);
 
-    *(frame->mutable_open_space_info()->mutable_publishable_trajectory_data()) =
-        std::move(publishable_traj_and_gear);
+    *(frame->mutable_open_space_info()->mutable_publishable_trajectory_data()) = std::move(publishable_traj_and_gear);
   }
   return stage_result;
 }

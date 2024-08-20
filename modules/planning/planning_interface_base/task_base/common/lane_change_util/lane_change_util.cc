@@ -26,11 +26,9 @@ namespace planning {
 bool IsClearToChangeLane(ReferenceLineInfo* reference_line_info) {
   double ego_start_s = reference_line_info->AdcSlBoundary().start_s();
   double ego_end_s = reference_line_info->AdcSlBoundary().end_s();
-  double ego_v =
-      std::abs(reference_line_info->vehicle_state().linear_velocity());
+  double ego_v = std::abs(reference_line_info->vehicle_state().linear_velocity());
 
-  for (const auto* obstacle :
-       reference_line_info->path_decision()->obstacles().Items()) {
+  for (const auto* obstacle : reference_line_info->path_decision()->obstacles().Items()) {
     if (obstacle->IsVirtual() || obstacle->IsStatic()) {
       ADEBUG << "skip one virtual or static obstacle";
       continue;
@@ -53,27 +51,23 @@ bool IsClearToChangeLane(ReferenceLineInfo* reference_line_info) {
 
     if (reference_line_info->IsChangeLanePath()) {
       double left_width(0), right_width(0);
-      reference_line_info->mutable_reference_line()->GetLaneWidth(
-          (start_s + end_s) * 0.5, &left_width, &right_width);
+      reference_line_info->mutable_reference_line()->GetLaneWidth((start_s + end_s) * 0.5, 
+                                                                   &left_width, &right_width);
       if (end_l < -right_width || start_l > left_width) {
         continue;
       }
     }
 
-    // Raw estimation on whether same direction with ADC or not based on
-    // prediction trajectory
+    // Raw estimation on whether same direction with ADC or not based on prediction trajectory
     bool same_direction = true;
     if (obstacle->HasTrajectory()) {
-      double obstacle_moving_direction =
-          obstacle->Trajectory().trajectory_point(0).path_point().theta();
+      double obstacle_moving_direction = obstacle->Trajectory().trajectory_point(0).path_point().theta();
       const auto& vehicle_state = reference_line_info->vehicle_state();
       double vehicle_moving_direction = vehicle_state.heading();
       if (vehicle_state.gear() == canbus::Chassis::GEAR_REVERSE) {
-        vehicle_moving_direction =
-            common::math::NormalizeAngle(vehicle_moving_direction + M_PI);
+        vehicle_moving_direction = common::math::NormalizeAngle(vehicle_moving_direction + M_PI);
       }
-      double heading_difference = std::abs(common::math::NormalizeAngle(
-          obstacle_moving_direction - vehicle_moving_direction));
+      double heading_difference = std::abs(common::math::NormalizeAngle(obstacle_moving_direction - vehicle_moving_direction));
       same_direction = heading_difference < (M_PI / 2.0);
     }
 
@@ -89,16 +83,13 @@ bool IsClearToChangeLane(ReferenceLineInfo* reference_line_info) {
     double kForwardSafeDistance = 0.0;
     double kBackwardSafeDistance = 0.0;
     if (same_direction) {
-      kForwardSafeDistance =
-          std::fmax(kForwardMinSafeDistanceOnSameDirection,
-                    (ego_v - obstacle->speed()) * kSafeTimeOnSameDirection);
-      kBackwardSafeDistance =
-          std::fmax(kBackwardMinSafeDistanceOnSameDirection,
-                    (obstacle->speed() - ego_v) * kSafeTimeOnSameDirection);
+      kForwardSafeDistance = std::fmax(kForwardMinSafeDistanceOnSameDirection,
+                                       (ego_v - obstacle->speed()) * kSafeTimeOnSameDirection);
+      kBackwardSafeDistance = std::fmax(kBackwardMinSafeDistanceOnSameDirection,
+                                        (obstacle->speed() - ego_v) * kSafeTimeOnSameDirection);
     } else {
-      kForwardSafeDistance =
-          std::fmax(kForwardMinSafeDistanceOnOppositeDirection,
-                    (ego_v + obstacle->speed()) * kSafeTimeOnOppositeDirection);
+      kForwardSafeDistance = std::fmax(kForwardMinSafeDistanceOnOppositeDirection,
+                                       (ego_v + obstacle->speed()) * kSafeTimeOnOppositeDirection);
       kBackwardSafeDistance = kBackwardMinSafeDistanceOnOppositeDirection;
     }
 
@@ -107,14 +98,14 @@ bool IsClearToChangeLane(ReferenceLineInfo* reference_line_info) {
         HysteresisFilter(start_s - ego_end_s, kForwardSafeDistance,
                          kDistanceBuffer, obstacle->IsLaneChangeBlocking())) {
       reference_line_info->path_decision()
-          ->Find(obstacle->Id())
-          ->SetLaneChangeBlocking(true);
+                         ->Find(obstacle->Id())
+                         ->SetLaneChangeBlocking(true);
       ADEBUG << "Lane Change is blocked by obstacle" << obstacle->Id();
       return false;
     } else {
       reference_line_info->path_decision()
-          ->Find(obstacle->Id())
-          ->SetLaneChangeBlocking(false);
+                         ->Find(obstacle->Id())
+                         ->SetLaneChangeBlocking(false);
     }
   }
   return true;
@@ -129,12 +120,9 @@ bool IsPerceptionBlocked(const ReferenceLineInfo& reference_line_info,
   const common::math::Vec2d adv_pos(vehicle_state.x(), vehicle_state.y());
   const double adv_heading = vehicle_state.heading();
 
-  for (auto* obstacle :
-       reference_line_info.path_decision().obstacles().Items()) {
-    double left_most_angle =
-        common::math::NormalizeAngle(adv_heading + 0.5 * search_range);
-    double right_most_angle =
-        common::math::NormalizeAngle(adv_heading - 0.5 * search_range);
+  for (auto* obstacle : reference_line_info.path_decision().obstacles().Items()) {
+    double left_most_angle = common::math::NormalizeAngle(adv_heading + 0.5 * search_range);
+    double right_most_angle = common::math::NormalizeAngle(adv_heading - 0.5 * search_range);
     bool right_most_found = false;
     if (obstacle->IsVirtual()) {
       ADEBUG << "skip one virtual obstacle";
@@ -144,8 +132,7 @@ bool IsPerceptionBlocked(const ReferenceLineInfo& reference_line_info,
     for (double search_angle = 0.0; search_angle < search_range;
          search_angle += search_beam_radius_intensity) {
       common::math::Vec2d search_beam_end(search_beam_length, 0.0);
-      const double beam_heading = common::math::NormalizeAngle(
-          adv_heading - 0.5 * search_range + search_angle);
+      const double beam_heading = common::math::NormalizeAngle(adv_heading - 0.5 * search_range + search_angle);
       search_beam_end.SelfRotate(beam_heading);
       search_beam_end += adv_pos;
       common::math::LineSegment2d search_beam(adv_pos, search_beam_end);

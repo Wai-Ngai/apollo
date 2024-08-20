@@ -95,8 +95,7 @@ class GriddedPathTimeGraph {
   const std::vector<const Obstacle*>& obstacles_;
 
   // vehicle configuration parameter
-  const common::VehicleParam& vehicle_param_ =
-      common::VehicleConfigHelper::GetConfig().vehicle_param();
+  const common::VehicleParam& vehicle_param_ = common::VehicleConfigHelper::GetConfig().vehicle_param();
 
   // initial status
   common::TrajectoryPoint init_point_;

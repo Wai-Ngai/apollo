@@ -59,11 +59,11 @@ Status PathDecider::Process(const ReferenceLineInfo *reference_line_info,
   if (FLAGS_enable_skip_path_tasks && reference_line_info->path_reusable()) {
     return Status::OK();
   }
+
   PrintCurves debug_info;
   const auto &path = path_data.discretized_path();
   if (!path.empty()) {
-    const auto &vehicle_box =
-        common::VehicleConfigHelper::Instance()->GetBoundingBox(path[0]);
+    const auto &vehicle_box = common::VehicleConfigHelper::Instance()->GetBoundingBox(path[0]);
     debug_info.AddPoint("start_point_box", vehicle_box.GetAllCorners());
   }
 
@@ -71,33 +71,33 @@ Status PathDecider::Process(const ReferenceLineInfo *reference_line_info,
     debug_info.AddPoint("output_path", path_pt.x(), path_pt.y());
   }
   debug_info.PrintToLog();
+
+  // 获取阻挡障碍物id
   std::string blocking_obstacle_id;
   auto *mutable_path_decider_status = injector_->planning_context()
-                                          ->mutable_planning_status()
-                                          ->mutable_path_decider();
+                                               ->mutable_planning_status()
+                                               ->mutable_path_decider();
+
   if (reference_line_info->GetBlockingObstacle() != nullptr) {
     blocking_obstacle_id = reference_line_info->GetBlockingObstacle()->Id();
-    int front_static_obstacle_cycle_counter =
-        mutable_path_decider_status->front_static_obstacle_cycle_counter();
-    mutable_path_decider_status->set_front_static_obstacle_cycle_counter(
-        std::max(front_static_obstacle_cycle_counter, 0));
-    mutable_path_decider_status->set_front_static_obstacle_cycle_counter(
-        std::min(front_static_obstacle_cycle_counter + 1, 10));
-    mutable_path_decider_status->set_front_static_obstacle_id(
-        reference_line_info->GetBlockingObstacle()->Id());
+
+    int front_static_obstacle_cycle_counter = mutable_path_decider_status->front_static_obstacle_cycle_counter();
+    
+    mutable_path_decider_status->set_front_static_obstacle_cycle_counter(std::max(front_static_obstacle_cycle_counter, 0));
+    mutable_path_decider_status->set_front_static_obstacle_cycle_counter(std::min(front_static_obstacle_cycle_counter + 1, 10));
+    mutable_path_decider_status->set_front_static_obstacle_id(reference_line_info->GetBlockingObstacle()->Id());
   } else {
-    int front_static_obstacle_cycle_counter =
-        mutable_path_decider_status->front_static_obstacle_cycle_counter();
-    mutable_path_decider_status->set_front_static_obstacle_cycle_counter(
-        std::min(front_static_obstacle_cycle_counter, 0));
-    mutable_path_decider_status->set_front_static_obstacle_cycle_counter(
-        std::max(front_static_obstacle_cycle_counter - 1, -10));
-    if (mutable_path_decider_status->front_static_obstacle_cycle_counter() <
-        -2) {
+    int front_static_obstacle_cycle_counter = mutable_path_decider_status->front_static_obstacle_cycle_counter();
+    mutable_path_decider_status->set_front_static_obstacle_cycle_counter( std::min(front_static_obstacle_cycle_counter, 0));
+    mutable_path_decider_status->set_front_static_obstacle_cycle_counter( std::max(front_static_obstacle_cycle_counter - 1, -10));
+    
+    if (mutable_path_decider_status->front_static_obstacle_cycle_counter() < -2) {
       std::string id = " ";
       mutable_path_decider_status->set_front_static_obstacle_id(id);
     }
   }
+
+  // 障碍物决策
   if (!MakeObjectDecision(path_data, blocking_obstacle_id, path_decision)) {
     const std::string msg = "Failed to make decision based on tunnel";
     AERROR << msg;
@@ -109,12 +109,15 @@ Status PathDecider::Process(const ReferenceLineInfo *reference_line_info,
 bool PathDecider::MakeObjectDecision(const PathData &path_data,
                                      const std::string &blocking_obstacle_id,
                                      PathDecision *const path_decision) {
+  // 静态障碍物决策，打标签
   if (!MakeStaticObstacleDecision(path_data, blocking_obstacle_id,
                                   path_decision)) {
     AERROR << "Failed to make decisions for static obstacles";
     return false;
   }
-  if (config_.ignore_backward_obstacle()) {
+
+  // 判断是否需要忽略后向障碍物
+  if (config_.ignore_backward_obstacle()) { // 默认false
     IgnoreBackwardObstacle(path_decision);
   }
 
@@ -122,11 +125,10 @@ bool PathDecider::MakeObjectDecision(const PathData &path_data,
 }
 
 // TODO(jiacheng): eventually this entire "path_decider" should be retired.
-// Before it gets retired, its logics are slightly modified so that everything
-// still works well for now.
-bool PathDecider::MakeStaticObstacleDecision(
-    const PathData &path_data, const std::string &blocking_obstacle_id,
-    PathDecision *const path_decision) {
+// Before it gets retired, its logics are slightly modified so that everything still works well for now.
+bool PathDecider::MakeStaticObstacleDecision(const PathData &path_data, 
+                                             const std::string &blocking_obstacle_id,
+                                             PathDecision *const path_decision) {
   // Sanity checks and get important values.
   ACHECK(path_decision);
   const auto &frenet_path = path_data.frenet_frame_path();
@@ -134,39 +136,41 @@ bool PathDecider::MakeStaticObstacleDecision(
     AERROR << "Path is empty.";
     return false;
   }
-  const double half_width =
-      common::VehicleConfigHelper::GetConfig().vehicle_param().width() / 2.0;
-  const double lateral_radius = half_width + FLAGS_lateral_ignore_buffer;
+
+  const double half_width = common::VehicleConfigHelper::GetConfig().vehicle_param().width() / 2.0;
+  const double lateral_radius = half_width + FLAGS_lateral_ignore_buffer;  // 3.0
 
   // Go through every obstacle and make decisions.
   for (const auto *obstacle : path_decision->obstacles().Items()) {
     const std::string &obstacle_id = obstacle->Id();
-    const std::string obstacle_type_name =
-        PerceptionObstacle_Type_Name(obstacle->Perception().type());
-    ADEBUG << "obstacle_id[<< " << obstacle_id << "] type["
-           << obstacle_type_name << "]";
-
+    const std::string obstacle_type_name = PerceptionObstacle_Type_Name(obstacle->Perception().type());
+    ADEBUG << "obstacle_id[<< " << obstacle_id
+           << "] type[" << obstacle_type_name << "]";
+    
+    // case1: 非静态和虚拟障碍物，直接跳过
     if (!obstacle->IsStatic() || obstacle->IsVirtual()) {
       continue;
     }
+
+    // case2: 经过纵向判决并且决策结果为ingnore，以及经过横向判决且横向决策结果为ignore的障碍物，直接跳过
     // - skip decision making for obstacles with IGNORE/STOP decisions already.
-    if (obstacle->HasLongitudinalDecision() &&
-        obstacle->LongitudinalDecision().has_ignore() &&
-        obstacle->HasLateralDecision() &&
-        obstacle->LateralDecision().has_ignore()) {
+    if (obstacle->HasLongitudinalDecision() && obstacle->LongitudinalDecision().has_ignore() &&
+        obstacle->HasLateralDecision() && obstacle->LateralDecision().has_ignore()) {
       continue;
     }
+
+    // case3: 判决结果为stop的障碍物，直接跳过
     if (obstacle->HasLongitudinalDecision() &&
         obstacle->LongitudinalDecision().has_stop()) {
       // STOP decision
       continue;
     }
+
+    // case4: id为 blocking_obstacle_id的障碍物，为障碍物增加stop的判决
     // - add STOP decision for blocking obstacles.
     if (obstacle->Id() == blocking_obstacle_id &&
-        !injector_->planning_context()
-             ->planning_status()
-             .path_decider()
-             .is_in_path_lane_borrow_scenario()) {
+        !injector_->planning_context()->planning_status()
+                  .path_decider().is_in_path_lane_borrow_scenario()) {
       // Add stop decision
       ADEBUG << "Blocking obstacle = " << blocking_obstacle_id;
       ObjectDecisionType object_decision;
@@ -175,16 +179,20 @@ bool PathDecider::MakeStaticObstacleDecision(
                                              obstacle->Id(), object_decision);
       continue;
     }
+
+    // case5: boundary_type 为 KEEP_CLEAR 的障碍物，直接跳过
     // - skip decision making for clear-zone obstacles.
     if (obstacle->reference_line_st_boundary().boundary_type() ==
         STBoundary::BoundaryType::KEEP_CLEAR) {
       continue;
     }
 
+    // case6: 不在范围内的障碍物，增加not-in-s决策
     // 0. IGNORE by default and if obstacle is not in path s at all.
     ObjectDecisionType object_decision;
     object_decision.mutable_ignore();
     const auto &sl_boundary = obstacle->PerceptionSLBoundary();
+
     if (sl_boundary.end_s() < frenet_path.front().s() ||
         sl_boundary.start_s() > frenet_path.back().s()) {
       path_decision->AddLongitudinalDecision("PathDecider/not-in-s",
@@ -194,9 +202,10 @@ bool PathDecider::MakeStaticObstacleDecision(
       continue;
     }
 
+    // case7: 判断静态障碍物可否nudge
     const auto frenet_point = frenet_path.GetNearestPoint(sl_boundary);
     const double curr_l = frenet_point.l();
-    double min_nudge_l = half_width + config_.static_obstacle_buffer() / 2.0;
+    double min_nudge_l = half_width + config_.static_obstacle_buffer() / 2.0;  // 0.3
 
     if (curr_l - lateral_radius > sl_boundary.end_l() ||
         curr_l + lateral_radius < sl_boundary.start_l()) {
@@ -206,12 +215,11 @@ bool PathDecider::MakeStaticObstacleDecision(
     } else if (sl_boundary.end_l() >= curr_l - min_nudge_l &&
                sl_boundary.start_l() <= curr_l + min_nudge_l) {
       // 2. STOP if laterally too overlapping.
-      *object_decision.mutable_stop() = GenerateObjectStopDecision(*obstacle);
+      *object_decision.mutable_stop() = GenerateObjectStopDecision(*obstacle); // 距离太近，无法绕开
 
-      if (path_decision->MergeWithMainStop(
-              object_decision.stop(), obstacle->Id(),
-              reference_line_info_->reference_line(),
-              reference_line_info_->AdcSlBoundary())) {
+      if (path_decision->MergeWithMainStop(object_decision.stop(), obstacle->Id(),
+                                           reference_line_info_->reference_line(),
+                                           reference_line_info_->AdcSlBoundary())) {
         path_decision->AddLongitudinalDecision("PathDecider/nearest-stop",
                                                obstacle->Id(), object_decision);
       } else {
@@ -221,25 +229,30 @@ bool PathDecider::MakeStaticObstacleDecision(
                                                obstacle->Id(), object_decision);
       }
       AINFO << "Add stop decision for static obs " << obstacle->Id()
-            << "start l" << sl_boundary.start_l() << "end l"
-            << sl_boundary.end_l() << "curr_l" << curr_l << "min_nudge_l"
-            << min_nudge_l;
+            << "start l" << sl_boundary.start_l() 
+            << "end l" << sl_boundary.end_l() 
+            << "curr_l" << curr_l 
+            << "min_nudge_l" << min_nudge_l;
     } else {
       // 3. NUDGE if laterally very close.
       if (sl_boundary.end_l() < curr_l - min_nudge_l) {  // &&
         // sl_boundary.end_l() > curr_l - min_nudge_l - 0.3) {
+
         // LEFT_NUDGE
         ObjectNudge *object_nudge_ptr = object_decision.mutable_nudge();
         object_nudge_ptr->set_type(ObjectNudge::LEFT_NUDGE);
         object_nudge_ptr->set_distance_l(config_.static_obstacle_buffer());
+
         path_decision->AddLateralDecision("PathDecider/left-nudge",
                                           obstacle->Id(), object_decision);
       } else if (sl_boundary.start_l() > curr_l + min_nudge_l) {  // &&
         // sl_boundary.start_l() < curr_l + min_nudge_l + 0.3) {
+
         // RIGHT_NUDGE
         ObjectNudge *object_nudge_ptr = object_decision.mutable_nudge();
         object_nudge_ptr->set_type(ObjectNudge::RIGHT_NUDGE);
         object_nudge_ptr->set_distance_l(-config_.static_obstacle_buffer());
+
         path_decision->AddLateralDecision("PathDecider/right-nudge",
                                           obstacle->Id(), object_decision);
       }
@@ -249,19 +262,17 @@ bool PathDecider::MakeStaticObstacleDecision(
   return true;
 }
 
-ObjectStop PathDecider::GenerateObjectStopDecision(
-    const Obstacle &obstacle) const {
+ObjectStop PathDecider::GenerateObjectStopDecision(const Obstacle &obstacle) const {
   ObjectStop object_stop;
 
-  double stop_distance = obstacle.MinRadiusStopDistance(
-      VehicleConfigHelper::GetConfig().vehicle_param());
+  // 计算出对于障碍物的最短刹停距离stop_distance
+  double stop_distance = obstacle.MinRadiusStopDistance(VehicleConfigHelper::GetConfig().vehicle_param());
   object_stop.set_reason_code(StopReasonCode::STOP_REASON_OBSTACLE);
   object_stop.set_distance_s(-stop_distance);
 
-  const double stop_ref_s =
-      obstacle.PerceptionSLBoundary().start_s() - stop_distance;
-  const auto stop_ref_point =
-      reference_line_info_->reference_line().GetReferencePoint(stop_ref_s);
+  // 计算刹停距离对应的参考station为stop_ref_s
+  const double stop_ref_s = obstacle.PerceptionSLBoundary().start_s() - stop_distance;
+  const auto stop_ref_point = reference_line_info_->reference_line().GetReferencePoint(stop_ref_s);
   object_stop.mutable_stop_point()->set_x(stop_ref_point.x());
   object_stop.mutable_stop_point()->set_y(stop_ref_point.y());
   object_stop.set_stop_heading(stop_ref_point.heading());
@@ -277,9 +288,9 @@ bool PathDecider::IgnoreBackwardObstacle(PathDecision *const path_decision) {
     if (obstacle->Obstacle::PerceptionSLBoundary().end_s() < adc_start_s) {
       ObjectDecisionType object_decision;
       object_decision.mutable_ignore();
-      path_decision->AddLongitudinalDecision(
-          "PathDecider/ignore-backward-obstacle", obstacle->Id(),
-          object_decision);
+      path_decision->AddLongitudinalDecision("PathDecider/ignore-backward-obstacle", 
+                                             obstacle->Id(),
+                                             object_decision);
     }
   }
   return true;

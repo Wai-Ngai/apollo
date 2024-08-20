@@ -42,14 +42,14 @@ class PiecewiseJerkSpeedOptimizer : public SpeedOptimizer {
   common::Status Process(const PathData& path_data,
                          const common::TrajectoryPoint& init_point,
                          SpeedData* const speed_data) override;
-  void AdjustInitStatus(
-      const std::vector<std::pair<double, double>> s_dot_bound, double delta_t,
-      std::array<double, 3>& init_s);
+  void AdjustInitStatus(const std::vector<std::pair<double, double>> s_dot_bound, 
+                        double delta_t,
+                        std::array<double, 3>& init_s);
+                        
   PiecewiseJerkSpeedOptimizerConfig config_;
 };
 
-CYBER_PLUGIN_MANAGER_REGISTER_PLUGIN(
-    apollo::planning::PiecewiseJerkSpeedOptimizer, Task)
+CYBER_PLUGIN_MANAGER_REGISTER_PLUGIN(apollo::planning::PiecewiseJerkSpeedOptimizer, Task)
 
 }  // namespace planning
 }  // namespace apollo

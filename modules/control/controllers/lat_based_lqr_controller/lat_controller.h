@@ -82,10 +82,10 @@ class LatController : public ControlTask {
    * @param cmd control command
    * @return Status computation status
    */
-  common::Status ComputeControlCommand(
-      const localization::LocalizationEstimate *localization,
-      const canbus::Chassis *chassis, const planning::ADCTrajectory *trajectory,
-      ControlCommand *cmd) override;
+  common::Status ComputeControlCommand(const localization::LocalizationEstimate *localization,
+                                       const canbus::Chassis *chassis, 
+                                       const planning::ADCTrajectory *trajectory,
+                                       ControlCommand *cmd) override;
 
   /**
    * @brief reset Lateral Controller
@@ -117,8 +117,7 @@ class LatController : public ControlTask {
   double ComputeFeedForward(double ref_curvature) const;
 
   void ComputeLateralErrors(const double x, const double y, const double theta,
-                            const double linear_v, const double angular_v,
-                            const double linear_a,
+                            const double linear_v, const double angular_v, const double linear_a,
                             const TrajectoryAnalyzer &trajectory_analyzer,
                             SimpleLateralDebug *debug,
                             const canbus::Chassis *chassis);
@@ -171,17 +170,17 @@ class LatController : public ControlTask {
   // longitudial length for look-ahead lateral error estimation during forward
   // driving and look-back lateral error estimation during backward driving
   // (look-ahead controller)
-  double lookahead_station_low_speed_ = 0.0;
-  double lookback_station_low_speed_ = 0.0;
-  double lookahead_station_high_speed_ = 0.0;
-  double lookback_station_high_speed_ = 0.0;
+  double lookahead_station_low_speed_ = 0.0;    // 低速前进预瞄距离，针对D档
+  double lookback_station_low_speed_ = 0.0;     // 低速倒车预瞄距离，针对R档
+  double lookahead_station_high_speed_ = 0.0;   // 高速前进预瞄距离，针对D档
+  double lookback_station_high_speed_ = 0.0;    // 高速倒车预瞄距离，针对R档
 
   // number of states without previews, includes
   // lateral error, lateral error rate, heading error, heading error rate
   const int basic_state_size_ = 4;
-  // vehicle state matrix
+  // vehicle state matrix     车辆状态方程系数矩阵A x'=Ax+Bu+B1*Psi_des'  Psi_des‘期望的heading角变化率
   Eigen::MatrixXd matrix_a_;
-  // vehicle state matrix (discrete-time)
+  // vehicle state matrix (discrete-time)  A通过双线性变化法变成Ad
   Eigen::MatrixXd matrix_ad_;
   // vehicle state matrix compound; related to preview
   Eigen::MatrixXd matrix_adc_;
@@ -191,17 +190,17 @@ class LatController : public ControlTask {
   Eigen::MatrixXd matrix_bd_;
   // control matrix compound
   Eigen::MatrixXd matrix_bdc_;
-  // gain matrix
+  // gain matrix               状态反馈矩阵K   u=-kx  LQR求解出最优的K  K=[k0 k1 k2 k3] 1x4
   Eigen::MatrixXd matrix_k_;
   // control authority weighting matrix
   Eigen::MatrixXd matrix_r_;
   // state weighting matrix
   Eigen::MatrixXd matrix_q_;
-  // updated state weighting matrix
+  // updated state weighting matrix    如果打开增益调度表 那么要不同车速下可以配置不同的Q矩阵，所以要根据车速更新Q
   Eigen::MatrixXd matrix_q_updated_;
-  // vehicle state matrix coefficients
+  // vehicle state matrix coefficients  车辆状态方程系数矩阵A中与v有关的时变项形如" 常数/v "，将常数提取出来放在矩阵matrix_a_coeff_里，每个周期处以v更新
   Eigen::MatrixXd matrix_a_coeff_;
-  // 4 by 1 matrix; state matrix
+  // 4 by 1 matrix; state matrix  [e1 e1' e2 e2'], e1,e2分别为横向误差，航向误差
   Eigen::MatrixXd matrix_state_;
 
   // parameters for lqr solver; number of iterations
@@ -209,29 +208,29 @@ class LatController : public ControlTask {
   // parameters for lqr solver; threshold for computation
   double lqr_eps_ = 0.0;
 
-  common::DigitalFilter digital_filter_;
+  common::DigitalFilter digital_filter_;   //数字滤波器类对象，这里是用于对方向盘转角控制指令进行滤波
 
-  std::unique_ptr<Interpolation1D> lat_err_interpolation_;
+  std::unique_ptr<Interpolation1D> lat_err_interpolation_; //插值表类对象，这里是用于根据车速插值车辆的增益调度表，不同v下，车辆横向误差乘以不同比例
 
-  std::unique_ptr<Interpolation1D> heading_err_interpolation_;
+  std::unique_ptr<Interpolation1D> heading_err_interpolation_; //插值表类对象，这里是用于根据车速插值车辆的增益调度表，不同v下，车辆航向误差乘以不同比例
 
   // MeanFilter heading_rate_filter_;
-  common::MeanFilter lateral_error_filter_;
+  common::MeanFilter lateral_error_filter_; // 用来对反馈的横向误差进行均值滤波，简而言之就是移动窗口内的多个值取平均达到滤波的效果
   common::MeanFilter heading_error_filter_;
 
-  // Lead/Lag controller
+  // Lead/Lag controller        超前滞后控制器，在主回路上串联校正环节
   bool enable_leadlag_ = false;
   LeadlagController leadlag_controller_;
 
-  // Mrac controller
+  // Mrac controller             模型参考自适应控制MRAC，这里没有开启
   bool enable_mrac_ = false;
   MracController mrac_controller_;
 
-  // Look-ahead controller
+  // Look-ahead controller       预瞄控制器，这里开启了
   bool enable_look_ahead_back_control_ = false;
 
   // for compute the differential valute to estimate acceleration/lon_jerk
-  double previous_lateral_acceleration_ = 0.0;
+  double previous_lateral_acceleration_ = 0.0; // 上一时刻的横向加速度，主要为了差分计算横向加加速度
 
   double previous_heading_rate_ = 0.0;
   double previous_ref_heading_rate_ = 0.0;
@@ -239,7 +238,7 @@ class LatController : public ControlTask {
   double previous_heading_acceleration_ = 0.0;
   double previous_ref_heading_acceleration_ = 0.0;
 
-  // for logging purpose
+  // for logging purpose  声明文件流对象，用于存储横向调试日志信息
   std::ofstream steer_log_file_;
 
   const std::string name_;
@@ -250,19 +249,19 @@ class LatController : public ControlTask {
 
   double pre_steering_position_ = 0.0;
 
-  double minimum_speed_protection_ = 0.1;
+  double minimum_speed_protection_ = 0.1; // 最小速度保护，车辆状态方程系数矩阵A中有好几项分母中含有v的，若v为0或者过小时会引发冲击或者错误，因此在更新系数矩阵时v小于保护速度就用保护速度代入
 
   double current_trajectory_timestamp_ = -1.0;
 
-  double init_vehicle_x_ = 0.0;
+  double init_vehicle_x_ = 0.0;     // 导航模式用的，默认关闭导航模式，略过
 
   double init_vehicle_y_ = 0.0;
 
   double init_vehicle_heading_ = 0.0;
 
-  double low_speed_bound_ = 0.0;
+  double low_speed_bound_ = 0.0;    // 定义低高速的切换临界点，低速的边界，有些控制参数采用低速高速两套，低速边界默认设置为3m/s
 
-  double low_speed_window_ = 0.0;
+  double low_speed_window_ = 0.0;   // 低速窗口，主要是为了在高低速参数切换时防止过于生硬，又在这个窗口范围内进行线性插值
 
   double driving_orientation_ = 0.0;
 

@@ -98,11 +98,12 @@ TrajectoryCost::TrajectoryCost(const DpPolyPathConfig &config,
   }
 }
 
-ComparableCost TrajectoryCost::CalculatePathCost(
-    const QuinticPolynomialCurve1d &curve, const double start_s,
-    const double end_s, const uint32_t curr_level, const uint32_t total_level) {
+ComparableCost TrajectoryCost::CalculatePathCost(const QuinticPolynomialCurve1d &curve, 
+                                                 const double start_s, const double end_s, 
+                                                 const uint32_t curr_level, const uint32_t total_level) {
   ComparableCost cost;
   double path_cost = 0.0;
+
   std::function<double(const double)> quasi_softmax = [this](const double x) {
     const double l0 = this->config_.path_l_cost_param_l0();
     const double b = this->config_.path_l_cost_param_b();
@@ -110,8 +111,7 @@ ComparableCost TrajectoryCost::CalculatePathCost(
     return (b + std::exp(-k * (x - l0))) / (1.0 + std::exp(-k * (x - l0)));
   };
 
-  for (double curve_s = 0.0; curve_s < (end_s - start_s);
-       curve_s += config_.path_resolution()) {
+  for (double curve_s = 0.0; curve_s < (end_s - start_s); curve_s += config_.path_resolution()) {
     const double l = curve.Evaluate(0, curve_s);
 
     path_cost += l * l * config_.path_l_cost() * quasi_softmax(std::fabs(l));
@@ -130,8 +130,7 @@ ComparableCost TrajectoryCost::CalculatePathCost(
 
   if (curr_level == total_level) {
     const double end_l = curve.Evaluate(0, end_s - start_s);
-    path_cost +=
-        std::sqrt(end_l - init_sl_point_.l() / 2.0) * config_.path_end_l_cost();
+    path_cost += std::sqrt(end_l - init_sl_point_.l() / 2.0) * config_.path_end_l_cost();
   }
   cost.smoothness_cost = path_cost;
   return cost;

@@ -93,9 +93,8 @@ class SpeedDecider : public Task {
   /**
    * @brief create overtake decision based on the boundary
    **/
-  bool CreateOvertakeDecision(
-      const Obstacle& obstacle,
-      ObjectDecisionType* const overtake_decision) const;
+  bool CreateOvertakeDecision(const Obstacle& obstacle,
+                              ObjectDecisionType* const overtake_decision) const;
 
   common::Status MakeObjectDecision(const SpeedData& speed_profile,
                                     PathDecision* const path_decision) const;

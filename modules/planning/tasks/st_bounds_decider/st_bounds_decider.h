@@ -53,37 +53,27 @@ class STBoundsDecider : public Decider {
   void InitSTBoundsDecider(const Frame& frame,
                            ReferenceLineInfo* const reference_line_info);
 
-  common::Status GenerateFallbackSTBound(
-      std::vector<std::tuple<double, double, double>>* const st_bound,
-      std::vector<std::tuple<double, double, double>>* const vt_bound);
+  common::Status GenerateFallbackSTBound(std::vector<std::tuple<double, double, double>>* const st_bound,
+                                         std::vector<std::tuple<double, double, double>>* const vt_bound);
 
-  common::Status GenerateRegularSTBound(
-      std::vector<std::tuple<double, double, double>>* const st_bound,
-      std::vector<std::tuple<double, double, double>>* const vt_bound,
-      std::vector<std::pair<double, double>>* const st_guide_line);
+  common::Status GenerateRegularSTBound(std::vector<std::tuple<double, double, double>>* const st_bound,
+                                        std::vector<std::tuple<double, double, double>>* const vt_bound,
+                                        std::vector<std::pair<double, double>>* const st_guide_line);
 
-  void RemoveInvalidDecisions(
-      std::pair<double, double> driving_limit,
-      std::vector<
-          std::pair<std::tuple<double, double, double>,
-                    std::vector<std::pair<std::string, ObjectDecisionType>>>>*
-          available_choices);
+  void RemoveInvalidDecisions(std::pair<double, double> driving_limit,
+                              std::vector<std::pair<std::tuple<double, double, double>,
+                                            std::vector<std::pair<std::string, ObjectDecisionType>>>>* available_choices);
 
-  void RankDecisions(
-      double s_guide_line, std::pair<double, double> driving_limit,
-      std::vector<
-          std::pair<std::tuple<double, double, double>,
-                    std::vector<std::pair<std::string, ObjectDecisionType>>>>*
-          available_choices);
+  void RankDecisions(double s_guide_line, std::pair<double, double> driving_limit,
+                     std::vector<std::pair<std::tuple<double, double, double>,
+                                   std::vector<std::pair<std::string, ObjectDecisionType>>>>* available_choices);
 
-  bool BackwardFlatten(
-      std::vector<std::tuple<double, double, double>>* const st_bound);
+  bool BackwardFlatten(std::vector<std::tuple<double, double, double>>* const st_bound);
 
-  void RecordSTGraphDebug(
-      const std::vector<STBoundary>& st_graph_data,
-      const std::vector<std::tuple<double, double, double>>& st_bound,
-      const std::vector<std::pair<double, double>>& st_guide_line,
-      planning_internal::STGraphDebug* const st_graph_debug);
+  void RecordSTGraphDebug(const std::vector<STBoundary>& st_graph_data,
+                          const std::vector<std::tuple<double, double, double>>& st_bound,
+                          const std::vector<std::pair<double, double>>& st_guide_line,
+                          planning_internal::STGraphDebug* const st_graph_debug);
 
  private:
   STBoundsDeciderConfig config_;

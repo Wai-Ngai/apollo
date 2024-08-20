@@ -36,7 +36,7 @@ namespace math {
 
 /**
  * @class AABox2d
- * @brief Implements a class of (undirected) axes-aligned bounding boxes in 2-D.
+ * @brief Implements a class of (undirected) axes-aligned bounding boxes in 2-D. 轴对称包围盒
  * This class is referential-agnostic.
  */
 class AABox2d {
