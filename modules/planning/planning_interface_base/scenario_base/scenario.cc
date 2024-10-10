@@ -66,7 +66,7 @@ bool Scenario::Init(std::shared_ptr<DependencyInjector> injector,
 
   // Load the pipeline config.
   std::string pipeline_config_path = apollo::cyber::plugin_manager::PluginManager::Instance()
-                                    ->GetPluginConfPath<Scenario>(class_name, "conf/pipeline.pb.txt");
+                                     ->GetPluginConfPath<Scenario>(class_name, "conf/pipeline.pb.txt");
   AINFO << "Load config path:" << pipeline_config_path;
   // Load the pipeline of scenario.
   if (!apollo::cyber::common::GetProtoFromFile(pipeline_config_path,
@@ -82,6 +82,7 @@ bool Scenario::Init(std::shared_ptr<DependencyInjector> injector,
 
 ScenarioResult Scenario::Process(const common::TrajectoryPoint& planning_init_point, 
                                  Frame* frame) {
+  // 刚进入当前场景，根据stge的顺序，创建第一个stage
   if (current_stage_ == nullptr) {
     current_stage_ = CreateStage(*stage_pipeline_map_[scenario_pipeline_config_.stage(0).name()]);
     if (nullptr == current_stage_) {
@@ -97,10 +98,12 @@ ScenarioResult Scenario::Process(const common::TrajectoryPoint& planning_init_po
     return scenario_result_;
   }
 
-  // 当前stage处理，计算规划轨迹
+  // 当前stage处理，遍历任务列表task_list_，计算规划轨迹
   auto ret = current_stage_->Process(planning_init_point, frame);
 
   scenario_result_.SetStageResult(ret);
+
+  // 根据当前stage计算的状态，判断stage切换
   switch (ret.GetStageStatus()) {
     case StageStatusType::ERROR: {
       AERROR << "Stage '" << current_stage_->Name() << "' returns error";
@@ -152,11 +155,11 @@ ScenarioResult Scenario::Process(const common::TrajectoryPoint& planning_init_po
 }
 
 std::shared_ptr<Stage> Scenario::CreateStage(const StagePipeline& stage_pipeline) {
-  // 创建stage，并调用stage的init()，初始化task_list_
+  // 创建stage
   auto stage_ptr = apollo::cyber::plugin_manager::PluginManager::Instance()
                   ->CreateInstance<Stage>(ConfigUtil::GetFullPlanningClassName(stage_pipeline.type()));
   if (nullptr == stage_ptr ||
-      !stage_ptr->Init(stage_pipeline, injector_, config_dir_, GetContext())) {
+      !stage_ptr->Init(stage_pipeline, injector_, config_dir_, GetContext())) { // 并调用stage::init()，初始化任务列表task_list_
     AERROR << "Create stage " << stage_pipeline.name() << " of " << name_
            << " failed!";
     return nullptr;

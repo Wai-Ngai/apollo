@@ -25,8 +25,8 @@
 #include "cyber/common/macros.h"
 
 /**
- * @brief PlanningContext is the runtime context in planning. It is
- * persistent across multiple frames.
+ * @brief PlanningContext is the runtime context in planning. 
+ * It is persistent across multiple frames.
  */
 namespace apollo {
 namespace planning {

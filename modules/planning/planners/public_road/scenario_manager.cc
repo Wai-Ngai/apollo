@@ -41,7 +41,7 @@ bool ScenarioManager::Init(const std::shared_ptr<DependencyInjector>& injector,
     auto scenario = PluginManager::Instance()->CreateInstance<Scenario>(
                                                ConfigUtil::GetFullPlanningClassName(
                                                    planner_config.scenario(i).type()));
-    // 分别调用每个场景的init()函数
+    // 每个场景都调用它们父类的Scenario::Init，传入不同的场景名称，完成不同场景的初始化，Load the pipeline of scenario.
     ACHECK(scenario->Init(injector_, planner_config.scenario(i).name()))
         << "Can not init scenario" << planner_config.scenario(i).name();
     scenario_list_.push_back(scenario);

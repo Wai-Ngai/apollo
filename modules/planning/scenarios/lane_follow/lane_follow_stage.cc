@@ -150,8 +150,8 @@ StageResult LaneFollowStage::PlanOnReferenceLine(const TrajectoryPoint& planning
   StageResult ret;
   for (auto task : task_list_) {
     const double start_timestamp = Clock::NowInSeconds();
-    const auto start_planning_perf_timestamp =
-        std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto start_planning_perf_timestamp = std::chrono::duration<double>(
+                                               std::chrono::system_clock::now().time_since_epoch()).count();
 
     // 执行每一个任务，调用task的执行函数
     ret.SetTaskStatus(task->Execute(frame, reference_line_info));
@@ -163,8 +163,8 @@ StageResult LaneFollowStage::PlanOnReferenceLine(const TrajectoryPoint& planning
     ADEBUG << task->Name() << " time spend: " << time_diff_ms << " ms.";
     RecordDebugInfo(reference_line_info, task->Name(), time_diff_ms);
 
-    const auto end_planning_perf_timestamp =
-        std::chrono::duration<double>( std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto end_planning_perf_timestamp = std::chrono::duration<double>(
+                                             std::chrono::system_clock::now().time_since_epoch()).count();
     const auto plnning_perf_ms = (end_planning_perf_timestamp - start_planning_perf_timestamp) * 1000;
     AINFO << "Planning Perf: task name [" << task->Name() << "], "
           << plnning_perf_ms << " ms.";

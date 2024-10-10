@@ -58,12 +58,12 @@ bool PlanningComponent::Init() {
     }
   }
 
-  planning_base_->Init(config_); // OnLanePlanning的init
+  planning_base_->Init(config_); // OnLanePlanning的init，初始化参考线线程，加载各种配置文件和场景
 
-  // 创建reader，传入topic和回调函数
+  // 创建reader，传入topic和回调函数，当收到相应消息的时候，会调用回调函数
   planning_command_reader_ = node_->CreateReader<PlanningCommand>(
       config_.topic_config().planning_command_topic(),
-      [this](const std::shared_ptr<PlanningCommand>& planning_command) {
+      [this](const std::shared_ptr<PlanningCommand>& planning_command) { //  Lambda 表达式捕获了 this 指针，使得 Lambda 可以访问当前对象的成员变量和成员函数。
         AINFO << "Received planning data: run planning callback."
               << planning_command->header().DebugString();
         std::lock_guard<std::mutex> lock(mutex_);       // 使用互斥锁 std::lock_guard 对共享的 planning_command_ 进行保护，以确保线程安全性。
@@ -104,13 +104,11 @@ bool PlanningComponent::Init() {
         });
   }
 
-  planning_writer_ = node_->CreateWriter<ADCTrajectory>(config_.topic_config().planning_trajectory_topic());
-
   rerouting_client_ = node_->CreateClient<apollo::external_command::LaneFollowCommand,
-                                          external_command::CommandStatus>(
-                                          config_.topic_config().routing_request_topic());
-  planning_learning_data_writer_ = node_->CreateWriter<PlanningLearningData>(
-                                                       config_.topic_config().planning_learning_data_topic());
+                                          external_command::CommandStatus>(config_.topic_config().routing_request_topic());
+
+  planning_writer_ = node_->CreateWriter<ADCTrajectory>(config_.topic_config().planning_trajectory_topic());
+  planning_learning_data_writer_ = node_->CreateWriter<PlanningLearningData>(config_.topic_config().planning_learning_data_topic());
   command_status_writer_ = node_->CreateWriter<external_command::CommandStatus>(FLAGS_planning_command_status);
   return true;
 }
@@ -128,7 +126,7 @@ bool PlanningComponent::Proc(const std::shared_ptr<prediction::PredictionObstacl
   local_view_.chassis = chassis;
   local_view_.localization_estimate = localization_estimate;
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_); // 自动获取和释放 mutex_ 锁，确保线程安全。
     if (!local_view_.planning_command ||
         !common::util::IsProtoEqual(local_view_.planning_command->header(),
                                     planning_command_.header())) {

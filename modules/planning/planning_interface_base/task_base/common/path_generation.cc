@@ -65,10 +65,8 @@ void PathGeneration::RecordDebugInfo(const PathBound& path_boundaries,
     frenet_frame_left_boundaries.push_back(frenet_frame_point);
   }
 
-  auto frenet_frame_left_path =
-      FrenetFramePath(std::move(frenet_frame_left_boundaries));
-  auto frenet_frame_right_path =
-      FrenetFramePath(std::move(frenet_frame_right_boundaries));
+  auto frenet_frame_left_path = FrenetFramePath(std::move(frenet_frame_left_boundaries));
+  auto frenet_frame_right_path = FrenetFramePath(std::move(frenet_frame_right_boundaries));
 
   PathData left_path_data;
   left_path_data.SetReferenceLine(&(reference_line_info->reference_line()));
@@ -78,30 +76,22 @@ void PathGeneration::RecordDebugInfo(const PathBound& path_boundaries,
   right_path_data.SetFrenetPath(std::move(frenet_frame_right_path));
 
   // Insert the transformed PathData into the simulator display.
-  auto* ptr_display_path_1 =
-      reference_line_info->mutable_debug()->mutable_planning_data()->add_path();
-  ptr_display_path_1->set_name(std::string("planning_path_boundary_1_") +
-                               debug_name);
-  ptr_display_path_1->mutable_path_point()->CopyFrom(
-      {left_path_data.discretized_path().begin(),
-       left_path_data.discretized_path().end()});
-  auto* ptr_display_path_2 =
-      reference_line_info->mutable_debug()->mutable_planning_data()->add_path();
-  ptr_display_path_2->set_name(std::string("planning_path_boundary_2_") +
-                               debug_name);
-  ptr_display_path_2->mutable_path_point()->CopyFrom(
-      {right_path_data.discretized_path().begin(),
-       right_path_data.discretized_path().end()});
+  auto* ptr_display_path_1 = reference_line_info->mutable_debug()->mutable_planning_data()->add_path();
+  ptr_display_path_1->set_name(std::string("planning_path_boundary_1_") + debug_name);
+  ptr_display_path_1->mutable_path_point()->CopyFrom({left_path_data.discretized_path().begin(),
+                                                      left_path_data.discretized_path().end()});
+  auto* ptr_display_path_2 = reference_line_info->mutable_debug()->mutable_planning_data()->add_path();
+  ptr_display_path_2->set_name(std::string("planning_path_boundary_2_") + debug_name);
+  ptr_display_path_2->mutable_path_point()->CopyFrom({right_path_data.discretized_path().begin(),
+                                                      right_path_data.discretized_path().end()});
 }
 
 void PathGeneration::RecordDebugInfo(const PathData& path_data, const std::string& debug_name,
                                      ReferenceLineInfo* const reference_line_info) {
   const auto& path_points = path_data.discretized_path();
-  auto* ptr_optimized_path =
-      reference_line_info->mutable_debug()->mutable_planning_data()->add_path();
+  auto* ptr_optimized_path = reference_line_info->mutable_debug()->mutable_planning_data()->add_path();
   ptr_optimized_path->set_name(std::string("candidate_path_") + debug_name);
-  ptr_optimized_path->mutable_path_point()->CopyFrom(
-      {path_points.begin(), path_points.end()});
+  ptr_optimized_path->mutable_path_point()->CopyFrom({path_points.begin(), path_points.end()});
 }
 
 void PathGeneration::GetStartPointSLState() {
@@ -122,37 +112,35 @@ void PathGeneration::GetStartPointSLState() {
 
   // Initialize some private variables.
   // ADC s/l info.
-  init_sl_state_ = reference_line.ToFrenetFrame(planning_start_point); // 将规划起点笛卡尔坐标转换为frenet坐标
+  init_sl_state_ = reference_line.ToFrenetFrame(planning_start_point); // 将规划起点 笛卡尔坐标转换为frenet坐标
 }
 
 bool PathGeneration::GetSLBoundary(const PathData& path_data, int point_index,
                                    const ReferenceLineInfo* reference_line_info,
                                    SLBoundary* const sl_boundary) {
   CHECK_NOTNULL(sl_boundary);
+
   const auto& discrete_path = path_data.discretized_path();
   if (point_index < 0 ||
       static_cast<size_t>(point_index) > discrete_path.size()) {
     return false;
   }
+
   sl_boundary->mutable_boundary_point()->Clear();
   // Get vehicle config parameters.
-  const auto& vehicle_config =
-      common::VehicleConfigHelper::Instance()->GetConfig();
+  const auto& vehicle_config = common::VehicleConfigHelper::Instance()->GetConfig();
   const double ego_length = vehicle_config.vehicle_param().length();
   const double ego_width = vehicle_config.vehicle_param().width();
-  const double ego_back_to_center =
-      vehicle_config.vehicle_param().back_edge_to_center();
-  const double ego_center_shift_distance =
-      ego_length / 2.0 - ego_back_to_center;
+  const double ego_back_to_center = vehicle_config.vehicle_param().back_edge_to_center();
+  const double ego_center_shift_distance = ego_length / 2.0 - ego_back_to_center;
+
   // Generate vehicle bounding box.
   const auto& rear_center_path_point = discrete_path[point_index];
   const double ego_theta = rear_center_path_point.theta();
-  common::math::Box2d ego_box(
-      {rear_center_path_point.x(), rear_center_path_point.y()}, ego_theta,
-      ego_length, ego_width);
-  common::math::Vec2d shift_vec{
-      ego_center_shift_distance * ego_box.cos_heading(),
-      ego_center_shift_distance * ego_box.sin_heading()};
+  common::math::Box2d ego_box({rear_center_path_point.x(), rear_center_path_point.y()}, 
+                              ego_theta, ego_length, ego_width);
+  common::math::Vec2d shift_vec{ego_center_shift_distance * ego_box.cos_heading(),
+                                ego_center_shift_distance * ego_box.sin_heading()};
   ego_box.Shift(shift_vec);
   // Set warm_start_s near the geometry center of the box.
   double warm_start_s = path_data.frenet_frame_path()[point_index].s() +

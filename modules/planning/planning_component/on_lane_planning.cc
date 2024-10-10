@@ -120,7 +120,7 @@ Status OnLanePlanning::Init(const PlanningConfig& config) {
 
   PlanningBase::Init(config);
 
-  // clear planning history
+  // clear planning history list
   injector_->history()->Clear();
 
   // clear planning status
@@ -139,7 +139,7 @@ Status OnLanePlanning::Init(const PlanningConfig& config) {
                                                                      reference_line_config);
   reference_line_provider_->Start();
 
-  // dispatch planner
+  // dispatch planner. Use PublicRoadPlanner as default Planner
   LoadPlanner();
   if (!planner_) {
     return Status(ErrorCode::PLANNING_ERROR,
@@ -148,19 +148,18 @@ Status OnLanePlanning::Init(const PlanningConfig& config) {
 
   if (config_.learning_mode() != PlanningConfig::NO_LEARNING) { //学习模型相关的
     PlanningSemanticMapConfig renderer_config;
-    ACHECK(apollo::cyber::common::GetProtoFromFile(
-        FLAGS_planning_birdview_img_feature_renderer_config_file,
-        &renderer_config))
-        << "Failed to load renderer config"
-        << FLAGS_planning_birdview_img_feature_renderer_config_file;
+    ACHECK(apollo::cyber::common::GetProtoFromFile(FLAGS_planning_birdview_img_feature_renderer_config_file,
+                                                   &renderer_config))
+    << "Failed to load renderer config"
+    << FLAGS_planning_birdview_img_feature_renderer_config_file;
 
     BirdviewImgFeatureRenderer::Instance()->Init(renderer_config);
   }
 
-  traffic_decider_.Init(injector_);   //decider初始化
+  traffic_decider_.Init(injector_);                              // TrafficDecider初始化
 
   start_time_ = Clock::NowInSeconds();
-  return planner_->Init(injector_, FLAGS_planner_config_path);   //planner初始化
+  return planner_->Init(injector_, FLAGS_planner_config_path);   // PublicRoadPlanner初始化
 }
 
 Status OnLanePlanning::InitFrame(const uint32_t sequence_num,
@@ -249,8 +248,8 @@ void OnLanePlanning::GenerateStopTrajectory(ADCTrajectory* ptr_trajectory_pb) {
 
 void OnLanePlanning::RunOnce(const LocalView& local_view,
                              ADCTrajectory* const ptr_trajectory_pb) {
-  // when rerouting, reference line might not be updated. In this case, planning
-  // module maintains not-ready until be restarted.
+  // when rerouting, reference line might not be updated. 
+  // In this case, planning module maintains not-ready until be restarted.
   local_view_ = local_view;
   const double start_timestamp = Clock::NowInSeconds();
   const double start_system_timestamp = std::chrono::duration<double>(
@@ -323,12 +322,12 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
                                                       planning_cycle_time, FLAGS_trajectory_stitching_preserved_length,
                                                       true, last_publishable_trajectory_.get(), &replan_reason);
 
-  injector_->ego_info()->Update(stitching_trajectory.back(), vehicle_state);
+  injector_->ego_info()->Update(stitching_trajectory.back(), vehicle_state);  // 拼接轨迹最后一个点作为规划起点 planning_start_point = stitching_trajectory.back()
   
   const uint32_t frame_num = static_cast<uint32_t>(seq_num_++);
   AINFO << "Planning start frame sequence id = [" << frame_num << "]";
 
-  // step3：更新本周期计算所需的所有信息，获取新的参考线。拼接轨迹最后一个点作为规划起点 planning_start_point = stitching_trajectory.back()
+  // step3：更新本周期计算所需的所有信息，获取新的参考线。
   status = InitFrame(frame_num, stitching_trajectory.back(), vehicle_state);
   if (status.ok()) {
     injector_->ego_info()->CalculateFrontObstacleClearDistance(frame_->obstacles());
@@ -353,9 +352,9 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
       ptr_trajectory_pb->CopyFrom(estop_trajectory);
     } else {
       ptr_trajectory_pb->mutable_decision()
-          ->mutable_main_decision()
-          ->mutable_not_ready()
-          ->set_reason(status.ToString());
+                       ->mutable_main_decision()
+                       ->mutable_not_ready()
+                       ->set_reason(status.ToString());
       status.Save(ptr_trajectory_pb->mutable_header()->mutable_status());
       GenerateStopTrajectory(ptr_trajectory_pb);
     }
@@ -466,8 +465,7 @@ void OnLanePlanning::ExportReferenceLineDebug(planning_internal::Debug* debug) {
     rl_debug->set_cost(reference_line_info.Cost());
     rl_debug->set_is_change_lane_path(reference_line_info.IsChangeLanePath());
     rl_debug->set_is_drivable(reference_line_info.IsDrivable());
-    rl_debug->set_is_protected(reference_line_info.GetRightOfWayStatus() ==
-                               ADCTrajectory::PROTECTED);
+    rl_debug->set_is_protected(reference_line_info.GetRightOfWayStatus() == ADCTrajectory::PROTECTED);
 
     // store kappa and dkappa for performance evaluation
     const auto& reference_points = reference_line_info.reference_line().reference_points();
@@ -525,7 +523,7 @@ void OnLanePlanning::ExportReferenceLineDebug(planning_internal::Debug* debug) {
 
 Status OnLanePlanning::Plan(const double current_time_stamp,
                             const std::vector<TrajectoryPoint>& stitching_trajectory,
-                            ADCTrajectory* const ptr_trajectory_pb) {
+                            ADCTrajectory* const ptr_trajectory_pb) {  // 指针常量，指针指向的内容可以被修改，指针本身（地址）是常量不能被修改
   auto* ptr_debug = ptr_trajectory_pb->mutable_debug();
   if (FLAGS_enable_record_debug) {
     ptr_debug->mutable_planning_data()->mutable_init_point()->CopyFrom(stitching_trajectory.back());
@@ -543,7 +541,9 @@ Status OnLanePlanning::Plan(const double current_time_stamp,
     frame_->mutable_open_space_info()->sync_debug_instance();
     const auto& publishable_trajectory = frame_->open_space_info().publishable_trajectory_data().first;
     const auto& publishable_trajectory_gear = frame_->open_space_info().publishable_trajectory_data().second;
+
     publishable_trajectory.PopulateTrajectoryProtobuf(ptr_trajectory_pb);
+    
     ptr_trajectory_pb->set_gear(publishable_trajectory_gear);
     ptr_trajectory_pb->set_trajectory_type(ADCTrajectory::OPEN_SPACE);
     // TODO(QiL): refine engage advice in open space trajectory optimizer.
@@ -584,8 +584,7 @@ Status OnLanePlanning::Plan(const double current_time_stamp,
       }
       return Status(ErrorCode::PLANNING_ERROR, msg);
     }
-    // Store current frame stitched path for possible speed fallback in next
-    // frames
+    // Store current frame stitched path for possible speed fallback in next frames
     DiscretizedPath current_frame_planned_path;
     for (const auto& trajectory_point : stitching_trajectory) {
       current_frame_planned_path.push_back(trajectory_point.path_point());
@@ -710,8 +709,7 @@ void AddSTGraph(const STGraphDebug& st_graph, Chart* chart) {
 
   for (const auto& boundary : st_graph.boundary()) {
     // from 'ST_BOUNDARY_TYPE_' to the end
-    std::string type =
-        StGraphBoundaryDebug_StBoundaryType_Name(boundary.type()).substr(17);
+    std::string type = StGraphBoundaryDebug_StBoundaryType_Name(boundary.type()).substr(17);
 
     auto* boundary_chart = chart->add_polygon();
     auto* properties = boundary_chart->mutable_properties();
@@ -749,8 +747,9 @@ void AddSTGraph(const STGraphDebug& st_graph, Chart* chart) {
 
 void AddSLFrame(const SLFrameDebug& sl_frame, Chart* chart) {
   chart->set_title(sl_frame.name());
-  PopulateChartOptions(0.0, 80.0, "s (meter)", -8.0, 8.0, "l (meter)", false,
-                       chart);
+  PopulateChartOptions(0.0, 80.0, "s (meter)",
+                      -8.0, 8.0, "l (meter)", 
+                       false, chart);
   auto* sl_line = chart->add_line();
   sl_line->set_label("SL Path");
   for (const auto& sl_point : sl_frame.sl_path()) {
@@ -763,8 +762,9 @@ void AddSLFrame(const SLFrameDebug& sl_frame, Chart* chart) {
 void AddSpeedPlan(const ::google::protobuf::RepeatedPtrField<SpeedPlan>& speed_plans,
                   Chart* chart) {
   chart->set_title("Speed Plan");
-  PopulateChartOptions(0.0, 80.0, "s (meter)", 0.0, 50.0, "v (m/s)", false,
-                       chart);
+  PopulateChartOptions(0.0, 80.0, "s (meter)", 
+                       0.0, 50.0, "v (m/s)", 
+                       false, chart);
 
   for (const auto& speed_plan : speed_plans) {
     auto* line = chart->add_line();
@@ -839,8 +839,8 @@ void OnLanePlanning::AddOpenSpaceOptimizerResult(const planning_internal::Debug&
   PopulateChartOptions(open_space_debug.xy_boundary(0) - 1.0,
                        open_space_debug.xy_boundary(1) + 1.0, "x (meter)",
                        open_space_debug.xy_boundary(2) - 1.0,
-                       open_space_debug.xy_boundary(3) + 1.0, "y (meter)", true,
-                       chart);
+                       open_space_debug.xy_boundary(3) + 1.0, "y (meter)",
+                       true, chart);
 
   chart->mutable_options()->set_sync_xy_window_size(true);
   chart->mutable_options()->set_aspect_ratio(0.9);
@@ -902,8 +902,7 @@ void OnLanePlanning::AddOpenSpaceOptimizerResult(const planning_internal::Debug&
   auto warm_start_trajectory = open_space_debug.warm_start_trajectory();
   auto* warm_start_line = chart->add_line();
   warm_start_line->set_label("WarmStart");
-  for (int i = 0; i < warm_start_trajectory.vehicle_motion_point_size() / 2;
-       i++) {
+  for (int i = 0; i < warm_start_trajectory.vehicle_motion_point_size() / 2; i++) {
     auto* point_debug = warm_start_line->add_point();
     auto& point = warm_start_trajectory.vehicle_motion_point(i);
     point_debug->set_x(point.trajectory_point().path_point().x());
@@ -1082,8 +1081,7 @@ void OnLanePlanning::AddStitchSpeedProfile(planning_internal::Debug* debug_chart
   // auto smoothed_trajectory = open_space_debug.smoothed_trajectory();
   auto* speed_profile = chart->add_line();
   speed_profile->set_label("Speed Profile");
-  const auto& last_trajectory =
-      injector_->frame_history()->Latest()->current_frame_planned_trajectory();
+  const auto& last_trajectory = injector_->frame_history()->Latest()->current_frame_planned_trajectory();
   for (const auto& point : last_trajectory.trajectory_point()) {
     auto* point_debug = speed_profile->add_point();
     point_debug->set_x(point.relative_time() +

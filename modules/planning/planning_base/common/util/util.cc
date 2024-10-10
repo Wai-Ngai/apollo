@@ -54,9 +54,8 @@ bool IsDifferentRouting(const PlanningCommand& first,
   return true;
 }
 
-double GetADCStopDeceleration(
-    apollo::common::VehicleStateProvider* vehicle_state,
-    const double adc_front_edge_s, const double stop_line_s) {
+double GetADCStopDeceleration(apollo::common::VehicleStateProvider* vehicle_state,
+                              const double adc_front_edge_s, const double stop_line_s) {
   double adc_speed = vehicle_state->linear_velocity();
   const double max_adc_stop_speed = common::VehicleConfigHelper::Instance()
                                         ->GetConfig()
@@ -84,27 +83,24 @@ bool CheckStopSignOnReferenceLine(const ReferenceLineInfo& reference_line_info,
                                   const std::string& stop_sign_overlap_id) {
   const std::vector<PathOverlap>& stop_sign_overlaps =
       reference_line_info.reference_line().map_path().stop_sign_overlaps();
-  auto stop_sign_overlap_it =
-      std::find_if(stop_sign_overlaps.begin(), stop_sign_overlaps.end(),
-                   [&stop_sign_overlap_id](const PathOverlap& overlap) {
-                     return overlap.object_id == stop_sign_overlap_id;
-                   });
+  auto stop_sign_overlap_it = std::find_if(stop_sign_overlaps.begin(), stop_sign_overlaps.end(),
+                                           [&stop_sign_overlap_id](const PathOverlap& overlap) {
+                                             return overlap.object_id == stop_sign_overlap_id;
+                                           });
   return (stop_sign_overlap_it != stop_sign_overlaps.end());
 }
 
 /*
  * @brief: check if a traffic_light_overlap is still along reference_line
  */
-bool CheckTrafficLightOnReferenceLine(
-    const ReferenceLineInfo& reference_line_info,
-    const std::string& traffic_light_overlap_id) {
+bool CheckTrafficLightOnReferenceLine(const ReferenceLineInfo& reference_line_info,
+                                      const std::string& traffic_light_overlap_id) {
   const std::vector<PathOverlap>& traffic_light_overlaps =
       reference_line_info.reference_line().map_path().signal_overlaps();
-  auto traffic_light_overlap_it =
-      std::find_if(traffic_light_overlaps.begin(), traffic_light_overlaps.end(),
-                   [&traffic_light_overlap_id](const PathOverlap& overlap) {
-                     return overlap.object_id == traffic_light_overlap_id;
-                   });
+  auto traffic_light_overlap_it = std::find_if(traffic_light_overlaps.begin(), traffic_light_overlaps.end(),
+                                               [&traffic_light_overlap_id](const PathOverlap& overlap) {
+                                                 return overlap.object_id == traffic_light_overlap_id;
+                                               });
   return (traffic_light_overlap_it != traffic_light_overlaps.end());
 }
 
@@ -122,8 +118,7 @@ bool CheckInsideJunction(const ReferenceLineInfo& reference_line_info) {
   }
 
   static constexpr double kIntersectionPassDist = 2.0;  // unit: m
-  const double distance_adc_pass_intersection =
-      adc_back_edge_s - junction_overlap.end_s;
+  const double distance_adc_pass_intersection = adc_back_edge_s - junction_overlap.end_s;
   ADEBUG << "distance_adc_pass_intersection[" << distance_adc_pass_intersection
          << "] junction_overlap[" << junction_overlap.object_id << "] start_s["
          << junction_overlap.start_s << "]";
@@ -158,28 +153,22 @@ void GetFilesByPath(const boost::filesystem::path& path,
  */
 double CalculateEquivalentEgoWidth(const ReferenceLineInfo& reference_line_info,
                                    double s) {
-  const auto& vehicle_param =
-      common::VehicleConfigHelper::Instance()->GetConfig().vehicle_param();
+  const auto& vehicle_param = common::VehicleConfigHelper::Instance()->GetConfig().vehicle_param();
   double max_kappa = 1.0 / vehicle_param.min_turn_radius();
   double half_wb = 0.5 * vehicle_param.wheel_base();
   double front_l = vehicle_param.front_edge_to_center() - half_wb;
   double half_w = 0.5 * vehicle_param.width();
   double current_heading = reference_line_info.reference_line()
-                               .GetReferencePoint(s - front_l)
-                               .heading();
-  double heading_f =
-      reference_line_info.reference_line().GetReferencePoint(s).heading();
+                           .GetReferencePoint(s - front_l)
+                           .heading();
+  double heading_f = reference_line_info.reference_line().GetReferencePoint(s).heading();
   double heading_b = reference_line_info.reference_line()
-                         .GetReferencePoint(s - front_l - half_wb)
-                         .heading();
+                     .GetReferencePoint(s - front_l - half_wb)
+                     .heading();
   // average kappa from front edge to center
-  double kappa_f =
-      apollo::common::math::NormalizeAngle(heading_f - current_heading) /
-      front_l;
+  double kappa_f = apollo::common::math::NormalizeAngle(heading_f - current_heading) / front_l;
   // average kappa from center to rear axle
-  double kappa_b =
-      apollo::common::math::NormalizeAngle(current_heading - heading_b) /
-      half_wb;
+  double kappa_b = apollo::common::math::NormalizeAngle(current_heading - heading_b) / half_wb;
   // prevent devide by 0, and quit if lane bends to difference direction
   if (kappa_f * kappa_b < 0.0 || fabs(kappa_f) < 1e-6) {
     return half_w;
@@ -191,18 +180,13 @@ double CalculateEquivalentEgoWidth(const ReferenceLineInfo& reference_line_info,
   double sint = std::sin(theta);
   double cost = std::cos(theta);
   double r_f = 1.0 / kappa_f;
-  double eq_half_w =
-      apollo::common::math::Vec2d(front_l * cost - half_w * sint,
-                                  r_f + front_l * sint + half_w * cost)
-          .Length() -
-      r_f;
+  double eq_half_w = apollo::common::math::Vec2d(front_l * cost - half_w * sint,
+                                                 r_f + front_l * sint + half_w * cost).Length() - r_f;
   return std::max(eq_half_w, half_w);
 }
 
-double CalculateEquivalentEgoWidth(
-    const apollo::hdmap::LaneInfoConstPtr lane_info, double s) {
-  const auto& vehicle_param =
-      common::VehicleConfigHelper::Instance()->GetConfig().vehicle_param();
+double CalculateEquivalentEgoWidth(const apollo::hdmap::LaneInfoConstPtr lane_info, double s) {
+  const auto& vehicle_param = common::VehicleConfigHelper::Instance()->GetConfig().vehicle_param();
   double max_kappa = 1.0 / vehicle_param.min_turn_radius();
   double half_wb = 0.5 * vehicle_param.wheel_base();
   double front_l = vehicle_param.front_edge_to_center() - half_wb;
@@ -211,13 +195,9 @@ double CalculateEquivalentEgoWidth(
   double heading_f = lane_info->Heading(s);
   double heading_b = lane_info->Heading(s - front_l - half_wb);
   // average kappa from front edge to center
-  double kappa_f =
-      apollo::common::math::NormalizeAngle(heading_f - current_heading) /
-      front_l;
+  double kappa_f = apollo::common::math::NormalizeAngle(heading_f - current_heading) / front_l;
   // average kappa from center to rear axle
-  double kappa_b =
-      apollo::common::math::NormalizeAngle(current_heading - heading_b) /
-      half_wb;
+  double kappa_b = apollo::common::math::NormalizeAngle(current_heading - heading_b) / half_wb;
   // prevent devide by 0, and quit if lane bends to difference direction
   if (kappa_f * kappa_b < 0.0 || fabs(kappa_f) < 1e-6) {
     return half_w;
@@ -229,11 +209,8 @@ double CalculateEquivalentEgoWidth(
   double sint = std::sin(theta);
   double cost = std::cos(theta);
   double r_f = 1.0 / kappa_f;
-  double eq_half_w =
-      apollo::common::math::Vec2d(front_l * cost - half_w * sint,
-                                  r_f + front_l * sint + half_w * cost)
-          .Length() -
-      r_f;
+  double eq_half_w = apollo::common::math::Vec2d(front_l * cost - half_w * sint,
+                                                 r_f + front_l * sint + half_w * cost).Length() - r_f;
   return std::max(eq_half_w, half_w);
 }
 

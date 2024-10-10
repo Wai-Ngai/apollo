@@ -45,15 +45,13 @@ void EgoInfo::CalculateEgoBox(const common::VehicleState& vehicle_state) {
   const auto& param = ego_vehicle_config_.vehicle_param();
   ADEBUG << "param: " << param.DebugString();
 
-  Vec2d vec_to_center(
-      (param.front_edge_to_center() - param.back_edge_to_center()) / 2.0,
-      (param.left_edge_to_center() - param.right_edge_to_center()) / 2.0);
+  Vec2d vec_to_center((param.front_edge_to_center() - param.back_edge_to_center()) / 2.0,
+                      (param.left_edge_to_center() - param.right_edge_to_center()) / 2.0);
 
   Vec2d position(vehicle_state.x(), vehicle_state.y());
   Vec2d center(position + vec_to_center.rotate(vehicle_state.heading()));
 
-  ego_box_ =
-      Box2d(center, vehicle_state.heading(), param.length(), param.width());
+  ego_box_ = Box2d(center, vehicle_state.heading(), param.length(), param.width());
 }
 
 void EgoInfo::Clear() {
@@ -66,14 +64,12 @@ void EgoInfo::Clear() {
 // It doesn't make sense when:
 // 1. the heading is not necessaries align with the road
 // 2. the road is not necessaries straight
-void EgoInfo::CalculateFrontObstacleClearDistance(
-    const std::vector<const Obstacle*>& obstacles) {
+void EgoInfo::CalculateFrontObstacleClearDistance(const std::vector<const Obstacle*>& obstacles) {
   Vec2d position(vehicle_state_.x(), vehicle_state_.y());
 
   const auto& param = ego_vehicle_config_.vehicle_param();
-  Vec2d vec_to_center(
-      (param.front_edge_to_center() - param.back_edge_to_center()) / 2.0,
-      (param.left_edge_to_center() - param.right_edge_to_center()) / 2.0);
+  Vec2d vec_to_center((param.front_edge_to_center() - param.back_edge_to_center()) / 2.0,
+                      (param.left_edge_to_center() - param.right_edge_to_center()) / 2.0);
 
   Vec2d center(position + vec_to_center.rotate(vehicle_state_.heading()));
 
@@ -82,10 +78,10 @@ void EgoInfo::CalculateFrontObstacleClearDistance(
   // Due to the error of ego heading, only short range distance is meaningful
   static constexpr double kDistanceThreshold = 50.0;
   static constexpr double buffer = 0.1;  // in meters
-  const double impact_region_length =
-      param.length() + buffer + kDistanceThreshold;
+  const double impact_region_length = param.length() + buffer + kDistanceThreshold;
   Box2d ego_front_region(center + unit_vec_heading * kDistanceThreshold / 2.0,
-                         vehicle_state_.heading(), impact_region_length,
+                         vehicle_state_.heading(), 
+                         impact_region_length,
                          param.width() + buffer);
 
   for (const auto& obstacle : obstacles) {
@@ -94,8 +90,7 @@ void EgoInfo::CalculateFrontObstacleClearDistance(
       continue;
     }
 
-    double dist = ego_box_.center().DistanceTo(
-                      obstacle->PerceptionBoundingBox().center()) -
+    double dist = ego_box_.center().DistanceTo(obstacle->PerceptionBoundingBox().center()) -
                   ego_box_.diagonal() / 2.0;
 
     if (front_clear_distance_ < 0.0 || dist < front_clear_distance_) {

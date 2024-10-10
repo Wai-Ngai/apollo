@@ -177,7 +177,7 @@ bool LaneChangePath::OptimizePath(const std::vector<PathBoundary>& path_boundari
     PathOptimizerUtil::CalculateAccBound(path_boundary, reference_line,
                                          &ddl_bounds);
 
-    // 曲率变化率jerk_bound计算
+    // 曲率变化率约束jerk_bound计算、参考路径、参考路径权重
     const double jerk_bound = PathOptimizerUtil::EstimateJerkBoundary(std::fmax(init_sl_state_.first[1], 1e-12));
     std::vector<double> ref_l(path_boundary_size, 0);
     std::vector<double> weight_ref_l(path_boundary_size, 0);
@@ -219,9 +219,10 @@ bool LaneChangePath::AssessPath(std::vector<PathData>* candidate_path_data,
   std::vector<PathData> valid_path_data;
   for (auto& curr_path_data : *candidate_path_data) {
 
-    // 如果当前路径是有效的常规路径
+    // 遍历候选路径数据，检查路径是否有效。其中会判断路径是否为空、路径是否远离参考线、路径是否远离道路、路径是否与静态障碍物碰撞、路径终点是否在逆向的临近车道上。
     if (PathAssessmentDeciderUtil::IsValidRegularPath(*reference_line_info_,
                                                       curr_path_data)) {
+      // 如果当前路径是有效的常规路径
       SetPathInfo(&curr_path_data);
       PathAssessmentDeciderUtil::TrimTailingOutLanePoints(&curr_path_data); // 剪除尾部超出车道的点
       if (curr_path_data.Empty()) {

@@ -150,10 +150,8 @@ Status STBoundsDecider::GenerateFallbackSTBound(STBound* const st_bound,
     // Get Boundary due to obstacles
     std::vector<std::pair<double, double>> available_s_bounds;
     std::vector<ObsDecSet> available_obs_decisions;
-    if (!st_obstacles_processor_.GetSBoundsFromDecisions(
-            t, &available_s_bounds, &available_obs_decisions)) {
-      const std::string msg =
-          "Failed to find a proper boundary due to obstacles.";
+    if (!st_obstacles_processor_.GetSBoundsFromDecisions(t, &available_s_bounds, &available_obs_decisions)) {
+      const std::string msg = "Failed to find a proper boundary due to obstacles.";
       AERROR << msg;
       return Status(ErrorCode::PLANNING_ERROR, msg);
     }

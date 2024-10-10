@@ -78,9 +78,9 @@ ReferenceLineProvider::ReferenceLineProvider(const common::VehicleStateProvider 
 
   // 根据配置，创建参考线平滑器。多态：父类指针指向子类对象
   if (smoother_config_.has_qp_spline()) {
-    smoother_.reset(new QpSplineReferenceLineSmoother(smoother_config_)); // 样条曲线
+    smoother_.reset(new QpSplineReferenceLineSmoother(smoother_config_));       // 样条曲线
   } else if (smoother_config_.has_spiral()) {
-    smoother_.reset(new SpiralReferenceLineSmoother(smoother_config_));  // 螺旋线
+    smoother_.reset(new SpiralReferenceLineSmoother(smoother_config_));         // 螺旋线
   } else if (smoother_config_.has_discrete_points()) {
     smoother_.reset(new DiscretePointsReferenceLineSmoother(smoother_config_)); // 离散点
   } else {

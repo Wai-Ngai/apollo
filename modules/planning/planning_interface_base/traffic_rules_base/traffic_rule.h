@@ -43,8 +43,7 @@ class TrafficRule {
   virtual bool Init(const std::string& name,
                     const std::shared_ptr<DependencyInjector>& injector);
 
-  virtual common::Status ApplyRule(
-      Frame* const frame, ReferenceLineInfo* const reference_line_info) = 0;
+  virtual common::Status ApplyRule(Frame* const frame, ReferenceLineInfo* const reference_line_info) = 0;
 
   virtual void Reset() = 0;
 

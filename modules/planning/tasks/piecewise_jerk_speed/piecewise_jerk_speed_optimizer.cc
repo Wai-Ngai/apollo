@@ -177,16 +177,18 @@ Status PiecewiseJerkSpeedOptimizer::Process(const PathData& path_data,
   piecewise_jerk_problem.set_weight_ddx(config_.acc_weight());
   piecewise_jerk_problem.set_weight_dddx(config_.jerk_weight());
   piecewise_jerk_problem.set_scale_factor({1.0, 10.0, 100.0});
+
   piecewise_jerk_problem.set_x_bounds(0.0, total_length);
+  piecewise_jerk_problem.set_dx_bounds(std::move(s_dot_bounds));
   piecewise_jerk_problem.set_ddx_bounds(veh_param.max_deceleration(),
                                         veh_param.max_acceleration());
   piecewise_jerk_problem.set_dddx_bound(FLAGS_longitudinal_jerk_lower_bound,
                                         FLAGS_longitudinal_jerk_upper_bound);
   piecewise_jerk_problem.set_x_bounds(std::move(s_bounds));
-  piecewise_jerk_problem.set_dx_ref(dx_ref_weight, dx_ref);
+
   piecewise_jerk_problem.set_x_ref(config_.ref_s_weight(), std::move(x_ref));
+  piecewise_jerk_problem.set_dx_ref(dx_ref_weight, dx_ref);
   piecewise_jerk_problem.set_penalty_dx(penalty_dx);
-  piecewise_jerk_problem.set_dx_bounds(std::move(s_dot_bounds));
 
   // Solve the problem
   if (!piecewise_jerk_problem.Optimize()) {

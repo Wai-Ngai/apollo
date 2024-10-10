@@ -67,7 +67,7 @@ Status SpeedBoundsDecider::Process(Frame *const frame,
     path_decision->EraseStBoundaries();
   }
 
-  // 将障碍物预测轨迹投影到ST空间，根据决策构建ST边界，如果没有决策保留障碍物上下两个边界。
+  // 将障碍物预测轨迹投影到ST空间，根据决策构建ST边界，如果没有决策，保留障碍物上下两个边界。
   if (boundary_mapper.ComputeSTBoundary(path_decision).code() == ErrorCode::PLANNING_ERROR) {
     const std::string msg = "Mapping obstacle failed.";
     AERROR << msg;

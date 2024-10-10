@@ -72,7 +72,6 @@ class DpStCost {
                                   const STPoint& first_point,
                                   const STPoint& second_point,
                                   const STPoint& third_point);
-
   double GetJerkCostByFourPoints(const STPoint& first, const STPoint& second,
                                  const STPoint& third, const STPoint& fourth);
 

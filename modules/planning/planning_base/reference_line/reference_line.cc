@@ -51,8 +51,8 @@ using apollo::hdmap::InterpolatedIndex;
 // 1.通过一组参考点生成，reference_points_直接拷贝赋值了，然后再用reference_points生成hdmap::MapPathPoint
 ReferenceLine::ReferenceLine(const std::vector<ReferencePoint>& reference_points)
     : reference_points_(reference_points),
-      map_path_(std::move(std::vector<hdmap::MapPathPoint>(
-          reference_points.begin(), reference_points.end()))) {
+      map_path_(std::move(std::vector<hdmap::MapPathPoint>(reference_points.begin(), 
+                                                           reference_points.end()))) {
   CHECK_EQ(static_cast<size_t>(map_path_.num_points()),
            reference_points_.size());
 }
@@ -63,8 +63,10 @@ ReferenceLine::ReferenceLine(const MapPath& hdmap_path)
   for (const auto& point : hdmap_path.path_points()) {
     DCHECK(!point.lane_waypoints().empty());
     const auto& lane_waypoint = point.lane_waypoints()[0];
-    reference_points_.emplace_back(
-        hdmap::MapPathPoint(point, point.heading(), lane_waypoint), 0.0, 0.0);
+
+    reference_points_.emplace_back(hdmap::MapPathPoint(point, point.heading(), lane_waypoint), 
+                                   0.0, 
+                                   0.0);
   }
   CHECK_EQ(static_cast<size_t>(map_path_.num_points()),
            reference_points_.size());
@@ -129,13 +131,12 @@ bool ReferenceLine::Stitch(const ReferenceLine& other) {
     reference_points_.insert(reference_points_.end(),
                              other_points.begin() + end_i, other_points.end());
   }
-  map_path_ = MapPath(std::move(std::vector<hdmap::MapPathPoint>(
-      reference_points_.begin(), reference_points_.end())));
+  map_path_ = MapPath(std::move(std::vector<hdmap::MapPathPoint>(reference_points_.begin(), 
+                                                                 reference_points_.end())));
   return true;
 }
 
-ReferencePoint ReferenceLine::GetNearestReferencePoint(
-    const common::math::Vec2d& xy) const {
+ReferencePoint ReferenceLine::GetNearestReferencePoint(const common::math::Vec2d& xy) const {
   double min_dist = std::numeric_limits<double>::max();
   size_t min_index = 0;
   for (size_t i = 0; i < reference_points_.size(); ++i) {
@@ -164,33 +165,29 @@ bool ReferenceLine::Segment(const double s, const double look_backward,
   const auto& accumulated_s = map_path_.accumulated_s();
 
   // inclusive
-  auto start_index =
-      std::distance(accumulated_s.begin(),
-                    std::lower_bound(accumulated_s.begin(), accumulated_s.end(),
-                                     s - look_backward));
+  auto start_index = std::distance(accumulated_s.begin(),
+                                   std::lower_bound(accumulated_s.begin(), accumulated_s.end(),
+                                                    s - look_backward));
 
   // exclusive
-  auto end_index =
-      std::distance(accumulated_s.begin(),
-                    std::upper_bound(accumulated_s.begin(), accumulated_s.end(),
-                                     s + look_forward));
+  auto end_index = std::distance(accumulated_s.begin(),
+                                 std::upper_bound(accumulated_s.begin(), accumulated_s.end(),
+                                                  s + look_forward));
 
   if (end_index - start_index < 2) {
     AERROR << "Too few reference points after shrinking.";
     return false;
   }
 
-  reference_points_ =
-      std::vector<ReferencePoint>(reference_points_.begin() + start_index,
-                                  reference_points_.begin() + end_index);
+  reference_points_ = std::vector<ReferencePoint>(reference_points_.begin() + start_index,
+                                                  reference_points_.begin() + end_index);
 
-  map_path_ = MapPath(std::vector<hdmap::MapPathPoint>(
-      reference_points_.begin(), reference_points_.end()));
+  map_path_ = MapPath(std::vector<hdmap::MapPathPoint>(reference_points_.begin(), 
+                                                       reference_points_.end()));
   return true;
 }
 
-common::FrenetFramePoint ReferenceLine::GetFrenetPoint(
-    const common::PathPoint& path_point) const {
+common::FrenetFramePoint ReferenceLine::GetFrenetPoint(const common::PathPoint& path_point) const {
   if (reference_points_.empty()) {
     return common::FrenetFramePoint();
   }
@@ -211,18 +208,15 @@ common::FrenetFramePoint ReferenceLine::GetFrenetPoint(
   const double kappa_ref = ref_point.kappa();
   const double dkappa_ref = ref_point.dkappa();
 
-  const double dl = CartesianFrenetConverter::CalculateLateralDerivative(
-      theta_ref, theta, l, kappa_ref);
-  const double ddl =
-      CartesianFrenetConverter::CalculateSecondOrderLateralDerivative(
-          theta_ref, theta, kappa_ref, kappa, dkappa_ref, l);
+  const double dl = CartesianFrenetConverter::CalculateLateralDerivative(theta_ref, theta, l, kappa_ref);
+  const double ddl = CartesianFrenetConverter::CalculateSecondOrderLateralDerivative(theta_ref, theta, kappa_ref, kappa, dkappa_ref, l);
+
   frenet_frame_point.set_dl(dl);
   frenet_frame_point.set_ddl(ddl);
   return frenet_frame_point;
 }
 
-std::pair<std::array<double, 3>, std::array<double, 3>>
-ReferenceLine::ToFrenetFrame(const common::TrajectoryPoint& traj_point) const {
+std::pair<std::array<double, 3>, std::array<double, 3>> ReferenceLine::ToFrenetFrame(const common::TrajectoryPoint& traj_point) const {
   ACHECK(!reference_points_.empty());
 
   common::SLPoint sl_point;
@@ -359,8 +353,7 @@ double ReferenceLine::FindMinDistancePoint(const ReferencePoint& p0,
     return dx * dx + dy * dy;
   };
 
-  return ::boost::math::tools::brent_find_minima(func_dist_square, s0, s1, 8)
-      .first;
+  return ::boost::math::tools::brent_find_minima(func_dist_square, s0, s1, 8).first;
 }
 
 ReferencePoint ReferenceLine::GetReferencePoint(const double x,
@@ -386,8 +379,7 @@ ReferencePoint ReferenceLine::GetReferencePoint(const double x,
   }
 
   size_t index_start = index_min == 0 ? index_min : index_min - 1;
-  size_t index_end =
-      index_min + 1 == reference_points_.size() ? index_min : index_min + 1;
+  size_t index_end = index_min + 1 == reference_points_.size() ? index_min : index_min + 1;
 
   if (index_start == index_end) {
     return reference_points_[index_start];
@@ -396,9 +388,7 @@ ReferencePoint ReferenceLine::GetReferencePoint(const double x,
   double s0 = map_path_.accumulated_s()[index_start];
   double s1 = map_path_.accumulated_s()[index_end];
 
-  double s = ReferenceLine::FindMinDistancePoint(
-      reference_points_[index_start], s0, reference_points_[index_end], s1, x,
-      y);
+  double s = ReferenceLine::FindMinDistancePoint(reference_points_[index_start], s0, reference_points_[index_end], s1, x, y);
 
   return Interpolate(reference_points_[index_start], s0,
                      reference_points_[index_end], s1, s);
@@ -493,11 +483,12 @@ ReferencePoint ReferenceLine::Interpolate(const ReferencePoint& p0,
 
   const double x = common::math::lerp(p0.x(), s0, p1.x(), s1, s);
   const double y = common::math::lerp(p0.y(), s0, p1.y(), s1, s);
-  const double heading =
-      common::math::slerp(p0.heading(), s0, p1.heading(), s1, s);
+  const double heading = common::math::slerp(p0.heading(), s0, p1.heading(), s1, s);
   const double kappa = common::math::lerp(p0.kappa(), s0, p1.kappa(), s1, s);
   const double dkappa = common::math::lerp(p0.dkappa(), s0, p1.dkappa(), s1, s);
+
   std::vector<hdmap::LaneWaypoint> waypoints;
+
   if (!p0.lane_waypoints().empty() && !p1.lane_waypoints().empty()) {
     const auto& p0_waypoint = p0.lane_waypoints()[0];
     if ((s - s0) + p0_waypoint.s <= p0_waypoint.lane->total_length()) {
@@ -515,7 +506,8 @@ ReferencePoint ReferenceLine::Interpolate(const ReferencePoint& p0,
       waypoints.emplace_back(p0_waypoint.lane, lane_s);
     }
   }
-  return ReferencePoint(hdmap::MapPathPoint({x, y}, heading, waypoints), kappa,
+  return ReferencePoint(hdmap::MapPathPoint({x, y}, heading, waypoints),
+                        kappa,
                         dkappa);
 }
 
@@ -585,8 +577,7 @@ hdmap::Road::Type ReferenceLine::GetRoadType(const double s) const {
   return road_type;
 }
 
-void ReferenceLine::GetLaneFromS(
-    const double s, std::vector<hdmap::LaneInfoConstPtr>* lanes) const {
+void ReferenceLine::GetLaneFromS(const double s, std::vector<hdmap::LaneInfoConstPtr>* lanes) const {
   CHECK_NOTNULL(lanes);
   auto ref_point = GetReferencePoint(s);
   std::unordered_set<hdmap::LaneInfoConstPtr> lane_set;
@@ -681,9 +672,10 @@ bool ReferenceLine::IsOnRoad(const SLPoint& sl_point) const {
 
 // Return a rough approximated SLBoundary using box length. It is guaranteed to
 // be larger than the accurate SL boundary.
-bool ReferenceLine::GetApproximateSLBoundary(
-    const common::math::Box2d& box, const double start_s, const double end_s,
-    SLBoundary* const sl_boundary) const {
+bool ReferenceLine::GetApproximateSLBoundary(const common::math::Box2d& box, 
+                                             const double start_s, 
+                                             const double end_s,
+                                             SLBoundary* const sl_boundary) const {
   double s = 0.0;
   double l = 0.0;
   double distance = 0.0;
@@ -735,9 +727,9 @@ bool ReferenceLine::GetSLBoundary(const common::math::Polygon2d& polygon,
   return GetSLBoundary(corners, sl_boundary, warm_start_s);
 }
 
-bool ReferenceLine::GetSLBoundary(
-    const std::vector<common::math::Vec2d>& corners,
-    SLBoundary* const sl_boundary, double warm_start_s) const {
+bool ReferenceLine::GetSLBoundary(const std::vector<common::math::Vec2d>& corners,
+                                  SLBoundary* const sl_boundary, 
+                                  double warm_start_s) const {
   double start_s(std::numeric_limits<double>::max());
   double end_s(std::numeric_limits<double>::lowest());
   double start_l(std::numeric_limits<double>::max());
@@ -797,8 +789,8 @@ bool ReferenceLine::GetSLBoundary(
   return true;
 }
 
-std::vector<hdmap::LaneSegment> ReferenceLine::GetLaneSegments(
-    const double start_s, const double end_s) const {
+std::vector<hdmap::LaneSegment> ReferenceLine::GetLaneSegments(const double start_s, 
+                                                               const double end_s) const {
   return map_path_.GetLaneSegments(start_s, end_s);
 }
 
@@ -859,14 +851,12 @@ bool ReferenceLine::HasOverlap(const common::math::Box2d& box) const {
 }
 
 std::string ReferenceLine::DebugString() const {
-  const auto limit =
-      std::min(reference_points_.size(),
-               static_cast<size_t>(FLAGS_trajectory_point_num_for_debug));
-  return absl::StrCat(
-      "point num:", reference_points_.size(),
-      absl::StrJoin(reference_points_.begin(),
-                    reference_points_.begin() + limit, "",
-                    apollo::common::util::DebugStringFormatter()));
+  const auto limit = std::min(reference_points_.size(),
+                              static_cast<size_t>(FLAGS_trajectory_point_num_for_debug));
+  return absl::StrCat("point num:", reference_points_.size(),
+                      absl::StrJoin(reference_points_.begin(),
+                                    reference_points_.begin() + limit, "",
+                                    apollo::common::util::DebugStringFormatter()));
 }
 
 double ReferenceLine::GetSpeedLimitFromS(const double s) const {
@@ -885,8 +875,7 @@ double ReferenceLine::GetSpeedLimitFromS(const double s) const {
       continue;
     }
     speed_limit_found = true;
-    speed_limit =
-        std::fmin(lane_waypoint.lane->lane().speed_limit(), speed_limit);
+    speed_limit = std::fmin(lane_waypoint.lane->lane().speed_limit(), speed_limit);
   }
 
   if (!speed_limit_found) {

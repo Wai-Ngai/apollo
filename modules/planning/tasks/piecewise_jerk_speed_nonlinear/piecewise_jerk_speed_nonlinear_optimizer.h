@@ -103,8 +103,7 @@ class PiecewiseJerkSpeedNonlinearOptimizer : public SpeedOptimizer {
   PiecewiseJerkNonlinearSpeedOptimizerConfig config_;
 };
 
-CYBER_PLUGIN_MANAGER_REGISTER_PLUGIN(
-    apollo::planning::PiecewiseJerkSpeedNonlinearOptimizer, Task)
+CYBER_PLUGIN_MANAGER_REGISTER_PLUGIN(apollo::planning::PiecewiseJerkSpeedNonlinearOptimizer, Task)
 
 }  // namespace planning
 }  // namespace apollo

@@ -48,6 +48,7 @@ class LaneChangePath : public PathGeneration {
    * @param boundary is calculated path boundaries
    */
   bool DecidePathBounds(std::vector<PathBoundary>* boundary);
+
   /**
    * @brief Optimize paths for each path boundary
    * @param path_boundaries is input path boundaries
@@ -66,11 +67,13 @@ class LaneChangePath : public PathGeneration {
    * @brief Update lane change status
    */
   void UpdateLaneChangeStatus();
+
   /**
    * @brief Correct the boundary based on the starting point of lane change
    * @param path_bound is input path bound
    */
   void GetBoundaryFromLaneChangeForbiddenZone(PathBoundary* const path_bound);
+
   /**
    * @brief Calculate starting point of lane change
    * @param adc_frenet_s is adc current position
@@ -83,11 +86,13 @@ class LaneChangePath : public PathGeneration {
    * @brief Determine if the space before and after changing lanes is safe
    */
   bool IsClearToChangeLane(ReferenceLineInfo* reference_line_info);
+
   /**
    * @brief Update Planning context lane change status
    */
   void UpdateStatus(double timestamp, ChangeLaneStatus::Status status_code,
                     const std::string& path_id);
+
   /**
    * @brief Determine whether the obstacle meets the safe distance
    */
@@ -95,6 +100,7 @@ class LaneChangePath : public PathGeneration {
                         const double safe_distance,
                         const double distance_buffer,
                         const bool is_obstacle_blocking);
+                        
   void SetPathInfo(PathData* const path_data);
 
   bool CheckLastFrameSucceed(const apollo::planning::Frame* const last_frame);

@@ -29,8 +29,7 @@ std::string ConfigUtil::TransformToPathName(const std::string& name) {
   return output;
 }
 
-std::string ConfigUtil::GetFullPlanningClassName(
-    const std::string& class_name) {
+std::string ConfigUtil::GetFullPlanningClassName(const std::string& class_name) {
   static const std::string kNameSpace = "apollo::planning::";
   // If the class name already has namespace in it, do nothing.
   if (class_name.find("::") != std::string::npos) {

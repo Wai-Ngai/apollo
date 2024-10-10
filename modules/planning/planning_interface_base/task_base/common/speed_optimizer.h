@@ -31,6 +31,7 @@ namespace planning {
 class SpeedOptimizer : public Task {
  public:
   virtual ~SpeedOptimizer() = default;
+  
   common::Status Execute(Frame* frame,
                          ReferenceLineInfo* reference_line_info) override;
 

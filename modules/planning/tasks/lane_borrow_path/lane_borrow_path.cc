@@ -166,7 +166,7 @@ bool LaneBorrowPath::OptimizePath(const std::vector<PathBoundary>& path_boundari
     // 曲率变化率约束
     const double jerk_bound = PathOptimizerUtil::EstimateJerkBoundary(std::fmax(init_sl_state_.first[1], 1e-12));
 
-    // 参考路径
+    // 计算参考路径、和参考路径权重
     std::vector<double> ref_l;
     std::vector<double> weight_ref_l;
     PathOptimizerUtil::UpdatePathRefWithBound(path_boundary, config.path_reference_l_weight(), 
@@ -374,11 +374,11 @@ bool LaneBorrowPath::IsNecessaryToBorrowLane() {
       AINFO << "Switch from LANE-BORROW path to SELF-LANE path.";
     }
   } else {
-    // If originally not borrowing neighbor lane: 检查是否需要借道
+    // If originally not borrowing neighbor lane: 检查是否需要借道：自车道是否被阻塞且满足借道条件
     AINFO << "Blocking obstacle ID["
           << mutable_path_decider_status->front_static_obstacle_id() << "]";
     // ADC requirements check for lane-borrowing:
-    if (!HasSingleReferenceLine(*frame_)) {                              // 是否有单一参考线
+    if (!HasSingleReferenceLine(*frame_)) {                              // 是否只有一条车道
       return false;
     }
     if (!IsWithinSidePassingSpeedADC(*frame_)) {                         // 是否在侧向通行速度范围内
@@ -665,10 +665,9 @@ void LaneBorrowPath::SetPathInfo(PathData* const path_data) {
       }
 
     } else {
-      AERROR
-          << "reference line not ready when setting path point guide, middle_s"
-          << middle_s << ",index" << i << "path point"
-          << discrete_path[i].DebugString();
+      AERROR << "reference line not ready when setting path point guide, middle_s"
+             << middle_s << ",index" << i << "path point"
+             << discrete_path[i].DebugString();
       break;
     }
   }

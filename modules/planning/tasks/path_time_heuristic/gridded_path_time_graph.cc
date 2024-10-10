@@ -64,7 +64,8 @@ bool CheckOverlapOnDpStGraph(const std::vector<const STBoundary*>& boundaries,
 }
 }  // namespace
 
-GriddedPathTimeGraph::GriddedPathTimeGraph(const StGraphData& st_graph_data, const DpStSpeedOptimizerConfig& dp_config,
+GriddedPathTimeGraph::GriddedPathTimeGraph(const StGraphData& st_graph_data, 
+                                           const DpStSpeedOptimizerConfig& dp_config,
                                            const std::vector<const Obstacle*>& obstacles,
                                            const common::TrajectoryPoint& init_point)
     : st_graph_data_(st_graph_data),   // 速度边界里面赋值，ST图

@@ -88,8 +88,9 @@ Status PathDecider::Process(const ReferenceLineInfo *reference_line_info,
     mutable_path_decider_status->set_front_static_obstacle_id(reference_line_info->GetBlockingObstacle()->Id());
   } else {
     int front_static_obstacle_cycle_counter = mutable_path_decider_status->front_static_obstacle_cycle_counter();
-    mutable_path_decider_status->set_front_static_obstacle_cycle_counter( std::min(front_static_obstacle_cycle_counter, 0));
-    mutable_path_decider_status->set_front_static_obstacle_cycle_counter( std::max(front_static_obstacle_cycle_counter - 1, -10));
+    
+    mutable_path_decider_status->set_front_static_obstacle_cycle_counter(std::min(front_static_obstacle_cycle_counter, 0));
+    mutable_path_decider_status->set_front_static_obstacle_cycle_counter(std::max(front_static_obstacle_cycle_counter - 1, -10));
     
     if (mutable_path_decider_status->front_static_obstacle_cycle_counter() < -2) {
       std::string id = " ";

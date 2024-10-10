@@ -30,7 +30,7 @@ void PiecewiseJerkPathProblem::CalculateKernel(std::vector<c_float>* P_data,
                                                std::vector<c_int>* P_indices,
                                                std::vector<c_int>* P_indptr) {
   const int n = static_cast<int>(num_of_knots_);
-  const int num_of_variables = 3 * n;           // l  l' l''
+  const int num_of_variables = 3 * n;                                             // l  l' l''
   const int num_of_nonzeros = num_of_variables + (n - 1);
   std::vector<std::vector<std::pair<c_int, c_float>>> columns(num_of_variables);  // P矩阵
   int value_index = 0;
@@ -62,15 +62,17 @@ void PiecewiseJerkPathProblem::CalculateKernel(std::vector<c_float>* P_data,
 
   // Px''---------------------------------------------------------------------------------------
   auto delta_s_square = delta_s_ * delta_s_;
-  // x(i)''^2 * (w_ddx + 2 * w_dddx / delta_s^2)
+  // x(0)''^2 * (w_ddx + w_dddx / delta_s^2)
   columns[2 * n].emplace_back(2 * n, (weight_ddx_ + weight_dddx_ / delta_s_square) /
                                      (scale_factor_[2] * scale_factor_[2]));
   ++value_index;
+  // x(i)''^2 * (w_ddx + 2 * w_dddx / delta_s^2)
   for (int i = 1; i < n - 1; ++i) {
     columns[2 * n + i].emplace_back(2 * n + i, (weight_ddx_ + 2.0 * weight_dddx_ / delta_s_square) /
                                                (scale_factor_[2] * scale_factor_[2]));
     ++value_index;
   }
+  // x(n-1)''^2 * (w_ddx + w_dddx / delta_s^2)
   columns[3 * n - 1].emplace_back(3 * n - 1,(weight_ddx_ + weight_dddx_ / delta_s_square + weight_end_state_[2]) /
                                             (scale_factor_[2] * scale_factor_[2]));
   ++value_index;

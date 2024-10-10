@@ -33,7 +33,7 @@ using apollo::common::Status;
 
 bool TrafficDecider::Init(const std::shared_ptr<DependencyInjector> &injector) {
   if (init_) return true;
-  // Load the pipeline config.
+  // Load the pipeline config.   "modules/planning/planning_component/conf/traffic_rule_config.pb.txt"
   AINFO << "Load config path:" << FLAGS_traffic_rule_config_filename;
   // Load the pipeline of scenario.
   if (!apollo::cyber::common::LoadConfig(FLAGS_traffic_rule_config_filename,
@@ -42,12 +42,10 @@ bool TrafficDecider::Init(const std::shared_ptr<DependencyInjector> &injector) {
            << " failed!";
     return false;
   }
-  //-----------------------------------------------
+  // 根据配置文件，遍历生成每一个traffic_rule，并初始化
   for (int i = 0; i < rule_pipeline_.rule_size(); i++) {
-    auto rule =
-        apollo::cyber::plugin_manager::PluginManager::Instance()
-            ->CreateInstance<TrafficRule>(ConfigUtil::GetFullPlanningClassName(
-                rule_pipeline_.rule(i).type()));
+    auto rule = apollo::cyber::plugin_manager::PluginManager::Instance()
+                ->CreateInstance<TrafficRule>(ConfigUtil::GetFullPlanningClassName(rule_pipeline_.rule(i).type()));
     if (!rule) {
       AERROR << "Init of Traffic rule" << rule_pipeline_.rule(i).name()
              << " failed!";
@@ -90,10 +88,8 @@ void TrafficDecider::BuildPlanningTarget(ReferenceLineInfo *reference_line_info)
     }
   }
   if (min_s != std::numeric_limits<double>::infinity()) {
-    const auto &vehicle_config =
-        common::VehicleConfigHelper::Instance()->GetConfig();
-    double front_edge_to_center =
-        vehicle_config.vehicle_param().front_edge_to_center();
+    const auto &vehicle_config = common::VehicleConfigHelper::Instance()->GetConfig();
+    double front_edge_to_center = vehicle_config.vehicle_param().front_edge_to_center();
     stop_point.set_s(min_s - front_edge_to_center +
                      FLAGS_virtual_stop_wall_length / 2.0);
     reference_line_info->SetLatticeStopPoint(stop_point);

@@ -207,6 +207,8 @@ bool LaneFollowPath::OptimizePath(const std::vector<PathBoundary>& path_boundari
 
     std::vector<double> opt_l, opt_dl, opt_ddl;
     std::vector<std::pair<double, double>> ddl_bounds;
+
+    // 路径曲率约束
     PathOptimizerUtil::CalculateAccBound(path_boundary, reference_line,
                                          &ddl_bounds);
     PrintCurves print_debug;
@@ -216,8 +218,11 @@ bool LaneFollowPath::OptimizePath(const std::vector<PathBoundary>& path_boundari
       print_debug.AddPoint("ref_kappa", static_cast<double>(i) * path_boundary.delta_s(), kappa);
     }
     print_debug.PrintToLog();
+
+    // 曲率变化率约束
     const double jerk_bound = PathOptimizerUtil::EstimateJerkBoundary(std::fmax(init_sl_state_.first[1], 1e-12));
 
+    // 计算参考路径、和参考路径权重
     std::vector<double> ref_l(path_boundary_size, 0);
     std::vector<double> weight_ref_l(path_boundary_size, 0);
     PathOptimizerUtil::UpdatePathRefWithBound(path_boundary, config.path_reference_l_weight(), &ref_l, &weight_ref_l);

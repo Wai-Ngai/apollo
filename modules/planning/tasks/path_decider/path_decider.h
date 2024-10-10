@@ -49,7 +49,9 @@ class PathDecider : public Task {
   bool MakeStaticObstacleDecision(const PathData &path_data,
                                   const std::string &blocking_obstacle_id,
                                   PathDecision *const path_decision);
+
   bool IgnoreBackwardObstacle(PathDecision *const path_decision);
+  
   ObjectStop GenerateObjectStopDecision(const Obstacle &obstacle) const;
 
  private:

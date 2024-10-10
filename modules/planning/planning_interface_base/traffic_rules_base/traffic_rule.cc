@@ -36,12 +36,11 @@ bool TrafficRule::Init(const std::string& name,
 
   // Get the name of this class.
   int status;
-  std::string class_name =
-      abi::__cxa_demangle(typeid(*this).name(), 0, 0, &status);
+  std::string class_name = abi::__cxa_demangle(typeid(*this).name(), 0, 0, &status);
+
   // Generate the traffic rule config path from PluginManager.
   config_path_ = apollo::cyber::plugin_manager::PluginManager::Instance()
-                     ->GetPluginConfPath<TrafficRule>(
-                         class_name, "conf/default_conf.pb.txt");
+                 ->GetPluginConfPath<TrafficRule>(class_name, "conf/default_conf.pb.txt");
   return true;
 }
 

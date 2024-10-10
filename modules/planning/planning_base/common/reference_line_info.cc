@@ -549,8 +549,7 @@ bool ReferenceLineInfo::CombinePathAndSpeedProfile(const double relative_time, c
     if (speed_point.s() > path_data_.discretized_path().Length()) {
       break;
     }
-    common::PathPoint path_point =
-        path_data_.GetPathPointWithPathS(speed_point.s());
+    common::PathPoint path_point = path_data_.GetPathPointWithPathS(speed_point.s());
     path_point.set_s(path_point.s() + start_s);
 
     common::TrajectoryPoint trajectory_point;

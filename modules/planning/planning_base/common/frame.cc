@@ -97,8 +97,7 @@ bool Frame::Rerouting(PlanningContext *planning_context) {
     AERROR << "Invalid HD Map.";
     return false;
   }
-  auto *rerouting =
-      planning_context->mutable_planning_status()->mutable_rerouting();
+  auto *rerouting = planning_context->mutable_planning_status()->mutable_rerouting();
   rerouting->set_need_rerouting(true);
   auto *lane_follow_command = rerouting->mutable_lane_follow_command();
   if (future_route_waypoints_.size() < 1) {
@@ -128,16 +127,15 @@ std::list<ReferenceLineInfo> *Frame::mutable_reference_line_info() {
   return &reference_line_info_;
 }
 
-void Frame::UpdateReferenceLinePriority(
-    const std::map<std::string, uint32_t> &id_to_priority) {
+void Frame::UpdateReferenceLinePriority(const std::map<std::string, uint32_t> &id_to_priority) {
   for (const auto &pair : id_to_priority) {
     const auto id = pair.first;
     const auto priority = pair.second;
-    auto ref_line_info_itr =
-        std::find_if(reference_line_info_.begin(), reference_line_info_.end(),
-                     [&id](const ReferenceLineInfo &ref_line_info) {
-                       return ref_line_info.Lanes().Id() == id;
-                     });
+    auto ref_line_info_itr = std::find_if(reference_line_info_.begin(), 
+                                          reference_line_info_.end(),
+                                          [&id](const ReferenceLineInfo &ref_line_info) {
+                                            return ref_line_info.Lanes().Id() == id;
+                                          });
     if (ref_line_info_itr != reference_line_info_.end()) {
       ref_line_info_itr->SetPriority(priority);
     }
@@ -207,9 +205,9 @@ bool Frame::CreateReferenceLineInfo(const std::list<ReferenceLine> &reference_li
  * @brief: create static virtual object with lane width,
  *         mainly used for virtual stop wall
  */
-const Obstacle *Frame::CreateStopObstacle(
-    ReferenceLineInfo *const reference_line_info,
-    const std::string &obstacle_id, const double obstacle_s) {
+const Obstacle *Frame::CreateStopObstacle(ReferenceLineInfo *const reference_line_info,
+                                          const std::string &obstacle_id, 
+                                          const double obstacle_s) {
   if (reference_line_info == nullptr) {
     AERROR << "reference_line_info nullptr";
     return nullptr;
@@ -220,6 +218,7 @@ const Obstacle *Frame::CreateStopObstacle(
   auto box_center = reference_line.GetReferencePoint(box_center_s);
   double heading = reference_line.GetReferencePoint(obstacle_s).heading();
   static constexpr double kStopWallWidth = 4.0;
+
   Box2d stop_wall_box{box_center, heading, FLAGS_virtual_stop_wall_length,
                       kStopWallWidth};
 
@@ -357,15 +356,13 @@ Status Frame::Init(const common::VehicleStateProvider *vehicle_state_provider,
   return Status::OK();
 }
 
-Status Frame::InitForOpenSpace(
-    const common::VehicleStateProvider *vehicle_state_provider,
-    const EgoInfo *ego_info) {
+Status Frame::InitForOpenSpace(const common::VehicleStateProvider *vehicle_state_provider,
+                               const EgoInfo *ego_info) {
   return InitFrameData(vehicle_state_provider, ego_info);
 }
 
-Status Frame::InitFrameData(
-    const common::VehicleStateProvider *vehicle_state_provider,
-    const EgoInfo *ego_info) {
+Status Frame::InitFrameData(const common::VehicleStateProvider *vehicle_state_provider,
+                            const EgoInfo *ego_info) {
   hdmap_ = hdmap::HDMapUtil::BaseMapPtr();
   CHECK_NOTNULL(hdmap_);
   vehicle_state_ = vehicle_state_provider->vehicle_state();
@@ -381,8 +378,7 @@ Status Frame::InitFrameData(
     AlignPredictionTime(vehicle_state_.timestamp(), &prediction);
     local_view_.prediction_obstacles->CopyFrom(prediction);
   }
-  for (auto &ptr :
-       Obstacle::CreateObstacles(*local_view_.prediction_obstacles)) {
+  for (auto &ptr : Obstacle::CreateObstacles(*local_view_.prediction_obstacles)) {
     AddObstacle(*ptr);
   }
   if (planning_start_point_.v() < 1e-3) {
@@ -442,8 +438,7 @@ void Frame::RecordInputDebug(planning_internal::Debug *debug) {
 
   if (!FLAGS_use_navigation_mode) {
     auto debug_routing = planning_debug_data->mutable_routing();
-    debug_routing->CopyFrom(
-        local_view_.planning_command->lane_follow_command());
+    debug_routing->CopyFrom(local_view_.planning_command->lane_follow_command());
   }
 
   planning_debug_data->mutable_prediction_header()->CopyFrom(
@@ -463,8 +458,8 @@ void Frame::AlignPredictionTime(const double planning_start_time,
       !prediction_obstacles->header().has_timestamp_sec()) {
     return;
   }
-  double prediction_header_time =
-      prediction_obstacles->header().timestamp_sec();
+  double prediction_header_time = prediction_obstacles->header().timestamp_sec();
+
   for (auto &obstacle : *prediction_obstacles->mutable_prediction_obstacle()) {
     for (auto &trajectory : *obstacle.mutable_trajectory()) {
       for (auto &point : *trajectory.mutable_trajectory_point()) {
@@ -478,8 +473,8 @@ void Frame::AlignPredictionTime(const double planning_start_time,
                it->relative_time() < 0) {
           ++it;
         }
-        trajectory.mutable_trajectory_point()->erase(
-            trajectory.trajectory_point().begin(), it);
+        trajectory.mutable_trajectory_point()->erase(trajectory.trajectory_point().begin(), 
+                                                     it);
       }
     }
   }
@@ -510,10 +505,8 @@ void Frame::ReadTrafficLights() {
   }
 }
 
-perception::TrafficLight Frame::GetSignal(
-    const std::string &traffic_light_id) const {
-  const auto *result =
-      apollo::common::util::FindPtrOrNull(traffic_lights_, traffic_light_id);
+perception::TrafficLight Frame::GetSignal(const std::string &traffic_light_id) const {
+  const auto *result = apollo::common::util::FindPtrOrNull(traffic_lights_, traffic_light_id);
   if (result == nullptr) {
     perception::TrafficLight traffic_light;
     traffic_light.set_id(traffic_light_id);

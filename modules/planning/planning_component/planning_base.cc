@@ -111,13 +111,11 @@ void PlanningBase::FillPlanningPb(const double timestamp,
 void PlanningBase::LoadPlanner() {
   // Use PublicRoadPlanner as default Planner
   std::string planner_name = "apollo::planning::PublicRoadPlanner";
-  if ("" != config_.planner()) {
+  if ("" != config_.planner()) {     // 配置文件planning_config.pb.txt中定义Planner名称，目前并没有定义
     planner_name = config_.planner();
     planner_name = ConfigUtil::GetFullPlanningClassName(planner_name);
   }
-  planner_ =
-      cyber::plugin_manager::PluginManager::Instance()->CreateInstance<Planner>(
-          planner_name);
+  planner_ = cyber::plugin_manager::PluginManager::Instance()->CreateInstance<Planner>(planner_name);
 }
 
 }  // namespace planning

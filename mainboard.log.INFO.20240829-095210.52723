@@ -1,0 +1,36 @@
+Log file created at: 2024/08/29 09:52:10
+Running on machine: in-dev-docker
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+W0829 09:52:10.596129 52723 environment.h:33] Environment variable [CYBER_PATH] not set, fallback to 
+W0829 09:52:10.596146 52723 scheduler_factory.cc:63] Scheduler conf named /apollo/cyber/conf/planning.conf not found, use default.
+W0829 09:52:10.596165 52723 environment.h:33] Environment variable [CYBER_PATH] not set, fallback to 
+I0829 09:52:10.596593 52893 processor.cc:42] processor_tid: 52893
+I0829 09:52:10.596851 52894 processor.cc:42] processor_tid: 52894
+I0829 09:52:10.597049 52895 processor.cc:42] processor_tid: 52895
+I0829 09:52:10.598563 52896 processor.cc:42] processor_tid: 52896
+I0829 09:52:10.613723 52899 processor.cc:42] processor_tid: 52899
+I0829 09:52:10.614149 52900 processor.cc:42] processor_tid: 52900
+I0829 09:52:10.614459 52901 processor.cc:42] processor_tid: 52901
+I0829 09:52:10.614641 52902 processor.cc:42] processor_tid: 52902
+I0829 09:52:10.614876 52903 processor.cc:42] processor_tid: 52903
+I0829 09:52:10.615043 52904 processor.cc:42] processor_tid: 52904
+I0829 09:52:10.615304 52905 processor.cc:42] processor_tid: 52905
+I0829 09:52:10.615458 52906 processor.cc:42] processor_tid: 52906
+I0829 09:52:10.615599 52907 processor.cc:42] processor_tid: 52907
+I0829 09:52:10.615717 52908 processor.cc:42] processor_tid: 52908
+I0829 09:52:10.615868 52909 processor.cc:42] processor_tid: 52909
+I0829 09:52:10.615988 52910 processor.cc:42] processor_tid: 52910
+W0829 09:52:10.616001 52723 environment.h:33] Environment variable [sysmo_start] not set, fallback to 
+I0829 09:52:10.616009 52723 init.cc:113] Register exit handle succ.
+W0829 09:52:10.616015 52723 environment.h:33] Environment variable [CYBER_PATH] not set, fallback to 
+W0829 09:52:10.616024 52723 environment.h:33] Environment variable [APOLLO_PLUGIN_SEARCH_IN_BAZEL_OUTPUT] not set, fallback to 
+W0829 09:52:10.616026 52723 environment.h:33] Environment variable [APOLLO_PLUGIN_INDEX_PATH] not set, fallback to 
+W0829 09:52:10.616027 52723 environment.h:33] Environment variable [APOLLO_DISTRIBUTION_HOME] not set, fallback to 
+I0829 09:52:10.616029 52723 plugin_manager.cc:177] loading plugins from APOLLO_PLUGIN_INDEX_PATH[]
+W0829 09:52:10.616032 52723 plugin_manager.cc:188] plugin index path[] not exists
+I0829 09:52:10.616165 52723 module_controller.cc:58] mainboard: use dag conf /apollo/modules/planning/planning_component/dag/planning.dag
+I0829 09:52:10.616824 52723 module_controller.cc:67] Start initialize dag: /apollo/modules/planning/planning_component/dag/planning.dag
+W0829 09:52:10.616900 52723 file.cc:426] GetFilePathWithEnv: env APOLLO_LIB_PATH not found.
+E0829 09:52:10.616905 52723 module_controller.cc:81] no module library [modules/planning/planning_component/libplanning_component.so] found!
+E0829 09:52:10.616919 52723 module_controller.cc:69] Failed to load module: /apollo/modules/planning/planning_component/dag/planning.dag
+E0829 09:52:10.616927 52723 mainboard.cc:39] module start error.
