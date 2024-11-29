@@ -26,10 +26,12 @@
 #include "modules/planning/planning_base/common/reference_line_info.h"
 #include "modules/planning/planning_base/common/sl_polygon.h"
 
+
 namespace apollo {
 namespace planning {
+
 // ObstacleEdge contains: (is_start_s, s, l_min, l_max, obstacle_id).
-using ObstacleEdge = std::tuple<int, double, double, double, std::string>;
+using ObstacleEdge = std::tuple<int, double, double, double, std::string>;  // 元组
 // SLSstate contains: (s ,s' ,s''), (l, l', l'')
 using SLState = std::pair<std::array<double, 3>, std::array<double, 3>>;
 

@@ -35,8 +35,7 @@ using apollo::common::Status;
 using apollo::common::math::Vec2d;
 
 namespace {
-// TODO(ALL): temporarily copy the value from lane_follow_stage.cc, will extract
-// as a common value for planning later
+// TODO(ALL): temporarily copy the value from lane_follow_stage.cc, will extract as a common value for planning later
 constexpr double kStraightForwardLineCost = 10.0;
 }  // namespace
 
@@ -57,7 +56,7 @@ apollo::common::Status RuleBasedStopDecider::Process(Frame *const frame,
 
   // 2. Rule_based stop for urgent lane change
   // 换道时接近换道终点没有成功换道产生停车决策
-  if (config_.enable_lane_change_urgency_checking()) {
+  if (config_.enable_lane_change_urgency_checking()) {  // false
     CheckLaneChangeUrgency(frame);
   }
 
@@ -114,11 +113,13 @@ void RuleBasedStopDecider::CheckLaneChangeUrgency(Frame *const frame) {
 
 void RuleBasedStopDecider::AddPathEndStop(Frame *const frame, 
                                           ReferenceLineInfo *const reference_line_info) {
+  // 路径长度小于20
   if (!reference_line_info->path_data().path_label().empty() &&
       reference_line_info->path_data().frenet_frame_path().back().s() -
-              reference_line_info->path_data().frenet_frame_path().front().s() <
-          config_.short_path_length_threshold()) {
+        reference_line_info->path_data().frenet_frame_path().front().s() <
+      config_.short_path_length_threshold()) {
     const std::string stop_wall_id = PATH_END_VO_ID_PREFIX + reference_line_info->path_data().path_label();
+    AINFO << "stop_wall_id : " << stop_wall_id;
     std::vector<std::string> wait_for_obstacles;
 
     util::BuildStopDecision(stop_wall_id,
@@ -136,6 +137,7 @@ void RuleBasedStopDecider::StopOnSidePass(Frame *const frame,
   const PathData &path_data = reference_line_info->path_data();
   double stop_s_on_pathdata = 0.0;
 
+  // Lane Follow 路径
   if (path_data.path_label().find("self") != std::string::npos) {
     check_clear = false;
     change_lane_stop_path_point.Clear();
@@ -282,8 +284,7 @@ bool RuleBasedStopDecider::CheckClearDone(const ReferenceLineInfo &reference_lin
                                                     &lane_right_width);
   SLPoint stop_sl_point;
   reference_line_info.reference_line().XYToSL(stop_point, &stop_sl_point);
-  // use distance to last stop point to determine if needed to check clear
-  // again
+  // use distance to last stop point to determine if needed to check clear again
   if (adc_back_edge_s > stop_sl_point.s()) {
     if (adc_start_l > -lane_right_width || adc_end_l < lane_left_width) {
       return true;

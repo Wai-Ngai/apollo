@@ -29,7 +29,7 @@ constexpr double kMaxVariableRange = 1.0e10;
 PiecewiseJerkProblem::PiecewiseJerkProblem(const size_t num_of_knots, const double delta_s,
                                            const std::array<double, 3>& x_init) {
   CHECK_GE(num_of_knots, 2U);
-  num_of_knots_ = num_of_knots;  // 200
+  num_of_knots_ = num_of_knots;  // 一般至少200，参考线短会少些
 
   x_init_ = x_init;
   delta_s_ = delta_s;
@@ -45,13 +45,13 @@ PiecewiseJerkProblem::PiecewiseJerkProblem(const size_t num_of_knots, const doub
 }
 
 bool PiecewiseJerkProblem::FormulateProblem(OSQPData* data) {
-  // calculate kernel  P矩阵：代价函数
+  // calculate kernel  P矩阵：代价函数 二次项 
   std::vector<c_float> P_data;
   std::vector<c_int> P_indices;
   std::vector<c_int> P_indptr;
-  CalculateKernel(&P_data, &P_indices, &P_indptr);
+  CalculateKernel(&P_data, &P_indices, &P_indptr);  // 调用子类
 
-  // calculate affine constraints A矩阵：约束矩阵以及上下边界lower_bounds和upper_bounds
+  // calculate affine constraints A矩阵：约束矩阵  lower_bounds和upper_bounds： 上下边界
   std::vector<c_float> A_data;
   std::vector<c_int> A_indices;
   std::vector<c_int> A_indptr;
@@ -60,15 +60,15 @@ bool PiecewiseJerkProblem::FormulateProblem(OSQPData* data) {
   CalculateAffineConstraint(&A_data, &A_indices, &A_indptr, 
                             &lower_bounds, &upper_bounds);
 
-  // calculate offset q矩阵：一次项q向量
+  // calculate offset q矩阵：代价函数 一次项 
   std::vector<c_float> q;
-  CalculateOffset(&q);
+  CalculateOffset(&q);    // 调用子类
 
   CHECK_EQ(lower_bounds.size(), upper_bounds.size());
   
   // 将矩阵都存储进OSQPData这个结构体里
   size_t kernel_dim = 3 * num_of_knots_;               // 3n * 3n
-  size_t num_affine_constraint = lower_bounds.size();  //  n
+  size_t num_affine_constraint = lower_bounds.size();  // n
 
   data->n = kernel_dim;
   data->m = num_affine_constraint;
@@ -80,6 +80,7 @@ bool PiecewiseJerkProblem::FormulateProblem(OSQPData* data) {
   data->l = CopyData(lower_bounds);
   data->u = CopyData(upper_bounds);
 
+  // 检查上下边界是否合理
   return CheckLowUpperBound(lower_bounds, upper_bounds);
 }
 
@@ -134,9 +135,9 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter) {
   return true;
 }
 
-void PiecewiseJerkProblem::CalculateAffineConstraint(std::vector<c_float>* A_data, std::vector<c_int>* A_indices,
-                                                     std::vector<c_int>* A_indptr, std::vector<c_float>* lower_bounds,
-                                                     std::vector<c_float>* upper_bounds) {
+void PiecewiseJerkProblem::CalculateAffineConstraint(std::vector<c_float>* A_data, 
+                                                     std::vector<c_int>* A_indices, std::vector<c_int>* A_indptr, 
+                                                     std::vector<c_float>* lower_bounds, std::vector<c_float>* upper_bounds) {
   // 3N params bounds on x, x', x''
   // 3(N-1) constraints on x, x', x''
   // 3 constraints on x_init_
@@ -150,7 +151,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(std::vector<c_float>* A_dat
 
   int constraint_index = 0;
 
-  // 不等式约束----边界约束
+  // ============================================ 不等式约束----边界约束 ============================================ 
   // set x, x', x'' bounds  对应矩阵的前3n行
   for (int i = 0; i < num_of_variables; ++i) {
     if (i < n) {
@@ -170,7 +171,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(std::vector<c_float>* A_dat
   }
   CHECK_EQ(constraint_index, num_of_variables);
 
-  // 等式约束 --- 二阶连续性约束
+  // ============================================ 等式约束 --- 二阶连续性约束 ============================================ 
   // x(i->i+1)''' = (x(i+1)'' - x(i)'') / delta_s  对应公式12
   for (int i = 0; i + 1 < n; ++i) {
     variables[2 * n + i].emplace_back(constraint_index, -1.0);
@@ -213,7 +214,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(std::vector<c_float>* A_dat
     ++constraint_index;
   }
 
-  // constrain on x_init
+  // ============================================ 等式约束 --- constrain on x_init ============================================ 
   variables[0].emplace_back(constraint_index, 1.0);
   lower_bounds->at(constraint_index) = x_init_[0] * scale_factor_[0];
   upper_bounds->at(constraint_index) = x_init_[0] * scale_factor_[0];
@@ -243,8 +244,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(std::vector<c_float>* A_dat
       ++ind_p;
     }
   }
-  // We indeed need this line because of
-  // https://github.com/oxfordcontrol/osqp/blob/master/src/cs.c#L255
+  // We indeed need this line because of https://github.com/oxfordcontrol/osqp/blob/master/src/cs.c#L255
   A_indptr->push_back(ind_p);
 }
 

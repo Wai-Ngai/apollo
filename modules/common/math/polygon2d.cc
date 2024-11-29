@@ -370,6 +370,8 @@ double Polygon2d::ComputeIoU(const Polygon2d &other_polygon) const {
 
 bool Polygon2d::HasOverlap(const LineSegment2d &line_segment) const {
   CHECK_GE(points_.size(), 3U);
+
+  // 首先检查线段是否完全位于多边形的边界框之外
   if ((line_segment.start().x() < min_x_ && line_segment.end().x() < min_x_) ||
       (line_segment.start().x() > max_x_ && line_segment.end().x() > max_x_) ||
       (line_segment.start().y() < min_y_ && line_segment.end().y() < min_y_) ||
@@ -377,6 +379,7 @@ bool Polygon2d::HasOverlap(const LineSegment2d &line_segment) const {
     return false;
   }
 
+  // 检查该线段是否与多边形的任何一条边相交
   if (std::any_of(line_segments_.begin(), line_segments_.end(),
                   [&](const LineSegment2d &poly_seg) {
                     return poly_seg.HasIntersect(line_segment);

@@ -35,11 +35,10 @@ bool TrafficDecider::Init(const std::shared_ptr<DependencyInjector> &injector) {
   if (init_) return true;
   // Load the pipeline config.   "modules/planning/planning_component/conf/traffic_rule_config.pb.txt"
   AINFO << "Load config path:" << FLAGS_traffic_rule_config_filename;
-  // Load the pipeline of scenario.
+  // Load the pipeline of traffic rule scenario.
   if (!apollo::cyber::common::LoadConfig(FLAGS_traffic_rule_config_filename,
                                          &rule_pipeline_)) {
-    AERROR << "Load pipeline of Traffic decider"
-           << " failed!";
+    AERROR << "Load pipeline of Traffic decider failed!";
     return false;
   }
   // 根据配置文件，遍历生成每一个traffic_rule，并初始化

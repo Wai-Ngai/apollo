@@ -336,45 +336,44 @@ double Box2d::DistanceTo(const Box2d &box) const {
 }
 
 bool Box2d::HasOverlap(const Box2d &box) const {
+  // 边界判断：AABB，基于矩形的最小和最大边界进行的初步检测，目的是快速排除不重叠的情况
   if (box.max_x() < min_x() || box.min_x() > max_x() || box.max_y() < min_y() ||
       box.min_y() > max_y()) {
     return false;
   }
 
+  // 计算平移向量: 从当前矩形的中心到目标矩形的中心的平移量
   const double shift_x = box.center_x() - center_.x();
   const double shift_y = box.center_y() - center_.y();
 
+  // 计算矩形的旋转偏移量（矩形在旋转后四个顶点的偏移量）
   const double dx1 = cos_heading_ * half_length_;
   const double dy1 = sin_heading_ * half_length_;
   const double dx2 = sin_heading_ * half_width_;
   const double dy2 = -cos_heading_ * half_width_;
+
   const double dx3 = box.cos_heading() * box.half_length();
   const double dy3 = box.sin_heading() * box.half_length();
   const double dx4 = box.sin_heading() * box.half_width();
   const double dy4 = -box.cos_heading() * box.half_width();
 
-  return std::abs(shift_x * cos_heading_ + shift_y * sin_heading_) <=
-             std::abs(dx3 * cos_heading_ + dy3 * sin_heading_) +
-                 std::abs(dx4 * cos_heading_ + dy4 * sin_heading_) +
-                 half_length_ &&
-         std::abs(shift_x * sin_heading_ - shift_y * cos_heading_) <=
-             std::abs(dx3 * sin_heading_ - dy3 * cos_heading_) +
-                 std::abs(dx4 * sin_heading_ - dy4 * cos_heading_) +
-                 half_width_ &&
-         std::abs(shift_x * box.cos_heading() + shift_y * box.sin_heading()) <=
-             std::abs(dx1 * box.cos_heading() + dy1 * box.sin_heading()) +
-                 std::abs(dx2 * box.cos_heading() + dy2 * box.sin_heading()) +
-                 box.half_length() &&
-         std::abs(shift_x * box.sin_heading() - shift_y * box.cos_heading()) <=
-             std::abs(dx1 * box.sin_heading() - dy1 * box.cos_heading()) +
-                 std::abs(dx2 * box.sin_heading() - dy2 * box.cos_heading()) +
-                 box.half_width();
+  // 重叠检测, 基于矩形的旋转状态，使用一系列的分离轴定理（SAT, Separating Axis Theorem）的条件来进行计算（只要有一个中心连线投影大于角点投影+半长，就表示有空隙，两个矩形不重叠）
+  // 前两个条件检查当前矩形与目标矩形在当前矩形法线方向和垂直方向上的投影是否重叠。
+  // 后两个条件检查目标矩形与当前矩形在目标矩形的法线方向和垂直方向上的投影是否重叠。
+  return std::abs(shift_x * cos_heading_ + shift_y * sin_heading_) <= std::abs(dx3 * cos_heading_ + dy3 * sin_heading_) +
+                                                                      std::abs(dx4 * cos_heading_ + dy4 * sin_heading_) + half_length_ &&
+         std::abs(shift_x * sin_heading_ - shift_y * cos_heading_) <= std::abs(dx3 * sin_heading_ - dy3 * cos_heading_) +
+                                                                      std::abs(dx4 * sin_heading_ - dy4 * cos_heading_) + half_width_ &&
+         std::abs(shift_x * box.cos_heading() + shift_y * box.sin_heading()) <= std::abs(dx1 * box.cos_heading() + dy1 * box.sin_heading()) +
+                                                                                std::abs(dx2 * box.cos_heading() + dy2 * box.sin_heading()) + box.half_length() &&
+         std::abs(shift_x * box.sin_heading() - shift_y * box.cos_heading()) <= std::abs(dx1 * box.sin_heading() - dy1 * box.cos_heading()) +
+                                                                                std::abs(dx2 * box.sin_heading() - dy2 * box.cos_heading()) + box.half_width();
 }
 
 AABox2d Box2d::GetAABox() const {
   const double dx1 = std::abs(cos_heading_ * half_length_);
   const double dy1 = std::abs(sin_heading_ * half_length_);
-  const double dx2 = std::abs(sin_heading_ * half_width_);
+  const double dx2 = std::abs(sin_heading_ * half_width_); 
   const double dy2 = std::abs(cos_heading_ * half_width_);
   return AABox2d(center_, (dx1 + dx2) * 2.0, (dy1 + dy2) * 2.0);
 }

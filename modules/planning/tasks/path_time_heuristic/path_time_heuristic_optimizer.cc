@@ -42,6 +42,7 @@ bool PathTimeHeuristicOptimizer::Init(const std::string& config_dir, const std::
 }
 
 bool PathTimeHeuristicOptimizer::SearchPathTimeGraph(SpeedData* speed_data) const {
+  // 变道和非变道加载不同的dp参数
   const auto& dp_st_speed_optimizer_config = reference_line_info_->IsChangeLanePath()
                                              ? config_.lane_change_speed_config()
                                              : config_.default_speed_config();
@@ -62,7 +63,7 @@ bool PathTimeHeuristicOptimizer::SearchPathTimeGraph(SpeedData* speed_data) cons
 Status PathTimeHeuristicOptimizer::Process(const PathData& path_data, 
                                            const common::TrajectoryPoint& init_point,
                                            SpeedData* const speed_data) {
-  init_point_ = init_point;
+  init_point_ = init_point; // 规划起点
 
   if (path_data.discretized_path().empty()) {
     const std::string msg = "Empty path data";

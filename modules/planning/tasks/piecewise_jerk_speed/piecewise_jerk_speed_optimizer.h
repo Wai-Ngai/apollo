@@ -45,7 +45,8 @@ class PiecewiseJerkSpeedOptimizer : public SpeedOptimizer {
   void AdjustInitStatus(const std::vector<std::pair<double, double>> s_dot_bound, 
                         double delta_t,
                         std::array<double, 3>& init_s);
-                        
+
+ private:                        
   PiecewiseJerkSpeedOptimizerConfig config_;
 };
 

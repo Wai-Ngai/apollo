@@ -57,7 +57,7 @@ Status SpeedBoundsDecider::Process(Frame *const frame,
   const ReferenceLine &reference_line = reference_line_info->reference_line();
   PathDecision *const path_decision = reference_line_info->path_decision();
 
-  // 1. Map obstacles into st graph 障碍物st边界框
+  // 1. Map obstacles into st graph
   auto time1 = std::chrono::system_clock::now();
   STBoundaryMapper boundary_mapper(config_, reference_line, path_data,
                                    path_data.discretized_path().Length(),
@@ -76,9 +76,9 @@ Status SpeedBoundsDecider::Process(Frame *const frame,
 
   auto time2 = std::chrono::system_clock::now();
   std::chrono::duration<double> diff = time2 - time1;
-  ADEBUG << "Time for ST Boundary Mapping = " << diff.count() * 1000
-         << " msec.";
+  AINFO << "Time for ST Boundary Mapping = " << diff.count() * 1000 << " msec.";
 
+  // 所有的障碍物的st_boundary会送入一个boundaries vector之中进行保存
   std::vector<const STBoundary *> boundaries;
   for (auto *obstacle : path_decision->obstacles().Items()) {
     const auto &id = obstacle->Id();
@@ -90,27 +90,27 @@ Status SpeedBoundsDecider::Process(Frame *const frame,
         path_decision->Find(id)->SetBlockingObstacle(true);
       }
       st_boundary.PrintDebug("_obs_st_bounds");
+
       boundaries.push_back(&st_boundary);
     }
   }
 
+  // 找到障碍物在路径上最近的s，将该s作为速度回退的距离
   const double min_s_on_st_boundaries = SetSpeedFallbackDistance(path_decision);
 
   // 2. Create speed limit along path
   SpeedLimitDecider speed_limit_decider(config_, reference_line, path_data);
   SpeedLimit speed_limit;
   
-  // 根据道路限速，障碍物nudge限速，产生限速曲线
+  // 遍历每一个离散的路径点并且找到其速度限制(map/path_curvature/nudge obstacles等因素)
   if (!speed_limit_decider.GetSpeedLimits(path_decision->obstacles(), &speed_limit).ok()) {
     const std::string msg = "Getting speed limits failed!";
     AERROR << msg;
     return Status(ErrorCode::PLANNING_ERROR, msg);
   }
 
-  // 3. Get path_length as s axis search bound in st graph
+  // 3. Get path_length as s axis and time duration as t axis search bound in st graph
   const double path_data_length = path_data.discretized_path().Length();
-
-  // 4. Get time duration as t axis search bound in st graph
   const double total_time_by_conf = config_.total_time();
 
   // Load generated st graph data back to frame
@@ -143,11 +143,12 @@ double SpeedBoundsDecider::SetSpeedFallbackDistance(PathDecision *const path_dec
       continue;
     }
 
+    // 获取st边界底部左侧点和右侧点的s值，并选择较小的值作为最低的s值
     const auto left_bottom_point_s = st_boundary.bottom_left_point().s();
     const auto right_bottom_point_s = st_boundary.bottom_right_point().s();
     const auto lowest_s = std::min(left_bottom_point_s, right_bottom_point_s);
 
-    if (left_bottom_point_s - right_bottom_point_s > kEpsilon) {
+    if (left_bottom_point_s - right_bottom_point_s > kEpsilon) {  // 左侧点在右侧点之后，则说明这是一个反向行驶的边界
       if (min_s_reverse > lowest_s) {
         min_s_reverse = lowest_s;
       }

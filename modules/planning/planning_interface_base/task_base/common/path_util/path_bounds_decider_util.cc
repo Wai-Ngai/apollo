@@ -47,16 +47,19 @@ bool PathBoundsDeciderUtil::InitPathBoundary(const ReferenceLineInfo& reference_
   const auto& vehicle_config = common::VehicleConfigHelper::Instance()->GetConfig();
   const double ego_front_to_center = vehicle_config.vehicle_param().front_edge_to_center();
 
-  // 从规划起点开始，每隔0.5m取一个点s，初始化l为±最大
+  // 从规划起点开始, 每隔0.5m取一个点s, 初始化l为±最大. 规划长度与巡航速度有关v*8, 至少100m, 但不能超过参考线长度
   for (double curr_s = init_sl_state.first[0];
        curr_s < std::fmin(init_sl_state.first[0] + std::fmax(FLAGS_path_bounds_horizon,          // 100
-                          reference_line_info.GetCruiseSpeed() * FLAGS_trajectory_time_length),  // 8s
+                                                             reference_line_info.GetCruiseSpeed() * FLAGS_trajectory_time_length),  // 8s
                           reference_line.Length() - ego_front_to_center);
        curr_s += FLAGS_path_bounds_decider_resolution) {
 
     path_bound->emplace_back(curr_s, std::numeric_limits<double>::lowest(),
                              std::numeric_limits<double>::max());
   }
+  AINFO << " start_s : " << init_sl_state.first[0];
+  AINFO << " end_s : " << path_bound->back().s; 
+  AINFO << " GetCruiseSpeed : " << reference_line_info.GetCruiseSpeed();
 
   // Return.
   if (path_bound->empty()) {
@@ -113,7 +116,7 @@ bool PathBoundsDeciderUtil::UpdatePathBoundaryWithBuffer(double left_bound, doub
 bool PathBoundsDeciderUtil::UpdateLeftPathBoundaryWithBuffer(double left_bound, BoundType left_type, 
                                                              std::string left_id, PathBoundPoint* const bound_point) {
   left_bound = left_bound - GetBufferBetweenADCCenterAndEdge(); // 减去自车半宽
-  
+
   PathBoundPoint new_point = *bound_point;
   if (new_point.l_upper.l > left_bound) {
     new_point.l_upper.l = left_bound;     // 更新上边界
@@ -121,8 +124,7 @@ bool PathBoundsDeciderUtil::UpdateLeftPathBoundaryWithBuffer(double left_bound, 
     new_point.l_upper.id = left_id;       // ''
   }
 
-  // Check if ADC is blocked.
-  // If blocked, don't update anything, return false.
+  // Check if ADC is blocked. If blocked, don't update anything, return false.
   if (new_point.l_lower.l > new_point.l_upper.l) {
     ADEBUG << "Path is blocked at" << new_point.l_lower.l << " "
            << new_point.l_upper.l;
@@ -145,8 +147,7 @@ bool PathBoundsDeciderUtil::UpdateRightPathBoundaryWithBuffer(double right_bound
     new_point.l_lower.id = right_id;
   }
 
-  // Check if ADC is blocked.
-  // If blocked, don't update anything, return false.
+  // Check if ADC is blocked. If blocked, don't update anything, return false.
   if (new_point.l_lower.l > new_point.l_upper.l) {
     ADEBUG << "Path is blocked at";
     return false;
@@ -163,8 +164,10 @@ void PathBoundsDeciderUtil::TrimPathBounds(const int path_blocked_idx,
     if (path_blocked_idx == 0) {
       ADEBUG << "Completely blocked. Cannot move at all.";
     }
+
+    // 计算被遮挡的长度，把挡住后的那段路去掉
     int range = static_cast<int>(path_boundaries->size()) - path_blocked_idx;
-    for (int i = 0; i < range; ++i) {  // 把挡住后的那段路去掉
+    for (int i = 0; i < range; ++i) {
       path_boundaries->pop_back();
     }
   }
@@ -210,7 +213,7 @@ bool PathBoundsDeciderUtil::GetBoundaryFromStaticObstacles(const ReferenceLineIn
   AINFO << "There are " << sorted_obstacles.size() << " obstacles.";
 
   double center_line = init_sl_state.second[0];
-  ADEBUG << "init l" << init_sl_state.second[0];
+  AINFO << "init l " << init_sl_state.second[0];
 
   size_t obs_idx = 0;
   int path_blocked_idx = -1;
@@ -219,11 +222,9 @@ bool PathBoundsDeciderUtil::GetBoundaryFromStaticObstacles(const ReferenceLineIn
   right_bounds.insert(std::make_pair("", std::numeric_limits<double>::lowest()));
   left_bounds.insert(std::make_pair("", std::numeric_limits<double>::max()));
 
-  // Maps obstacle ID's to the decided ADC pass direction, if ADC should
-  // pass from left, then true; otherwise, false.
+  // Maps obstacle ID's to the decided ADC pass direction, if ADC should pass from left, then true; otherwise, false.
   std::unordered_map<std::string, bool> obs_id_to_direction;
-  // Maps obstacle ID's to the decision of whether side-pass on this obstacle
-  // is allowed. If allowed, then true; otherwise, false.
+  // Maps obstacle ID's to the decision of whether side-pass on this obstacle is allowed. If allowed, then true; otherwise, false.
   std::unordered_map<std::string, bool> obs_id_to_sidepass_decision;
   // Maps obstacle ID's to start s on this obstacle
   std::unordered_map<std::string, double> obs_id_to_start_s;
@@ -231,9 +232,12 @@ bool PathBoundsDeciderUtil::GetBoundaryFromStaticObstacles(const ReferenceLineIn
   // Step through every path point.
   for (size_t i = 1; i < path_boundaries->size(); ++i) {
     double curr_s = (*path_boundaries)[i].s;
+    AINFO << "curr_s  " << curr_s;
 
-    // Check and see if there is any obstacle change:
+    // Check and see if there is any obstacle change;
+    // 从第一个 s 小于 curr_obstacle_s的点开始更新该点的边界
     if (obs_idx < sorted_obstacles.size() && std::get<1>(sorted_obstacles[obs_idx]) < curr_s) {
+
       while (obs_idx < sorted_obstacles.size() && std::get<1>(sorted_obstacles[obs_idx]) < curr_s) {
         // 获取障碍物的边界
         const auto& curr_obstacle = sorted_obstacles[obs_idx];
@@ -241,7 +245,8 @@ bool PathBoundsDeciderUtil::GetBoundaryFromStaticObstacles(const ReferenceLineIn
         const double curr_obstacle_l_min = std::get<2>(curr_obstacle);
         const double curr_obstacle_l_max = std::get<3>(curr_obstacle);
         const std::string curr_obstacle_id = std::get<4>(curr_obstacle);
-        ADEBUG << "id[" << curr_obstacle_id << "] s[" << curr_obstacle_s
+
+        AINFO << "id[" << curr_obstacle_id << "] s[" << curr_obstacle_s
                << "] curr_obstacle_l_min[" << curr_obstacle_l_min
                << "] curr_obstacle_l_max[" << curr_obstacle_l_max
                << "] center_line[" << center_line << "]";
@@ -256,17 +261,20 @@ bool PathBoundsDeciderUtil::GetBoundaryFromStaticObstacles(const ReferenceLineIn
 
           if (curr_obstacle_l_min + curr_obstacle_l_max < center_line * 2) {
             // Obstacle is to the right of center-line, should pass from left.
-            ADEBUG << curr_obstacle_id << "left nudge";
             obs_id_to_direction[curr_obstacle_id] = true;
             right_bounds.insert(std::make_pair(curr_obstacle_id, curr_obstacle_l_max));
+
+            AINFO << curr_obstacle_id << " left nudge";
           } else {
             // Obstacle is to the left of center-line, should pass from right.
             obs_id_to_direction[curr_obstacle_id] = false;
             left_bounds.insert(std::make_pair(curr_obstacle_id, curr_obstacle_l_min));
+
+            AINFO << curr_obstacle_id << " right nudge";
           }
-          ADEBUG << curr_obstacle_id << "right nudge";
           obs_id_to_start_s[curr_obstacle_id] = curr_obstacle_s;
         } else {
+          // 障碍物终点，向左绕，从右边边界集合去除；向右绕，从左边边界集合去除
           // An existing obstacle exits our scope.
           if (obs_id_to_direction[curr_obstacle_id]) {
             right_bounds.erase(right_bounds.find(std::make_pair(curr_obstacle_id, curr_obstacle_l_max)));
@@ -276,6 +284,9 @@ bool PathBoundsDeciderUtil::GetBoundaryFromStaticObstacles(const ReferenceLineIn
           obs_id_to_direction.erase(curr_obstacle_id);
           obs_id_to_start_s.erase(curr_obstacle_id);
         }
+        // AINFO << " left_bound : " << left_bounds.begin()->second;
+        // AINFO << "right_bound : " << right_bounds.begin()->second;
+
         // Update the bounds and center_line.
         if (!UpdateLeftPathBoundaryWithBuffer(left_bounds.begin()->second, 
                                               BoundType::OBSTACLE,
@@ -299,6 +310,7 @@ bool PathBoundsDeciderUtil::GetBoundaryFromStaticObstacles(const ReferenceLineIn
         ++obs_idx;
       }
     } else {
+      // 跟新完第一个点后，后面都走else逻辑，将边界全部更新成障碍物边界，直到障碍物最后一个点。
       // If no obstacle change, update the bounds and center_line.
       if (!UpdateLeftPathBoundaryWithBuffer(left_bounds.begin()->second, 
                                             BoundType::OBSTACLE,
@@ -319,8 +331,12 @@ bool PathBoundsDeciderUtil::GetBoundaryFromStaticObstacles(const ReferenceLineIn
         break;
       }
     }
+    AINFO << " left_bound : " << (*path_boundaries)[i].l_upper.l;
+    AINFO << "right_bound : " << (*path_boundaries)[i].l_lower.l;
     
     center_line = ((*path_boundaries)[i].l_lower.l + (*path_boundaries)[i].l_upper.l) / 2.0;
+    // AINFO << "center_line : " << center_line;
+
     // Early exit if path is blocked.
     if (path_blocked_idx != -1) {
       break;
@@ -344,13 +360,14 @@ std::vector<ObstacleEdge> PathBoundsDeciderUtil::SortObstaclesForSweepLine(const
     if (!IsWithinPathDeciderScopeObstacle(*obstacle)) {
       continue;
     }
-    // Only focus on obstacles that are ahead of ADC.
+    // Only focus on obstacles that are ahead of ADC. 只考自车前面的障碍物
     if (obstacle->PerceptionSLBoundary().end_s() < init_sl_state.first[0]) {
       continue;
     }
     // Decompose each obstacle's rectangle into two edges: one at start_s; the other at end_s.
     const auto obstacle_sl = obstacle->PerceptionSLBoundary();
 
+    // 将障碍物起点和终点分别放入容器，障碍物四周膨胀一个buffer
     sorted_obstacles.emplace_back(1, 
                                   obstacle_sl.start_s() - FLAGS_obstacle_lon_start_buffer, // 3.0
                                   obstacle_sl.start_l() - FLAGS_obstacle_lat_buffer,       // 0.4
@@ -362,6 +379,9 @@ std::vector<ObstacleEdge> PathBoundsDeciderUtil::SortObstaclesForSweepLine(const
                                   obstacle_sl.start_l() - FLAGS_obstacle_lat_buffer,
                                   obstacle_sl.end_l() + FLAGS_obstacle_lat_buffer, 
                                   obstacle->Id());
+    AINFO << " ID [" << obstacle->Id() << "]  : " 
+          << obstacle_sl.start_s() << " - " << obstacle_sl.end_s() << "  "
+          << obstacle_sl.start_l() << " - " << obstacle_sl.end_l() << "  ";
   }
 
   // Sort. 根据s，从小到大进行排序
@@ -379,8 +399,7 @@ std::vector<ObstacleEdge> PathBoundsDeciderUtil::SortObstaclesForSweepLine(const
 
 double PathBoundsDeciderUtil::GetBufferBetweenADCCenterAndEdge() {
   double adc_half_width = VehicleConfigHelper::GetConfig().vehicle_param().width() / 2.0;
-  // TODO(all): currently it's a fixed number. But it can take into account
-  // many factors such as: ADC length, possible turning angle, speed, etc.
+  // TODO(all): currently it's a fixed number. But it can take into account many factors such as: ADC length, possible turning angle, speed, etc.
   static constexpr double kAdcEdgeBuffer = 0.0;
 
   return (adc_half_width + kAdcEdgeBuffer);
@@ -401,6 +420,7 @@ bool PathBoundsDeciderUtil::IsWithinPathDeciderScopeObstacle(const Obstacle& obs
       obstacle.speed() > FLAGS_static_obstacle_speed_threshold) {
     return false;
   }
+
   // TODO(jiacheng):
   // Some obstacles are not moving, but only because they are waiting for
   // red light (traffic rule) or because they are blocked by others (social).
@@ -460,8 +480,10 @@ bool PathBoundsDeciderUtil::GetBoundaryFromSelfLane(const ReferenceLineInfo& ref
   CHECK_NOTNULL(path_bound);
   ACHECK(!path_bound->empty());
 
+  // 计算目标车道宽度
   const ReferenceLine& reference_line = reference_line_info.reference_line();
   double adc_lane_width = GetADCLaneWidth(reference_line, init_sl_state.first[0]);
+  AINFO << "adc_lane_width : " << adc_lane_width;
 
   // Go through every point, update the boundary based on lane info and ADC's position.
   double past_lane_left_width = adc_lane_width / 2.0;
@@ -470,6 +492,8 @@ bool PathBoundsDeciderUtil::GetBoundaryFromSelfLane(const ReferenceLineInfo& ref
 
   for (size_t i = 0; i < path_bound->size(); ++i) {
     double curr_s = (*path_bound)[i].s;
+    // AINFO << "curr_s : " << curr_s;
+
     // 1. Get the current lane width at current point.
     double curr_lane_left_width = 0.0;
     double curr_lane_right_width = 0.0;
@@ -486,6 +510,9 @@ bool PathBoundsDeciderUtil::GetBoundaryFromSelfLane(const ReferenceLineInfo& ref
       past_lane_left_width = curr_lane_left_width;
       past_lane_right_width = curr_lane_right_width;
     }
+    // AINFO << "past_lane_left_width  : " << past_lane_left_width;
+    // AINFO << "past_lane_right_width : " << past_lane_right_width;
+
 
     // 3. Calculate the proper boundary based on lane-width, ADC's position, and ADC's velocity.
     double offset_to_map = 0.0;
@@ -496,15 +523,21 @@ bool PathBoundsDeciderUtil::GetBoundaryFromSelfLane(const ReferenceLineInfo& ref
     curr_left_bound = curr_lane_left_width - offset_to_map;
     curr_right_bound = -curr_lane_right_width - offset_to_map;
 
+    // AINFO << "offset_to_map    : " << offset_to_map;
+    // AINFO << "curr_left_bound  : " << curr_left_bound;
+    // AINFO << "curr_right_bound : " << curr_right_bound;
+
     // 4. Update the boundary. 减去自车半宽，表示自车中心可以变化的l范围
     if (!UpdatePathBoundaryWithBuffer(curr_left_bound, curr_right_bound,
                                       BoundType::LANE, BoundType::LANE, "", "",
                                       &path_bound->at(i))) {
       path_blocked_idx = static_cast<int>(i);
     }
-    if (path_blocked_idx != -1) { // 路被挡住了，直接返回
+    if (path_blocked_idx != -1) { // 路被第i个点挡住了，直接返回
       break;
     }
+    AINFO << "l_upper          : " << path_bound->at(i).l_upper.l;
+    AINFO << "l_lower          : " << path_bound->at(i).l_lower.l;
   }
 
   // 把挡住后的那段路去掉
@@ -515,46 +548,64 @@ bool PathBoundsDeciderUtil::GetBoundaryFromSelfLane(const ReferenceLineInfo& ref
 
 bool PathBoundsDeciderUtil::ExtendBoundaryByADC(const ReferenceLineInfo& reference_line_info, 
                                                 const SLState& init_sl_state, // (s ,s' ,s''), (l, l', l'')
-                                                const double extend_buffer,   // 0.5
+                                                const double extend_buffer,   // 0.5(LC) 0.2(LK)
                                                 PathBoundary* const path_bound) {
-  double adc_l_to_lane_center = init_sl_state.second[0];
-  static constexpr double kMaxLateralAccelerations = 1.5;
+  // 根据侧向速度，扩展变道那侧的边界
+  double adc_l_to_lane_center = init_sl_state.second[0];  // 向左变道，为负，变道刚过线，就变道完成，此时 l = -1.61左右
+  static constexpr double kMaxLateralAccelerations = 1.5; 
 
   double ADC_speed_buffer = (init_sl_state.second[1] > 0 ? 1.0 : -1.0) *
                             init_sl_state.second[1] * init_sl_state.second[1] /
-                            kMaxLateralAccelerations / 2.0;
+                            kMaxLateralAccelerations / 2.0; // 向左变道，为正
   double adc_half_width = VehicleConfigHelper::GetConfig().vehicle_param().width() / 2.0;
 
   double left_bound_adc = std::fmax(adc_l_to_lane_center, adc_l_to_lane_center + ADC_speed_buffer) +
-                          adc_half_width + extend_buffer;
+                          adc_half_width + extend_buffer;   // 随着变道，左右边界逐渐收缩
   double right_bound_adc = std::fmin(adc_l_to_lane_center, adc_l_to_lane_center + ADC_speed_buffer) -
                            adc_half_width - extend_buffer;
+  
+  AINFO << " adc_l_to_lane_center " << adc_l_to_lane_center;
+  AINFO << " init_sl_state.second[1] " << init_sl_state.second[1];
+  AINFO << " adc_half_width   " << adc_half_width;
+  AINFO << " ADC_speed_buffer " << ADC_speed_buffer;
+  AINFO << " left_bound_adc   " << left_bound_adc;
+  AINFO << " right_bound_adc  " << right_bound_adc;
 
+  // 根据道路宽度，扩展边界
   static constexpr double kEpsilon = 0.05;
   for (size_t i = 0; i < path_bound->size(); ++i) {
     double road_left_width = std::fabs(left_bound_adc) + kEpsilon;
     double road_right_width = std::fabs(right_bound_adc) + kEpsilon;
 
-    // 计算道路边界
+    // 计算道路边界，以目标车道中心线为s轴，均为正
     reference_line_info.reference_line().GetRoadWidth((*path_bound)[i].s, 
                                                       &road_left_width, 
                                                       &road_right_width);
-    // 减去半车宽，自车中心实际可运动的l边界
+    // AINFO << " road_left_width  " << road_left_width;
+    // AINFO << " road_right_width " << road_right_width;
+
+    // 减去半车宽，自车中心实际可运动的道路边界，左正右负
     double left_bound_road = road_left_width - adc_half_width;
     double right_bound_road = -road_right_width + adc_half_width;
+    // AINFO << " left_bound_road  " << left_bound_road;
+    // AINFO << " right_bound_road " << right_bound_road;
 
-    if (left_bound_adc > (*path_bound)[i].l_upper.l) {  // 向右变道，更新左边界
+    if (left_bound_adc > (*path_bound)[i].l_upper.l) {  // 向右变道，更新左边界（原左边界是车道边界）为道路边界，变道过程中，左边界逐渐收缩
       (*path_bound)[i].l_upper.l = std::max(std::min(left_bound_adc, left_bound_road),
                                             (*path_bound)[i].l_upper.l);
       (*path_bound)[i].l_upper.type = BoundType::ADC;
       (*path_bound)[i].l_upper.id = "adc";
+      
+      AINFO << " l_upper          " << (*path_bound)[i].l_upper.l;
     }
 
-    if (right_bound_adc < (*path_bound)[i].l_lower.l) { // 向左变道，更新右边界
+    if (right_bound_adc < (*path_bound)[i].l_lower.l) { // 向左变道，更新右边界（原右边界是车道边界）为道路边界，变道过程中，右边界逐渐收缩
       (*path_bound)[i].l_lower.l = std::min(std::max(right_bound_adc, right_bound_road),
                                             (*path_bound)[i].l_lower.l);
       (*path_bound)[i].l_lower.type = BoundType::ADC;
       (*path_bound)[i].l_lower.id = "adc";
+
+      AINFO << " l_lower          " << (*path_bound)[i].l_lower.l;
     }
   }
   return true;

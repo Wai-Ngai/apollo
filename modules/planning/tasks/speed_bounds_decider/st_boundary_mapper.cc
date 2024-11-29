@@ -72,6 +72,7 @@ Status STBoundaryMapper::ComputeSTBoundary(PathDecision* path_decision) const {
     return Status(ErrorCode::PLANNING_ERROR,
                   "Fail to get params because of too few path points");
   }
+  AINFO << " =================   ST Graph   =================  ";
 
   // Go through every obstacle.
   Obstacle* stop_obstacle = nullptr;
@@ -81,14 +82,16 @@ Status STBoundaryMapper::ComputeSTBoundary(PathDecision* path_decision) const {
   for (const auto* ptr_obstacle_item : path_decision->obstacles().Items()) {
     Obstacle* ptr_obstacle = path_decision->Find(ptr_obstacle_item->Id());
     ACHECK(ptr_obstacle != nullptr);
+    AINFO << "obstacle id : " << ptr_obstacle_item->Id();
 
-    // If no longitudinal decision has been made, then plot it onto ST-graph.
+    // If no longitudinal decision has been made, then plot it onto ST-graph. 该障碍物首次出现，创建该障碍物的ST图（2维多边形）
     if (!ptr_obstacle->HasLongitudinalDecision()) {
+      AINFO << "!HasLongitudinalDecision : ";
       ComputeSTBoundary(ptr_obstacle);
       continue;
     }
 
-    // If there is a longitudinal decision, then fine-tune boundary. 该障碍物有纵向决策信息，则微调边界
+    // If there is a longitudinal decision, then fine-tune boundary. 该障碍物非首次出现，则微调该障碍物的ST图
     const auto& decision = ptr_obstacle->LongitudinalDecision();
     if (decision.has_stop()) {
       // 1. Store the closest stop fence info.
@@ -104,14 +107,14 @@ Status STBoundaryMapper::ComputeSTBoundary(PathDecision* path_decision) const {
       }
     } else if (decision.has_follow() || decision.has_overtake() ||
                decision.has_yield()) {
-      // 2. Depending on the longitudinal overtake/yield decision,
-      //    fine-tune the upper/lower st-boundary of related obstacles.
-      ComputeSTBoundaryWithDecision(ptr_obstacle, decision);    // 创建该障碍物的ST图（2维多边形）
+      // 2. Depending on the longitudinal overtake/yield decision, fine-tune the upper/lower st-boundary of related obstacles.
+      ComputeSTBoundaryWithDecision(ptr_obstacle, decision);    // 该障碍物有纵向决策信息，则微调ST图边界
     } else if (!decision.has_ignore()) {
       // 3. Ignore those unrelated obstacles.
       AWARN << "No mapping for decision: " << decision.DebugString();
     }
   }
+
   // 有存在决策为停车的障碍物，创建ST图
   if (stop_obstacle) {
     bool success = MapStopDecision(stop_obstacle, stop_decision);
@@ -132,15 +135,16 @@ void STBoundaryMapper::ComputeSTBoundary(Obstacle* obstacle) const {
   std::vector<STPoint> lower_points;
   std::vector<STPoint> upper_points;
 
-  // 获取该障碍物与路径path交互的上下界
+  // STEP 1. 计算障碍物在规划路径s和时间t的上下边界，用于建立ST图中障碍物的四边形框
   if (!GetOverlapBoundaryPoints(path_data_.discretized_path(), *obstacle,
                                 &upper_points, &lower_points)) {
     return;
   }
-  // 根据上下边界点，创建2维多边形
+  // STEP 2. 根据上下边界点，创建2维多边形
   auto boundary = STBoundary::CreateInstance(lower_points, upper_points);
   boundary.set_id(obstacle->Id());
 
+  // STEP3. 设置边界类型
   // TODO(all): potential bug here.
   const auto& prev_st_boundary = obstacle->path_st_boundary();
   const auto& ref_line_st_boundary = obstacle->reference_line_st_boundary();
@@ -161,6 +165,7 @@ bool STBoundaryMapper::MapStopDecision(Obstacle* stop_obstacle,
 
   double st_stop_s = 0.0;
   const double stop_ref_s = stop_sl_point.s() - vehicle_param_.front_edge_to_center();
+  AINFO << " stop_ref_s : " << stop_ref_s;
 
   if (stop_ref_s > path_data_.frenet_frame_path().back().s()) {
     st_stop_s = path_data_.discretized_path().back().s() +
@@ -180,7 +185,7 @@ bool STBoundaryMapper::MapStopDecision(Obstacle* stop_obstacle,
   point_pairs.emplace_back(STPoint(s_min, 0.0), 
                            STPoint(s_max, 0.0));
   point_pairs.emplace_back(STPoint(s_min, planning_max_time_),
-                           STPoint(s_max + speed_bounds_config_.boundary_buffer(), planning_max_time_));
+                           STPoint(s_max + speed_bounds_config_.boundary_buffer(), planning_max_time_)); // ? 这里加个buffer的目的  0.25
 
   // 根据上下边界点，创建2维多边形
   auto boundary = STBoundary(point_pairs);
@@ -204,6 +209,7 @@ bool STBoundaryMapper::GetOverlapBoundaryPoints(const std::vector<PathPoint>& pa
     return false;
   }
 
+  // 区别变道和非变道，给不同的横向buffer，用于碰撞检测
   const auto* planning_status = injector_->planning_context()
                                          ->mutable_planning_status()
                                          ->mutable_change_lane();
@@ -215,7 +221,7 @@ bool STBoundaryMapper::GetOverlapBoundaryPoints(const std::vector<PathPoint>& pa
   const auto& trajectory = obstacle.Trajectory();
   const double obstacle_length = obstacle.Perception().length();
   const double obstacle_width = obstacle.Perception().width();
-  if (trajectory.trajectory_point().empty()) {              // 该障碍物的预测轨迹不存在
+  if (trajectory.trajectory_point().empty()) {               // 该障碍物的预测轨迹不存在，认为是静态障碍物
     bool box_check_collision = false;
 
     // For those with no predicted trajectories, just map the obstacle's
@@ -232,14 +238,14 @@ bool STBoundaryMapper::GetOverlapBoundaryPoints(const std::vector<PathPoint>& pa
       if (curr_point_on_path.s() > planning_max_distance_) {
         break;
       }
-      // 碰撞检测：包围盒
+      // 碰撞检测：基于障碍物矩形框
       if (CheckOverlap(curr_point_on_path, obs_box, l_buffer)) {
         box_check_collision = true;
         break;
       }
     }
 
-    if (box_check_collision) {
+    if (box_check_collision) {  // 因为没有预测轨迹，障碍物当前帧在ST图上是一个横向矩形
       const double backward_distance = -vehicle_param_.front_edge_to_center();
       const double forward_distance = obs_box.length();
 
@@ -249,15 +255,14 @@ bool STBoundaryMapper::GetOverlapBoundaryPoints(const std::vector<PathPoint>& pa
         }
         const Polygon2d& obs_polygon = obstacle.PerceptionPolygon();
 
-        // 再次确认碰撞检测：多边形
+        // 再次确认碰撞检测：基于障碍物多边形
         if (CheckOverlap(curr_point_on_path, obs_polygon, l_buffer)) {
           // If there is overlapping, then plot it on ST-graph.
-          double low_s = std::fmax(0.0, curr_point_on_path.s() + backward_distance);
+          double low_s = std::fmax(0.0, curr_point_on_path.s() + backward_distance);  // ? 
           double high_s = std::fmin(planning_max_distance_, curr_point_on_path.s() + forward_distance);
-          // It is an unrotated rectangle appearing on the ST-graph.
-          // TODO(jiacheng): reconsider the backward_distance, it might be unnecessary,
-          // but forward_distance is indeed meaningful though.
-          // ST图：一个横向的矩形
+
+          // It is an unrotated rectangle appearing on the ST-graph. ST图：一个横向的矩形
+          // TODO(jiacheng): reconsider the backward_distance, it might be unnecessary, but forward_distance is indeed meaningful though.
           lower_points->emplace_back(low_s, 0.0);
           lower_points->emplace_back(low_s, planning_max_time_);
           upper_points->emplace_back(high_s, 0.0);
@@ -266,13 +271,14 @@ bool STBoundaryMapper::GetOverlapBoundaryPoints(const std::vector<PathPoint>& pa
         }
       }
     }
-  } else { // 有该障碍物的预测轨迹
+  } else { // 有该障碍物的预测轨迹，认为是动态障碍物
     // For those with predicted trajectories (moving obstacles):
-    // 1. Subsample to reduce computation time.  进行二次采样以减少计算时间。
+    // 1. Subsample to reduce computation time.  对规划的路径进行二次采样以减少计算时间。
     const int default_num_point = 50;
     DiscretizedPath discretized_path;
     if (path_points.size() > 2 * default_num_point) {
       const auto ratio = path_points.size() / default_num_point;
+      AINFO << "ratio : " << ratio;
       std::vector<PathPoint> sampled_path_points;
       for (size_t i = 0; i < path_points.size(); ++i) {
         if (i % ratio == 0) {
@@ -290,6 +296,9 @@ bool STBoundaryMapper::GetOverlapBoundaryPoints(const std::vector<PathPoint>& pa
                                    std::max(vehicle_param_.width() / obstacle.speed() / trajectory_time_interval, 1.0));
     bool trajectory_point_collision_status = false;
     int previous_index = 0;
+    AINFO << "trajectory_time_interval : " << trajectory_time_interval;
+    AINFO << "trajectory_step : " << trajectory_step;
+
 
     // 遍历当前障碍物的预测轨迹点
     for (int i = 0; i < trajectory.trajectory_point_size();
@@ -300,6 +309,7 @@ bool STBoundaryMapper::GetOverlapBoundaryPoints(const std::vector<PathPoint>& pa
       Polygon2d obstacle_shape = obstacle.GetObstacleTrajectoryPolygon(trajectory_point);
 
       double trajectory_point_time = trajectory_point.relative_time();
+      AINFO << "trajectory_point_time : " << trajectory_point_time;
       static constexpr double kNegtiveTimeThreshold = -1.0;
       if (trajectory_point_time < kNegtiveTimeThreshold) {
         continue;
@@ -311,6 +321,8 @@ bool STBoundaryMapper::GetOverlapBoundaryPoints(const std::vector<PathPoint>& pa
                                                        l_buffer, default_num_point,
                                                        obstacle_length, obstacle_width,
                                                        trajectory_point_time);
+      AINFO << "collision : " << collision;
+      
       // 按位异或：不同为1，相同为0
       if ((trajectory_point_collision_status ^ collision) && i != 0) {
         // Start retracing track points forward 开始向前追溯轨迹点
@@ -358,12 +370,13 @@ bool STBoundaryMapper::CheckOverlapWithTrajectoryPoint(const DiscretizedPath& di
                                                        const double obstacle_width,
                                                        const double trajectory_point_time) const {
   const double step_length = vehicle_param_.front_edge_to_center();
-  auto path_len = std::min(speed_bounds_config_.max_trajectory_len(),
+  auto path_len = std::min(speed_bounds_config_.max_trajectory_len(), // 1000
                            discretized_path.Length());
   // Go through every point of the ADC's path.
   for (double path_s = 0.0; path_s < path_len; path_s += step_length) {
-    const auto curr_adc_path_point = discretized_path.Evaluate(path_s + discretized_path.front().s());
-
+    const auto curr_adc_path_point = discretized_path.Evaluate(path_s + discretized_path.front().s());  // 估计车辆当前位置
+    AINFO << "step_length : " << step_length;
+    AINFO << "path_s : " << path_s;
     // 碰撞检测
     if (CheckOverlap(curr_adc_path_point, obstacle_shape, l_buffer)) {
       // Found overlap, start searching with higher resolution
@@ -378,9 +391,12 @@ bool STBoundaryMapper::CheckOverlapWithTrajectoryPoint(const DiscretizedPath& di
       bool find_high = false;
       double low_s = std::fmax(0.0, path_s + backward_distance);
       double high_s = std::fmin(discretized_path.Length(), path_s + forward_distance);
+      AINFO << "low_s  : " << low_s;
+      AINFO << "high_s : " << high_s;
+      AINFO << "fine_tuning_step_length : " << fine_tuning_step_length;
 
-      // Keep shrinking by the resolution bidirectionally until finally
-      // locating the tight upper and lower bounds.
+
+      // Keep shrinking by the resolution bidirectionally until finally locating the tight upper and lower bounds.
       while (low_s < high_s) {
         if (find_low && find_high) {
           break;
@@ -429,7 +445,7 @@ void STBoundaryMapper::ComputeSTBoundaryWithDecision(Obstacle* obstacle,
     lower_points = path_st_boundary.lower_points();
     upper_points = path_st_boundary.upper_points();
   } else {
-    // 获取该障碍物与路径path交互的上下界
+    // STEP 1. 获取该障碍物与路径path交互的上下界
     if (!GetOverlapBoundaryPoints(path_data_.discretized_path(), *obstacle,
                                   &upper_points, &lower_points)) {
       return;
@@ -438,27 +454,29 @@ void STBoundaryMapper::ComputeSTBoundaryWithDecision(Obstacle* obstacle,
 
   auto boundary = STBoundary::CreateInstance(lower_points, upper_points);
 
-  // get characteristic_length and boundary_type.
+  // STEP 2. get characteristic_length and boundary_type.
   STBoundary::BoundaryType b_type = STBoundary::BoundaryType::UNKNOWN;
   double characteristic_length = 0.0;
 
   if (decision.has_follow()) {
     characteristic_length = std::fabs(decision.follow().distance_s());
-    AINFO << "characteristic_length: " << characteristic_length;
-    boundary = STBoundary::CreateInstance(lower_points, upper_points)  // 创建ST图，并上下扩大s
+    boundary = STBoundary::CreateInstance(lower_points, upper_points)  // 创建ST图，并上下都扩大s
                           .ExpandByS(characteristic_length);
     b_type = STBoundary::BoundaryType::FOLLOW;
 
+    AINFO << "FOLLOW  characteristic_length: " << characteristic_length;
   } else if (decision.has_yield()) {
     characteristic_length = std::fabs(decision.yield().distance_s());
     boundary = STBoundary::CreateInstance(lower_points, upper_points)
                           .ExpandByS(characteristic_length);
     b_type = STBoundary::BoundaryType::YIELD;
 
+    AINFO << "YIELD  characteristic_length: " << characteristic_length;
   } else if (decision.has_overtake()) {
     characteristic_length = std::fabs(decision.overtake().distance_s());
     b_type = STBoundary::BoundaryType::OVERTAKE;
 
+    AINFO << "OVERTAKE  characteristic_length: " << characteristic_length;
   } else {
     DCHECK(false) << "Obj decision should be either yield or overtake: "
                   << decision.DebugString();
@@ -473,7 +491,7 @@ void STBoundaryMapper::ComputeSTBoundaryWithDecision(Obstacle* obstacle,
 bool STBoundaryMapper::CheckOverlap(const PathPoint& path_point,
                                     const Box2d& obs_box,
                                     const double l_buffer) const {
-  // Convert reference point from center of rear axis to center of ADC. 自车的几何中心
+  // Convert reference point from center of rear axis to center of ADC. 规划点以自车后轴为基准，转换到自车的几何中心
   Vec2d ego_center_map_frame((vehicle_param_.front_edge_to_center() -
                               vehicle_param_.back_edge_to_center()) * 0.5,
                              (vehicle_param_.left_edge_to_center() -
@@ -482,11 +500,11 @@ bool STBoundaryMapper::CheckOverlap(const PathPoint& path_point,
   ego_center_map_frame.set_x(ego_center_map_frame.x() + path_point.x());
   ego_center_map_frame.set_y(ego_center_map_frame.y() + path_point.y());
 
-  // Compute the ADC bounding box.
+  // Compute the ADC bounding box. 矩形
   Box2d adc_box(ego_center_map_frame, path_point.theta(),
                 vehicle_param_.length(), vehicle_param_.width() + l_buffer * 2); // 宽度上加一个buff
 
-  // Check whether ADC bounding box overlaps with obstacle bounding box. 碰撞检测
+  // Check whether ADC bounding box overlaps with obstacle bounding box. 碰撞检测（SAT方法）
   return obs_box.HasOverlap(adc_box);
 }
 

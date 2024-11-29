@@ -40,10 +40,10 @@ void SpeedProfileGenerator::FillEnoughSpeedPoints(SpeedData* const speed_data) {
     last_point_t = speed_data->back().t();
     last_point_s = speed_data->back().s();
   }
-  if (last_point_t >= FLAGS_fallback_total_time) {
+  if (last_point_t >= FLAGS_fallback_total_time) {  // 3s
     return;
   }
-  for (double t = last_point_t + FLAGS_fallback_time_unit;
+  for (double t = last_point_t + FLAGS_fallback_time_unit;  // 0.1s
        t < FLAGS_fallback_total_time; t += FLAGS_fallback_time_unit) {
     speed_data->AppendSpeedPoint(last_point_s, t, 0.0, 0.0, 0.0); // 规划时间不足t，后面的全部填充0。是否合理
   }

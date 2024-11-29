@@ -167,6 +167,8 @@ bool LineSegment2d::HasIntersect(const LineSegment2d &other_segment) const {
 bool LineSegment2d::GetIntersect(const LineSegment2d &other_segment,
                                  Vec2d *const point) const {
   CHECK_NOTNULL(point);
+
+  // 首先检查两条线段的端点是否互相包含在对方的线段上
   if (IsPointIn(other_segment.start())) {
     *point = other_segment.start();
     return true;
@@ -186,18 +188,21 @@ bool LineSegment2d::GetIntersect(const LineSegment2d &other_segment,
   if (length_ <= kMathEpsilon || other_segment.length() <= kMathEpsilon) {
     return false;
   }
-  const double cc1 = CrossProd(start_, end_, other_segment.start());
+
+  // 计算叉积来判断两条线段的方向关系，从而判断是否相交
+  const double cc1 = CrossProd(start_, end_, other_segment.start());  // CrossProd(a, b, c) 用来计算 a->b 和 a->c 的叉积，正表示顺时针，负表示逆时针，零表示共线
   const double cc2 = CrossProd(start_, end_, other_segment.end());
-  if (cc1 * cc2 >= -kMathEpsilon) {
+  if (cc1 * cc2 >= -kMathEpsilon) { // 两端点在同一侧或共线
     return false;
   }
-  const double cc3 =
-      CrossProd(other_segment.start(), other_segment.end(), start_);
-  const double cc4 =
-      CrossProd(other_segment.start(), other_segment.end(), end_);
+
+  const double cc3 = CrossProd(other_segment.start(), other_segment.end(), start_);
+  const double cc4 = CrossProd(other_segment.start(), other_segment.end(), end_);
   if (cc3 * cc4 >= -kMathEpsilon) {
     return false;
   }
+
+  // 计算交点比例
   const double ratio = cc4 / (cc4 - cc3);
   *point = Vec2d(start_.x() * ratio + end_.x() * (1.0 - ratio),
                  start_.y() * ratio + end_.y() * (1.0 - ratio));

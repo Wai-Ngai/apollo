@@ -55,33 +55,36 @@ void PiecewiseJerkSpeedProblem::CalculateKernel(std::vector<c_float>* P_data,
   const int n = static_cast<int>(num_of_knots_);
   const int kNumParam = 3 * n;
   const int kNumValue = 4 * n - 1;
-  std::vector<std::vector<std::pair<c_int, c_float>>> columns;
+  std::vector<std::vector<std::pair<c_int, c_float>>> columns; // P矩阵
   columns.resize(kNumParam);
   int value_index = 0;
 
-  // x(i)^2 * w_x_ref
+  // ============================================ Ps ============================================
+  // w_x_ref * x(i)^2
   for (int i = 0; i < n - 1; ++i) {
     columns[i].emplace_back(i, weight_x_ref_ / (scale_factor_[0] * scale_factor_[0]));
     ++value_index;
   }
-  // x(n-1)^2 * (w_x_ref + w_end_x)
+  // (w_x_ref + w_end_x) * x(n-1)^2
   columns[n - 1].emplace_back(n - 1, (weight_x_ref_ + weight_end_state_[0]) /
                                      (scale_factor_[0] * scale_factor_[0]));
   ++value_index;
 
-  // x(i)'^2 * (w_dx_ref + penalty_dx)
+  // ============================================ Ps' ============================================
+  // (w_dx_ref + penalty_dx) * x(i)'^2
   for (int i = 0; i < n - 1; ++i) {
     columns[n + i].emplace_back(n + i, (weight_dx_ref_[i] + penalty_dx_[i]) /
                                        (scale_factor_[1] * scale_factor_[1]));
     ++value_index;
   }
-  // x(n-1)'^2 * (w_dx_ref + penalty_dx + w_end_dx)
+  // (w_dx_ref + penalty_dx + w_end_dx) * x(n-1)'^2
   columns[2 * n - 1].emplace_back(2 * n - 1, (weight_dx_ref_[n - 1] + penalty_dx_[n - 1] + weight_end_state_[1]) /
                                              (scale_factor_[1] * scale_factor_[1]));
   ++value_index;
 
+  // ============================================ Ps'' ============================================
   auto delta_s_square = delta_s_ * delta_s_;
-  // x(i)''^2 * (w_ddx + 2 * w_dddx / delta_s^2)
+  // (w_ddx + 2 * w_dddx / delta_s^2) * x(i)''^2
   columns[2 * n].emplace_back(2 * n, (weight_ddx_ + weight_dddx_ / delta_s_square) /
                                      (scale_factor_[2] * scale_factor_[2]));
   ++value_index;
@@ -98,7 +101,7 @@ void PiecewiseJerkSpeedProblem::CalculateKernel(std::vector<c_float>* P_data,
 
   // -2 * w_dddx / delta_s^2 * x(i)'' * x(i + 1)''
   for (int i = 0; i < n - 1; ++i) {
-    columns[2 * n + i].emplace_back(2 * n + i + 1, -2.0 * weight_dddx_ / delta_s_square /
+    columns[2 * n + i].emplace_back(2 * n + i + 1, -2.0 * weight_dddx_ / delta_s_square /     // ! 这里不应该乘以2 
                                                   (scale_factor_[2] * scale_factor_[2]));
     ++value_index;
   }
@@ -107,10 +110,10 @@ void PiecewiseJerkSpeedProblem::CalculateKernel(std::vector<c_float>* P_data,
 
   int ind_p = 0;
   for (int i = 0; i < kNumParam; ++i) {
-    P_indptr->push_back(ind_p);
-    for (const auto& row_data_pair : columns[i]) {
-      P_data->push_back(row_data_pair.second * 2.0);
-      P_indices->push_back(row_data_pair.first);
+    P_indptr->push_back(ind_p);                      // 将即上一列的非零元素数量推入 P_indptr 中，表示当前列的起始位置。
+    for (const auto& row_data_pair : columns[i]) {   // std::pair<c_int, c_float>
+      P_data->push_back(row_data_pair.second * 2.0); // 每个元素前都乘以了2，这是为了和二次优化问题的一般形式中的1/2进行抵消的。
+      P_indices->push_back(row_data_pair.first);     // 将当前非零元素的行索引存入 P_indices 中。
       ++ind_p;
     }
   }
@@ -122,22 +125,20 @@ void PiecewiseJerkSpeedProblem::CalculateOffset(std::vector<c_float>* q) {
   const int n = static_cast<int>(num_of_knots_);
   const int kNumParam = 3 * n;
   q->resize(kNumParam);
+
   for (int i = 0; i < n; ++i) {
     if (has_x_ref_) {
       q->at(i) += -2.0 * weight_x_ref_ * x_ref_[i] / scale_factor_[0];
     }
     if (has_dx_ref_) {
-      q->at(n + i) += -2.0 * weight_dx_ref_[i] * dx_ref_[i] / scale_factor_[1];
+      q->at(n + i) += -2.0 * weight_dx_ref_[i] * dx_ref_[i] / scale_factor_[1];   // ! 这里感觉有问题，没有考虑曲率惩罚penalty_dx_
     }
   }
 
   if (has_end_state_ref_) {
-    q->at(n - 1) +=
-        -2.0 * weight_end_state_[0] * end_state_ref_[0] / scale_factor_[0];
-    q->at(2 * n - 1) +=
-        -2.0 * weight_end_state_[1] * end_state_ref_[1] / scale_factor_[1];
-    q->at(3 * n - 1) +=
-        -2.0 * weight_end_state_[2] * end_state_ref_[2] / scale_factor_[2];
+    q->at(n - 1) += -2.0 * weight_end_state_[0] * end_state_ref_[0] / scale_factor_[0];
+    q->at(2 * n - 1) += -2.0 * weight_end_state_[1] * end_state_ref_[1] / scale_factor_[1];
+    q->at(3 * n - 1) += -2.0 * weight_end_state_[2] * end_state_ref_[2] / scale_factor_[2];
   }
 }
 

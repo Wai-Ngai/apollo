@@ -50,18 +50,15 @@ class OpenSpaceTrajectoryOptimizer {
 
   virtual ~OpenSpaceTrajectoryOptimizer() = default;
 
-  common::Status Plan(
-      const std::vector<common::TrajectoryPoint>& stitching_trajectory,
-      const std::vector<double>& end_pose, const std::vector<double>& XYbounds,
-      double rotate_angle, const common::math::Vec2d& translate_origin,
-      const Eigen::MatrixXi& obstacles_edges_num,
-      const Eigen::MatrixXd& obstacles_A, const Eigen::MatrixXd& obstacles_b,
-      const std::vector<std::vector<common::math::Vec2d>>&
-          obstacles_vertices_vec,
-      double* time_latency);
+  common::Status Plan(const std::vector<common::TrajectoryPoint>& stitching_trajectory,
+                      const std::vector<double>& end_pose, const std::vector<double>& XYbounds,
+                      double rotate_angle, const common::math::Vec2d& translate_origin,
+                      const Eigen::MatrixXi& obstacles_edges_num,
+                      const Eigen::MatrixXd& obstacles_A, const Eigen::MatrixXd& obstacles_b,
+                      const std::vector<std::vector<common::math::Vec2d>>& obstacles_vertices_vec,
+                      double* time_latency);
 
-  void GetStitchingTrajectory(
-      std::vector<common::TrajectoryPoint>* stitching_trajectory) {
+  void GetStitchingTrajectory(std::vector<common::TrajectoryPoint>* stitching_trajectory) {
     stitching_trajectory->clear();
     *stitching_trajectory = stitching_trajectory_;
   }
@@ -71,32 +68,28 @@ class OpenSpaceTrajectoryOptimizer {
     *optimized_trajectory = optimized_trajectory_;
   }
 
-  void RecordDebugInfo(
-      const common::TrajectoryPoint& trajectory_stitching_point,
-      const common::math::Vec2d& translate_origin, const double rotate_angle,
-      const std::vector<double>& end_pose, const Eigen::MatrixXd& xWS,
-      const Eigen::MatrixXd& uWs, const Eigen::MatrixXd& l_warm_up,
-      const Eigen::MatrixXd& n_warm_up, const Eigen::MatrixXd& dual_l_result_ds,
-      const Eigen::MatrixXd& dual_n_result_ds,
-      const Eigen::MatrixXd& state_result_ds,
-      const Eigen::MatrixXd& control_result_ds,
-      const Eigen::MatrixXd& time_result_ds,
-      const std::vector<double>& XYbounds,
-      const std::vector<std::vector<common::math::Vec2d>>&
-          obstacles_vertices_vec);
+  void RecordDebugInfo(const common::TrajectoryPoint& trajectory_stitching_point,
+                       const common::math::Vec2d& translate_origin, const double rotate_angle,
+                       const std::vector<double>& end_pose, const Eigen::MatrixXd& xWS,
+                       const Eigen::MatrixXd& uWs, const Eigen::MatrixXd& l_warm_up,
+                       const Eigen::MatrixXd& n_warm_up, const Eigen::MatrixXd& dual_l_result_ds,
+                       const Eigen::MatrixXd& dual_n_result_ds,
+                       const Eigen::MatrixXd& state_result_ds,
+                       const Eigen::MatrixXd& control_result_ds,
+                       const Eigen::MatrixXd& time_result_ds,
+                       const std::vector<double>& XYbounds,
+                       const std::vector<std::vector<common::math::Vec2d>>& obstacles_vertices_vec);
 
-  void UpdateDebugInfo(
-      ::apollo::planning_internal::OpenSpaceDebug* open_space_debug);
+  void UpdateDebugInfo(::apollo::planning_internal::OpenSpaceDebug* open_space_debug);
 
   apollo::planning_internal::OpenSpaceDebug* mutable_open_space_debug() {
     return &open_space_debug_;
   }
 
  private:
-  bool IsInitPointNearDestination(
-      const common::TrajectoryPoint& planning_init_point,
-      const std::vector<double>& end_pose, double rotate_angle,
-      const common::math::Vec2d& translate_origin);
+  bool IsInitPointNearDestination(const common::TrajectoryPoint& planning_init_point,
+                                  const std::vector<double>& end_pose, double rotate_angle,
+                                  const common::math::Vec2d& translate_origin);
 
   void PathPointNormalizing(double rotate_angle,
                             const common::math::Vec2d& translate_origin,
@@ -113,53 +106,47 @@ class OpenSpaceTrajectoryOptimizer {
   void LoadHybridAstarResultInEigen(HybridAStartResult* result,
                                     Eigen::MatrixXd* xWS, Eigen::MatrixXd* uWS);
 
-  void UseWarmStartAsResult(
-      const Eigen::MatrixXd& xWS, const Eigen::MatrixXd& uWS,
-      const Eigen::MatrixXd& l_warm_up, const Eigen::MatrixXd& n_warm_up,
-      Eigen::MatrixXd* state_result_ds, Eigen::MatrixXd* control_result_ds,
-      Eigen::MatrixXd* time_result_ds, Eigen::MatrixXd* dual_l_result_ds,
-      Eigen::MatrixXd* dual_n_result_ds);
+  void UseWarmStartAsResult(const Eigen::MatrixXd& xWS, const Eigen::MatrixXd& uWS,
+                            const Eigen::MatrixXd& l_warm_up, const Eigen::MatrixXd& n_warm_up,
+                            Eigen::MatrixXd* state_result_ds, Eigen::MatrixXd* control_result_ds,
+                            Eigen::MatrixXd* time_result_ds, Eigen::MatrixXd* dual_l_result_ds,
+                            Eigen::MatrixXd* dual_n_result_ds);
 
-  bool GenerateDistanceApproachTraj(
-      const Eigen::MatrixXd& xWS, const Eigen::MatrixXd& uWS,
-      const std::vector<double>& XYbounds,
-      const Eigen::MatrixXi& obstacles_edges_num,
-      const Eigen::MatrixXd& obstacles_A, const Eigen::MatrixXd& obstacles_b,
-      const std::vector<std::vector<common::math::Vec2d>>&
-          obstacles_vertices_vec,
-      const Eigen::MatrixXd& last_time_u, const double init_v,
-      Eigen::MatrixXd* state_result_ds, Eigen::MatrixXd* control_result_ds,
-      Eigen::MatrixXd* time_result_ds, Eigen::MatrixXd* l_warm_up,
-      Eigen::MatrixXd* n_warm_up, Eigen::MatrixXd* dual_l_result_ds,
-      Eigen::MatrixXd* dual_n_result_ds);
+  bool GenerateDistanceApproachTraj(const Eigen::MatrixXd& xWS, const Eigen::MatrixXd& uWS,
+                                    const std::vector<double>& XYbounds,
+                                    const Eigen::MatrixXi& obstacles_edges_num,
+                                    const Eigen::MatrixXd& obstacles_A, const Eigen::MatrixXd& obstacles_b,
+                                    const std::vector<std::vector<common::math::Vec2d>>& obstacles_vertices_vec,
+                                    const Eigen::MatrixXd& last_time_u, const double init_v,
+                                    Eigen::MatrixXd* state_result_ds, Eigen::MatrixXd* control_result_ds,
+                                    Eigen::MatrixXd* time_result_ds, Eigen::MatrixXd* l_warm_up,
+                                    Eigen::MatrixXd* n_warm_up, Eigen::MatrixXd* dual_l_result_ds,
+                                    Eigen::MatrixXd* dual_n_result_ds);
 
-  bool GenerateDecoupledTraj(
-      const Eigen::MatrixXd& xWS, const double init_a, const double init_v,
-      const std::vector<std::vector<common::math::Vec2d>>&
-          obstacles_vertices_vec,
-      Eigen::MatrixXd* state_result_dc, Eigen::MatrixXd* control_result_dc,
-      Eigen::MatrixXd* time_result_dc);
+  bool GenerateDecoupledTraj(const Eigen::MatrixXd& xWS, const double init_a, const double init_v,
+                             const std::vector<std::vector<common::math::Vec2d>>& obstacles_vertices_vec,
+                             Eigen::MatrixXd* state_result_dc, Eigen::MatrixXd* control_result_dc,
+                             Eigen::MatrixXd* time_result_dc);
 
   void LoadResult(const DiscretizedTrajectory& discretized_trajectory,
                   Eigen::MatrixXd* state_result_dc,
                   Eigen::MatrixXd* control_result_dc,
                   Eigen::MatrixXd* time_result_dc);
 
-  void CombineTrajectories(
-      const std::vector<Eigen::MatrixXd>& xWS_vec,
-      const std::vector<Eigen::MatrixXd>& uWS_vec,
-      const std::vector<Eigen::MatrixXd>& state_result_ds_vec,
-      const std::vector<Eigen::MatrixXd>& control_result_ds_vec,
-      const std::vector<Eigen::MatrixXd>& time_result_ds_vec,
-      const std::vector<Eigen::MatrixXd>& l_warm_up_vec,
-      const std::vector<Eigen::MatrixXd>& n_warm_up_vec,
-      const std::vector<Eigen::MatrixXd>& dual_l_result_ds_vec,
-      const std::vector<Eigen::MatrixXd>& dual_n_result_ds_vec,
-      Eigen::MatrixXd* xWS, Eigen::MatrixXd* uWS,
-      Eigen::MatrixXd* state_result_ds, Eigen::MatrixXd* control_result_ds,
-      Eigen::MatrixXd* time_result_ds, Eigen::MatrixXd* l_warm_up,
-      Eigen::MatrixXd* n_warm_up, Eigen::MatrixXd* dual_l_result_ds,
-      Eigen::MatrixXd* dual_n_result_ds);
+  void CombineTrajectories(const std::vector<Eigen::MatrixXd>& xWS_vec,
+                           const std::vector<Eigen::MatrixXd>& uWS_vec,
+                           const std::vector<Eigen::MatrixXd>& state_result_ds_vec,
+                           const std::vector<Eigen::MatrixXd>& control_result_ds_vec,
+                           const std::vector<Eigen::MatrixXd>& time_result_ds_vec,
+                           const std::vector<Eigen::MatrixXd>& l_warm_up_vec,
+                           const std::vector<Eigen::MatrixXd>& n_warm_up_vec,
+                           const std::vector<Eigen::MatrixXd>& dual_l_result_ds_vec,
+                           const std::vector<Eigen::MatrixXd>& dual_n_result_ds_vec,
+                           Eigen::MatrixXd* xWS, Eigen::MatrixXd* uWS,
+                           Eigen::MatrixXd* state_result_ds, Eigen::MatrixXd* control_result_ds,
+                           Eigen::MatrixXd* time_result_ds, Eigen::MatrixXd* l_warm_up,
+                           Eigen::MatrixXd* n_warm_up, Eigen::MatrixXd* dual_l_result_ds,
+                           Eigen::MatrixXd* dual_n_result_ds);
 
  private:
   OpenSpaceTrajectoryOptimizerConfig config_;

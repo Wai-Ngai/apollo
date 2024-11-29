@@ -33,7 +33,7 @@ Status SpeedOptimizer::Execute(Frame* frame,
                                ReferenceLineInfo* reference_line_info) {
   Task::Execute(frame, reference_line_info);
 
-  // 最终会调用速度规划task的Process函数
+  // 最终会调用具体的速度规划task的Process函数
   auto ret = Process(reference_line_info->path_data(), 
                      frame->PlanningStartPoint(),
                      reference_line_info->mutable_speed_data());  // 传入要计算的速度轨迹，经过dp和qp得到最终的速度

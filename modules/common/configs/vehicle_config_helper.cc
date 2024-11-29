@@ -53,22 +53,24 @@ const VehicleConfig &VehicleConfigHelper::GetConfig() {
 
 double VehicleConfigHelper::MinSafeTurnRadius() {
   const auto &param = vehicle_config_.vehicle_param();
-  double lat_edge_to_center =
-      std::max(param.left_edge_to_center(), param.right_edge_to_center());
-  double lon_edge_to_center =
-      std::max(param.front_edge_to_center(), param.back_edge_to_center());
+  AINFO << "left_edge_to_center: " << param.left_edge_to_center() << " right_edge_to_center: " << param.right_edge_to_center();
+  AINFO << "front_edge_to_center: " << param.front_edge_to_center() << " back_edge_to_center: " << param.back_edge_to_center();
+  AINFO << "min_turn_radius: " << param.min_turn_radius();
+
+  double lat_edge_to_center = std::max(param.left_edge_to_center(), param.right_edge_to_center());
+  double lon_edge_to_center = std::max(param.front_edge_to_center(), param.back_edge_to_center());
   return std::sqrt((lat_edge_to_center + param.min_turn_radius()) *
-                       (lat_edge_to_center + param.min_turn_radius()) +
+                   (lat_edge_to_center + param.min_turn_radius()) +
                    lon_edge_to_center * lon_edge_to_center);
 }
 
-common::math::Box2d VehicleConfigHelper::GetBoundingBox(
-    const common::PathPoint &path_point) {
+common::math::Box2d VehicleConfigHelper::GetBoundingBox(const common::PathPoint &path_point) {
   const auto &vehicle_param = vehicle_config_.vehicle_param();
   math::Vec2d point(path_point.x(), path_point.y());
-  return common::math::Box2d(
-      point, path_point.theta(), vehicle_param.front_edge_to_center(),
-      vehicle_param.back_edge_to_center(), vehicle_param.width());
+  return common::math::Box2d(point, path_point.theta(), 
+                             vehicle_param.front_edge_to_center(),
+                             vehicle_param.back_edge_to_center(), 
+                             vehicle_param.width());
 }
 
 }  // namespace common

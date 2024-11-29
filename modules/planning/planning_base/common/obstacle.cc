@@ -287,19 +287,25 @@ double Obstacle::MinRadiusStopDistance(const common::VehicleParam& vehicle_param
   if (min_radius_stop_distance_ > 0) {
     return min_radius_stop_distance_;
   }
+
   static constexpr double stop_distance_buffer = 0.5;
   const double min_turn_radius = VehicleConfigHelper::MinSafeTurnRadius();
-  double lateral_diff =
-      vehicle_param.width() / 2.0 + std::max(std::fabs(sl_boundary_.start_l()),
-                                             std::fabs(sl_boundary_.end_l()));
+  AINFO << "min_turn_radius: " << min_turn_radius;
+
+  double lateral_diff = vehicle_param.width() / 2.0 + std::max(std::fabs(sl_boundary_.start_l()),
+                                                               std::fabs(sl_boundary_.end_l()));
+  AINFO << "lateral_diff: " << lateral_diff;
+  
   const double kEpison = 1e-5;
   lateral_diff = std::min(lateral_diff, min_turn_radius - kEpison);
-  double stop_distance =
-      std::sqrt(std::fabs(min_turn_radius * min_turn_radius -
-                          (min_turn_radius - lateral_diff) *
-                              (min_turn_radius - lateral_diff))) +
-      stop_distance_buffer;
+  double stop_distance = std::sqrt(std::fabs(min_turn_radius * min_turn_radius -
+                                             (min_turn_radius - lateral_diff) * (min_turn_radius - lateral_diff))) + 
+                         stop_distance_buffer;
+  AINFO << "stop_distance: " << stop_distance;
+  
   stop_distance -= vehicle_param.front_edge_to_center();
+  AINFO << "stop_distance: " << stop_distance;
+
   stop_distance = std::min(stop_distance, FLAGS_max_stop_distance_obstacle);
   stop_distance = std::max(stop_distance, FLAGS_min_stop_distance_obstacle);
   return stop_distance;
@@ -526,18 +532,16 @@ bool Obstacle::IsLongitudinalDecision(const ObjectDecisionType& decision) {
          decision.has_follow() || decision.has_overtake();
 }
 
-ObjectDecisionType Obstacle::MergeLongitudinalDecision(
-    const ObjectDecisionType& lhs, const ObjectDecisionType& rhs) {
+ObjectDecisionType Obstacle::MergeLongitudinalDecision(const ObjectDecisionType& lhs, 
+                                                       const ObjectDecisionType& rhs) {
   if (lhs.object_tag_case() == ObjectDecisionType::OBJECT_TAG_NOT_SET) {
     return rhs;
   }
   if (rhs.object_tag_case() == ObjectDecisionType::OBJECT_TAG_NOT_SET) {
     return lhs;
   }
-  const auto lhs_val =
-      FindOrDie(s_longitudinal_decision_safety_sorter_, lhs.object_tag_case());
-  const auto rhs_val =
-      FindOrDie(s_longitudinal_decision_safety_sorter_, rhs.object_tag_case());
+  const auto lhs_val = FindOrDie(s_longitudinal_decision_safety_sorter_, lhs.object_tag_case());
+  const auto rhs_val = FindOrDie(s_longitudinal_decision_safety_sorter_, rhs.object_tag_case());
   if (lhs_val < rhs_val) {
     return rhs;
   } else if (lhs_val > rhs_val) {
@@ -581,18 +585,16 @@ bool Obstacle::IsLateralIgnore() const {
   return lateral_decision_.has_ignore();
 }
 
-ObjectDecisionType Obstacle::MergeLateralDecision(
-    const ObjectDecisionType& lhs, const ObjectDecisionType& rhs) {
+ObjectDecisionType Obstacle::MergeLateralDecision(const ObjectDecisionType& lhs, 
+                                                  const ObjectDecisionType& rhs) {
   if (lhs.object_tag_case() == ObjectDecisionType::OBJECT_TAG_NOT_SET) {
     return rhs;
   }
   if (rhs.object_tag_case() == ObjectDecisionType::OBJECT_TAG_NOT_SET) {
     return lhs;
   }
-  const auto lhs_val =
-      FindOrDie(s_lateral_decision_safety_sorter_, lhs.object_tag_case());
-  const auto rhs_val =
-      FindOrDie(s_lateral_decision_safety_sorter_, rhs.object_tag_case());
+  const auto lhs_val = FindOrDie(s_lateral_decision_safety_sorter_, lhs.object_tag_case());
+  const auto rhs_val = FindOrDie(s_lateral_decision_safety_sorter_, rhs.object_tag_case());
   if (lhs_val < rhs_val) {
     return rhs;
   } else if (lhs_val > rhs_val) {
@@ -603,8 +605,7 @@ ObjectDecisionType Obstacle::MergeLateralDecision(
     } else if (lhs.has_nudge()) {
       DCHECK(lhs.nudge().type() == rhs.nudge().type())
           << "could not merge left nudge and right nudge";
-      return std::fabs(lhs.nudge().distance_l()) >
-                     std::fabs(rhs.nudge().distance_l())
+      return std::fabs(lhs.nudge().distance_l()) > std::fabs(rhs.nudge().distance_l())
                  ? lhs
                  : rhs;
     }
@@ -635,8 +636,8 @@ void Obstacle::AddLongitudinalDecision(const std::string& decider_tag,
   DCHECK(IsLongitudinalDecision(decision))
       << "Decision: " << decision.ShortDebugString()
       << " is not a longitudinal decision";
-  longitudinal_decision_ =
-      MergeLongitudinalDecision(longitudinal_decision_, decision);
+
+  longitudinal_decision_ = MergeLongitudinalDecision(longitudinal_decision_, decision);
   ADEBUG << decider_tag << " added obstacle " << Id()
          << " longitudinal decision: " << decision.ShortDebugString()
          << ". The merged decision is: "
@@ -650,6 +651,7 @@ void Obstacle::AddLateralDecision(const std::string& decider_tag,
   DCHECK(IsLateralDecision(decision))
       << "Decision: " << decision.ShortDebugString()
       << " is not a lateral decision";
+  
   lateral_decision_ = MergeLateralDecision(lateral_decision_, decision);
   ADEBUG << decider_tag << " added obstacle " << Id()
          << " a lateral decision: " << decision.ShortDebugString()
@@ -763,9 +765,9 @@ common::math::Polygon2d Obstacle::GetObstacleTrajectoryPolygon(const common::Tra
   double sin_delta_heading = sin(delta_heading);
 
   std::vector<common::math::Vec2d> polygon_point;
-  polygon_point.reserve(perception_polygon_.points().size());
+  polygon_point.reserve(perception_polygon_.points().size()); // 提前分配内存，避免在元素插入时多次重新分配内存，从而提高性能。
 
-  for (auto& iter : perception_polygon_.points()) {
+  for (auto& iter : perception_polygon_.points()) {  // 障碍物多边形点转换到预测点处
     double relative_x = iter.x() - perception_obstacle_.position().x();
     double relative_y = iter.y() - perception_obstacle_.position().y();
     double x = relative_x * cos_delta_heading - relative_y * sin_delta_heading + point.path_point().x();

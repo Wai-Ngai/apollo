@@ -159,12 +159,13 @@ Status OnLanePlanning::Init(const PlanningConfig& config) {
   traffic_decider_.Init(injector_);                              // TrafficDecider初始化
 
   start_time_ = Clock::NowInSeconds();
-  return planner_->Init(injector_, FLAGS_planner_config_path);   // PublicRoadPlanner初始化
+  return planner_->Init(injector_, FLAGS_planner_config_path);   // PublicRoadPlanner初始化 "modules/planning/planning_component/conf/public_road_planner_config.pb.txt",
 }
 
 Status OnLanePlanning::InitFrame(const uint32_t sequence_num,
                                  const TrajectoryPoint& planning_start_point,
                                  const VehicleState& vehicle_state) {
+  // std::unique_ptr 提供了 reset 方法，用于释放当前管理的对象，并为智能指针分配一个新的对象
   frame_.reset(new Frame(sequence_num, local_view_, planning_start_point,
                          vehicle_state, reference_line_provider_.get()));
 
@@ -179,7 +180,9 @@ Status OnLanePlanning::InitFrame(const uint32_t sequence_num,
 
   DCHECK_EQ(reference_lines.size(), segments.size());
 
+  // 根据车速限制参考线长度
   auto forward_limit = planning::PncMapBase::LookForwardDistance(vehicle_state.linear_velocity());
+  AINFO << "forward_limit : " << forward_limit;
 
   for (auto& ref_line : reference_lines) {
     if (!ref_line.Segment(Vec2d(vehicle_state.x(), vehicle_state.y()),
@@ -212,7 +215,7 @@ Status OnLanePlanning::InitFrame(const uint32_t sequence_num,
     segment_print_curve.PrintToLog();
   }
 
-  // 对hdmap_、vehicle_state_、obstacles、traffic_lights，ReferenceLineInfo进行赋值
+  // 对hdmap_、vehicle_state_、obstacles、traffic_lights, ReferenceLineInfo进行赋值
   auto status = frame_->Init(injector_->vehicle_state(), reference_lines, segments,
                              reference_line_provider_->FutureRouteWaypoints(), 
                              injector_->ego_info());
@@ -248,6 +251,8 @@ void OnLanePlanning::GenerateStopTrajectory(ADCTrajectory* ptr_trajectory_pb) {
 
 void OnLanePlanning::RunOnce(const LocalView& local_view,
                              ADCTrajectory* const ptr_trajectory_pb) {
+  AINFO << "======================  OnLanePlanning::RunOnce  ======================";
+
   // when rerouting, reference line might not be updated. 
   // In this case, planning module maintains not-ready until be restarted.
   local_view_ = local_view;
@@ -531,12 +536,13 @@ Status OnLanePlanning::Plan(const double current_time_stamp,
     frame_->mutable_open_space_info()->sync_debug_instance();
   }
 
-  // 调用PublicRoadPlanner::Plan()，进行轨迹规划
+  // 调用PublicRoadPlanner::Plan()，进行轨迹规划    planning_start_point = stitching_trajectory.back()
   auto status = planner_->Plan(stitching_trajectory.back(), frame_.get(), ptr_trajectory_pb);
 
   ptr_debug->mutable_planning_data()
            ->set_front_clear_distance(injector_->ego_info()->front_clear_distance());
 
+  // open space trajectory
   if (frame_->open_space_info().is_on_open_space_trajectory()) {
     frame_->mutable_open_space_info()->sync_debug_instance();
     const auto& publishable_trajectory = frame_->open_space_info().publishable_trajectory_data().first;
@@ -574,6 +580,7 @@ Status OnLanePlanning::Plan(const double current_time_stamp,
                            ptr_debug);
     }
   } else {
+  // plan on referenceline trajectory
     const auto* best_ref_info = frame_->FindDriveReferenceLineInfo();
     const auto* target_ref_info = frame_->FindTargetReferenceLineInfo();
     if (!best_ref_info) {
@@ -584,6 +591,7 @@ Status OnLanePlanning::Plan(const double current_time_stamp,
       }
       return Status(ErrorCode::PLANNING_ERROR, msg);
     }
+
     // Store current frame stitched path for possible speed fallback in next frames
     DiscretizedPath current_frame_planned_path;
     for (const auto& trajectory_point : stitching_trajectory) {

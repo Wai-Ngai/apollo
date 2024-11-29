@@ -121,7 +121,7 @@ bool STBoundary::GetUnblockSRange(const double curr_time, double* s_upper,
   CHECK_NOTNULL(s_upper);
   CHECK_NOTNULL(s_lower);
 
-  *s_upper = FLAGS_speed_lon_decision_horizon;
+  *s_upper = FLAGS_speed_lon_decision_horizon;  // 200
   *s_lower = 0.0;
   if (curr_time < min_t_ || curr_time > max_t_) {
     return true;
@@ -243,7 +243,7 @@ bool STBoundary::IsPointInBoundary(const STPoint& st_point) const {
   const double check_upper = common::math::CrossProd(st_point, upper_points_[left], upper_points_[right]);
   const double check_lower = common::math::CrossProd(st_point, lower_points_[left], lower_points_[right]);
 
-  return (check_upper * check_lower < 0);
+  return (check_upper * check_lower < 0); // st_point与4个点叉积异号，st_point在里面
 }
 
 STBoundary STBoundary::ExpandByS(const double s) const {

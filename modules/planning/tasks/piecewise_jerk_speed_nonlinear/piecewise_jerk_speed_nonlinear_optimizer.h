@@ -66,8 +66,9 @@ class PiecewiseJerkSpeedNonlinearOptimizer : public SpeedOptimizer {
                                std::vector<double>* velocity,
                                std::vector<double>* acceleration);
 
+ private:
   // st problem dimensions
-  double delta_t_ = 0.0;
+  double delta_t_ = 0.0;    //  0.1s
   double total_length_ = 0.0;
   double total_time_ = 0.0;
   int num_of_knots_ = 0;

@@ -60,6 +60,7 @@ class FallbackPath : public PathGeneration {
   bool AssessPath(std::vector<PathData>* candidate_path_data,
                   PathData* final_path);
 
+ private:
   FallbackPathConfig config_;
 };
 

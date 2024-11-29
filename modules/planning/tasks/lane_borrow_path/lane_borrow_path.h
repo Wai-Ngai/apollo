@@ -46,6 +46,7 @@ class LaneBorrowPath : public PathGeneration {
    * @param boundary is calculated path boundaries
    */
   bool DecidePathBounds(std::vector<PathBoundary>* boundary);
+
   /**
    * @brief Optimize paths for each path boundary
    * @param path_boundaries is input path boundaries
@@ -53,6 +54,7 @@ class LaneBorrowPath : public PathGeneration {
    */
   bool OptimizePath(const std::vector<PathBoundary>& path_boundaries,
                     std::vector<PathData>* candidate_path_data);
+
   /**
    * @brief Assess the feasibility of each path and select the best one
    * @param candidate_path_data is input paths
@@ -60,6 +62,7 @@ class LaneBorrowPath : public PathGeneration {
    */
   bool AssessPath(std::vector<PathData>* candidate_path_data,
                   PathData* final_path);
+                  
   /**
    * @brief Generate path boundary by left or right neightbor lane and self lane
    * @param pass_direction is side pass direction (left or right)

@@ -35,9 +35,13 @@ class StGraphPoint {
   const STPoint& point() const;
   const StGraphPoint* pre_point() const;
 
+  // reference speed profile, reach the cost, including position
   double reference_cost() const;
+
   double obstacle_cost() const;
+
   double spatial_potential_cost() const;
+
   double total_cost() const;
 
   void Init(const std::uint32_t index_t, const std::uint32_t index_s,

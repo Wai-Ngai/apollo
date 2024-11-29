@@ -46,6 +46,7 @@ bool PlanningComponent::Init() {
     planning_base_ = std::make_unique<OnLanePlanning>(injector_);
   }
 
+  // 解析ProtoBuf PlanningConfig
   ACHECK(ComponentBase::GetProtoConfig(&config_))
       << "failed to load planning config file "
       << ComponentBase::ConfigFilePath();

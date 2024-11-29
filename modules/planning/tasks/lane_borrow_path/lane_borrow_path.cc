@@ -57,21 +57,21 @@ apollo::common::Status LaneBorrowPath::Process(Frame* frame,
                                                ReferenceLineInfo* reference_line_info) {
   if (!config_.is_allow_lane_borrowing() ||
       reference_line_info->path_reusable()) {
-    ADEBUG << "path reusable" << reference_line_info->path_reusable()
-           << ",skip";
+    AINFO << "path reusable" << reference_line_info->path_reusable() << ",skip";
     return Status::OK();
   }
 
   // 判断是否需要借道，以及借道方向
   if (!IsNecessaryToBorrowLane()) {
-    ADEBUG << "No need to borrow lane";
+    AINFO << "No need to borrow lane";
     return Status::OK();
   }
-  std::vector<PathBoundary> candidate_path_boundaries;
-  std::vector<PathData> candidate_path_data;
 
   // 获取规划起点的笛卡尔坐标，而后通过参考线，将笛卡尔坐标转换为frenet坐标。如果使用前轴中心作为规划，将规划起点平移
   GetStartPointSLState();
+
+  std::vector<PathBoundary> candidate_path_boundaries;
+  std::vector<PathData> candidate_path_data;
 
   // 通过对周围车道、车辆位置和静态障碍物的分析，来决定车辆行驶的路径边界
   if (!DecidePathBounds(&candidate_path_boundaries)) {
@@ -86,7 +86,7 @@ apollo::common::Status LaneBorrowPath::Process(Frame* frame,
   // 评估候选路径数据，并选择一个最终路径
   if (AssessPath(&candidate_path_data,
                  reference_line_info->mutable_path_data())) {
-    ADEBUG << "lane borrow path success";
+    AINFO << "lane borrow path success";
   }
 
   return Status::OK();
@@ -108,6 +108,7 @@ bool LaneBorrowPath::DecidePathBounds(std::vector<PathBoundary>* boundary) {
       boundary->pop_back();
       continue;
     }
+
     // 2. Decide a rough boundary based on lane info and ADC's position
     if (!GetBoundaryFromNeighborLane(decided_side_pass_direction_[i],
                                      &path_bound, &borrow_lane_type)) {
@@ -115,7 +116,7 @@ bool LaneBorrowPath::DecidePathBounds(std::vector<PathBoundary>* boundary) {
       boundary->pop_back();
       continue;
     }
-    // path_bound.DebugString("after_neighbor_lane");
+
     // 3. Fine-tune the boundary based on static obstacles
     PathBound temp_path_bound = path_bound;
     if (!PathBoundsDeciderUtil::GetBoundaryFromStaticObstacles(*reference_line_info_, 
@@ -127,7 +128,7 @@ bool LaneBorrowPath::DecidePathBounds(std::vector<PathBoundary>* boundary) {
       boundary->pop_back();
       continue;
     }
-    // path_bound.DebugString("after_obs");
+
     // 4. Append some extra path bound points to avoid zero-length path data.
     int counter = 0;
     while (!blocking_obstacle_id.empty() &&
@@ -137,9 +138,10 @@ bool LaneBorrowPath::DecidePathBounds(std::vector<PathBoundary>* boundary) {
       counter++;
     }
     ADEBUG << "Completed generating path boundaries.";
+
     std::string label;
     if (decided_side_pass_direction_[i] == SidePassDirection::LEFT_BORROW) {
-      label = "regular/left" + borrow_lane_type;
+      label = "regular/left" + borrow_lane_type;  // reverse / forward
     } else {
       label = "regular/right" + borrow_lane_type;
     }
@@ -188,9 +190,11 @@ bool LaneBorrowPath::OptimizePath(const std::vector<PathBoundary>& path_boundari
         auto discretized_path = DiscretizedPath(PathOptimizerUtil::ConvertPathPointRefFromFrontAxeToRearAxe(path_data));
         path_data.SetDiscretizedPath(discretized_path);
       }
-      path_data.set_path_label(path_boundary.label());
+      path_data.set_path_label(path_boundary.label());  // regular/rightforward、regular/leftforward
       path_data.set_blocking_obstacle_id(path_boundary.blocking_obstacle_id());
       candidate_path_data->push_back(std::move(path_data));
+
+      AINFO << " path_label : " << path_boundary.label() ;
     }
   }
   if (candidate_path_data->empty()) {
@@ -263,8 +267,10 @@ bool LaneBorrowPath::GetBoundaryFromNeighborLane(const SidePassDirection pass_di
 
   for (size_t i = 0; i < path_bound->size(); ++i) {
     double curr_s = (*path_bound)[i].s;
+    AINFO << "curr_s : " << curr_s;
+
     // 1. Get the current lane width at current point.
-    double curr_lane_left_width = 0.0;
+    double curr_lane_left_width = 0.0;    // 均为正
     double curr_lane_right_width = 0.0;
     double offset_to_lane_center = 0.0;
     if (!reference_line.GetLaneWidth(curr_s, &curr_lane_left_width,
@@ -279,6 +285,9 @@ bool LaneBorrowPath::GetBoundaryFromNeighborLane(const SidePassDirection pass_di
       past_lane_left_width = curr_lane_left_width;
       past_lane_right_width = curr_lane_right_width;
     }
+    AINFO << "curr_lane_left_width  : " << curr_lane_left_width;
+    AINFO << "curr_lane_right_width : " << curr_lane_right_width;
+    
 
     // 2. Get the neighbor lane widths at the current point.
     double curr_neighbor_lane_width = 0.0;
@@ -288,32 +297,34 @@ bool LaneBorrowPath::GetBoundaryFromNeighborLane(const SidePassDirection pass_di
         // Borrowing left neighbor lane.
         if (reference_line_info_->GetNeighborLaneInfo(ReferenceLineInfo::LaneType::LeftForward, curr_s,
                                                       &neighbor_lane_id, &curr_neighbor_lane_width)) {
-          ADEBUG << "Borrow left forward neighbor lane."
+          AINFO << "Borrow left forward neighbor lane."
                 << neighbor_lane_id.id();
         } else if (reference_line_info_->GetNeighborLaneInfo(ReferenceLineInfo::LaneType::LeftReverse, curr_s,
                                                              &neighbor_lane_id, &curr_neighbor_lane_width)) {
           borrowing_reverse_lane = true;
-          ADEBUG << "Borrow left reverse neighbor lane."
+          AINFO << "Borrow left reverse neighbor lane."
                 << neighbor_lane_id.id();
         } else {
-          ADEBUG << "There is no left neighbor lane.";
+          AINFO << "There is no left neighbor lane.";
         }
       } else if (pass_direction == SidePassDirection::RIGHT_BORROW) {
         // Borrowing right neighbor lane.
         if (reference_line_info_->GetNeighborLaneInfo(ReferenceLineInfo::LaneType::RightForward, curr_s,
                                                       &neighbor_lane_id, &curr_neighbor_lane_width)) {
-          ADEBUG << "Borrow right forward neighbor lane."
+          AINFO << "Borrow right forward neighbor lane."
                 << neighbor_lane_id.id();
         } else if (reference_line_info_->GetNeighborLaneInfo(ReferenceLineInfo::LaneType::RightReverse, curr_s,
                                                              &neighbor_lane_id, &curr_neighbor_lane_width)) {
           borrowing_reverse_lane = true;
-          ADEBUG << "Borrow right reverse neighbor lane."
+          AINFO << "Borrow right reverse neighbor lane."
                 << neighbor_lane_id.id();
         } else {
-          ADEBUG << "There is no right neighbor lane.";
+          AINFO << "There is no right neighbor lane.";
         }
       }
     }
+    
+    AINFO << "curr_neighbor_lane_width : " << curr_neighbor_lane_width;
 
     // 3. Calculate the proper boundary based on lane-width, ADC's position, and ADC's velocity.
     double offset_to_map = 0.0;
@@ -321,7 +332,7 @@ bool LaneBorrowPath::GetBoundaryFromNeighborLane(const SidePassDirection pass_di
 
     double curr_left_bound_lane = curr_lane_left_width + (pass_direction == SidePassDirection::LEFT_BORROW
                                   ? curr_neighbor_lane_width
-                                  : 0.0);
+                                  : 0.0);    // 加上借道的道路宽度
 
     double curr_right_bound_lane = -curr_lane_right_width - (pass_direction == SidePassDirection::RIGHT_BORROW
                                    ? curr_neighbor_lane_width
@@ -330,6 +341,10 @@ bool LaneBorrowPath::GetBoundaryFromNeighborLane(const SidePassDirection pass_di
     double curr_right_bound = 0.0;
     curr_left_bound = curr_left_bound_lane - offset_to_map;
     curr_right_bound = curr_right_bound_lane - offset_to_map;
+
+    AINFO << "offset_to_map         : " << offset_to_map;
+    AINFO << "curr_left_bound_lane  : " << curr_left_bound_lane;
+    AINFO << "curr_right_bound_lane : " << curr_right_bound_lane;
 
     // 4. Update the boundary.
     if (!PathBoundsDeciderUtil::UpdatePathBoundaryWithBuffer(curr_left_bound, curr_right_bound, 
@@ -341,6 +356,8 @@ bool LaneBorrowPath::GetBoundaryFromNeighborLane(const SidePassDirection pass_di
       break;
     }
   }
+
+  // 把挡住后的那段路去掉
   PathBoundsDeciderUtil::TrimPathBounds(path_blocked_idx, path_bound);
   *borrow_lane_type = borrowing_reverse_lane ? "reverse" : "forward";
   return true;
@@ -356,15 +373,17 @@ void LaneBorrowPath::UpdateSelfPathInfo() {
     use_self_lane_ = 0;
   }
   blocking_obstacle_id_ = cur_path.blocking_obstacle_id();
+  
+  AINFO << " use_self_lane_ : " << use_self_lane_;
 }
 
 bool LaneBorrowPath::IsNecessaryToBorrowLane() {
   auto* mutable_path_decider_status = injector_->planning_context()
                                                ->mutable_planning_status()
                                                ->mutable_path_decider();
-  // 首先检查当前是否处于借道场景中
+  // 首先检查当前是否处于借道场景中, 检查是否借道结束
   if (mutable_path_decider_status->is_in_path_lane_borrow_scenario()) {
-    // If originally borrowing neighbor lane: 检查是否借道结束
+    // If originally borrowing neighbor lane: 
     UpdateSelfPathInfo();
     
     if (use_self_lane_ >= 6) {
@@ -377,8 +396,9 @@ bool LaneBorrowPath::IsNecessaryToBorrowLane() {
     // If originally not borrowing neighbor lane: 检查是否需要借道：自车道是否被阻塞且满足借道条件
     AINFO << "Blocking obstacle ID["
           << mutable_path_decider_status->front_static_obstacle_id() << "]";
+
     // ADC requirements check for lane-borrowing:
-    if (!HasSingleReferenceLine(*frame_)) {                              // 是否只有一条车道
+    if (!HasSingleReferenceLine(*frame_)) {                              // 只有一条车道（不能变道）, 继续判断
       return false;
     }
     if (!IsWithinSidePassingSpeedADC(*frame_)) {                         // 是否在侧向通行速度范围内
@@ -417,9 +437,11 @@ bool LaneBorrowPath::IsNecessaryToBorrowLane() {
         mutable_path_decider_status->set_is_in_path_lane_borrow_scenario(true);
         if (left_borrowable) {
           decided_side_pass_direction_.push_back(SidePassDirection::LEFT_BORROW);
+          AINFO << "SidePassDirection::LEFT_BORROW ";
         }
         if (right_borrowable) {
           decided_side_pass_direction_.push_back(SidePassDirection::RIGHT_BORROW);
+          AINFO << "SidePassDirection::RIGHT_BORROW ";
         }
       }
     }
@@ -434,14 +456,13 @@ bool LaneBorrowPath::HasSingleReferenceLine(const Frame& frame) {
 }
 
 bool LaneBorrowPath::IsWithinSidePassingSpeedADC(const Frame& frame) {
-  return frame.PlanningStartPoint().v() < config_.lane_borrow_max_speed();
+  return frame.PlanningStartPoint().v() < config_.lane_borrow_max_speed();  // 5
 }
 
 bool LaneBorrowPath::IsLongTermBlockingObstacle() {
   if (injector_->planning_context()->planning_status()
-                .path_decider()
-                .front_static_obstacle_cycle_counter() >=
-      config_.long_term_blocking_obstacle_cycle_threshold()) {
+                .path_decider().front_static_obstacle_cycle_counter() >=
+      config_.long_term_blocking_obstacle_cycle_threshold()) {  // 3
     ADEBUG << "The blocking obstacle is long-term existing.";
     return true;
   } else {
@@ -469,8 +490,8 @@ bool LaneBorrowPath::IsBlockingObstacleWithinDestination(const ReferenceLineInfo
   ADEBUG << "ADC is at s = " << adc_end_s;
   ADEBUG << "Destination is at s = "
          << reference_line_info.SDistanceToDestination() + adc_end_s;
-  if (blocking_obstacle_s - adc_end_s >
-      reference_line_info.SDistanceToDestination()) {
+
+  if (blocking_obstacle_s - adc_end_s > reference_line_info.SDistanceToDestination()) {
     return false;
   }
   return true;
@@ -548,7 +569,9 @@ void LaneBorrowPath::CheckLaneBorrow(const ReferenceLineInfo& reference_line_inf
   static constexpr double kLookforwardDistance = 100.0;
   double check_s = reference_line_info.AdcSlBoundary().end_s();
   const double lookforward_distance = std::min(check_s + kLookforwardDistance, reference_line.Length());
+  AINFO << "check_s : " << check_s << " lookforward_distance : " << lookforward_distance;
 
+  // 从自车车尾向前看100m，每隔2m一个点，看是否允许变道
   while (check_s < lookforward_distance) {
     auto ref_point = reference_line.GetNearestReferencePoint(check_s);
     if (ref_point.lane_waypoints().empty()) {
@@ -566,6 +589,7 @@ void LaneBorrowPath::CheckLaneBorrow(const ReferenceLineInfo& reference_line_inf
       *right_neighbor_lane_borrowable = false;
     }
 
+    // 取出下一个路径点
     const auto waypoint = ref_point.lane_waypoints().front();
     hdmap::LaneBoundaryType::Type lane_boundary_type = hdmap::LaneBoundaryType::UNKNOWN;
 
@@ -576,7 +600,7 @@ void LaneBorrowPath::CheckLaneBorrow(const ReferenceLineInfo& reference_line_inf
           lane_boundary_type == hdmap::LaneBoundaryType::SOLID_WHITE) {
         *left_neighbor_lane_borrowable = false;
       }
-      ADEBUG << "s[" << check_s << "] left_lane_boundary_type["
+      AINFO << "s[" << check_s << "] left_lane_boundary_type["
              << LaneBoundaryType_Type_Name(lane_boundary_type) << "]";
     }
     if (*right_neighbor_lane_borrowable) {
@@ -585,7 +609,7 @@ void LaneBorrowPath::CheckLaneBorrow(const ReferenceLineInfo& reference_line_inf
           lane_boundary_type == hdmap::LaneBoundaryType::SOLID_WHITE) {
         *right_neighbor_lane_borrowable = false;
       }
-      ADEBUG << "s[" << check_s << "] right_neighbor_lane_borrowable["
+      AINFO << "s[" << check_s << "] right_neighbor_lane_borrowable["
              << LaneBoundaryType_Type_Name(lane_boundary_type) << "]";
     }
     check_s += 2.0;
@@ -602,8 +626,8 @@ bool LaneBorrowPath::CheckLaneBoundaryType(const ReferenceLineInfo& reference_li
   }
 
   const auto waypoint = ref_point.lane_waypoints().front();
-  hdmap::LaneBoundaryType::Type lane_boundary_type =
-      hdmap::LaneBoundaryType::UNKNOWN;
+  hdmap::LaneBoundaryType::Type lane_boundary_type = hdmap::LaneBoundaryType::UNKNOWN;
+
   if (lane_borrow_info == SidePassDirection::LEFT_BORROW) {
     lane_boundary_type = hdmap::LeftBoundaryType(waypoint);
   } else if (lane_borrow_info == SidePassDirection::RIGHT_BORROW) {

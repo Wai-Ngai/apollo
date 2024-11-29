@@ -98,7 +98,8 @@ void PathGeneration::GetStartPointSLState() {
   const ReferenceLine& reference_line = reference_line_info_->reference_line();
   common::TrajectoryPoint planning_start_point = frame_->PlanningStartPoint();
 
-  if (FLAGS_use_front_axe_center_in_path_planning) { // 是否使用前轴中心作为规划
+  // If using front axe center in path planning, the path can be more agile.
+  if (FLAGS_use_front_axe_center_in_path_planning) {
     double front_to_rear_axe_distance = apollo::common::VehicleConfigHelper::GetConfig().vehicle_param().wheel_base();
     planning_start_point.mutable_path_point()->set_x(planning_start_point.path_point().x() +
                                                      front_to_rear_axe_distance * std::cos(planning_start_point.path_point().theta()));

@@ -59,13 +59,16 @@ FrenetFramePath PathOptimizerUtil::ToPiecewiseJerkPath(const std::vector<double>
     frenet_frame_point.set_ddl(ddl);
     frenet_frame_path.push_back(std::move(frenet_frame_point));
 
-    accumulated_s += FLAGS_trajectory_space_resolution;
+    accumulated_s += FLAGS_trajectory_space_resolution;  // 1
+    
+    AINFO << " accumulated_s : " << accumulated_s;
   }
 
   return FrenetFramePath(std::move(frenet_frame_path));
 }
 
 double PathOptimizerUtil::EstimateJerkBoundary(const double vehicle_speed) {
+  // 满足方向盘转角范围内
   const auto& veh_param = common::VehicleConfigHelper::GetConfig().vehicle_param();
   const double axis_distance = veh_param.wheel_base();   // 2.8448
   const double max_yaw_rate = veh_param.max_steer_angle_rate() / veh_param.steer_ratio(); // 0.43633
@@ -97,6 +100,7 @@ bool PathOptimizerUtil::OptimizePath(const SLState& init_state, const std::array
   // num of knots
   const auto& lat_boundaries = path_boundary.boundary();
   const size_t kNumKnots = lat_boundaries.size();
+  AINFO << " Path kNumKnots : " << kNumKnots;   // 一般至少200，参考线短会少
 
   double delta_s = path_boundary.delta_s(); // 0.5
   PiecewiseJerkPathProblem piecewise_jerk_problem(kNumKnots, delta_s,
@@ -184,11 +188,15 @@ void PathOptimizerUtil::UpdatePathRefWithBound(const PathBoundary& path_boundary
                                                std::vector<double>* weight_ref_l) {
   ref_l->resize(path_boundary.size());
   weight_ref_l->resize(path_boundary.size());
+
+  // 由于静态障碍物挡住导致绕行，更新该部分边界
   for (size_t i = 0; i < ref_l->size(); i++) {
     if (path_boundary[i].l_lower.type == BoundType::OBSTACLE ||
         path_boundary[i].l_upper.type == BoundType::OBSTACLE) {
       ref_l->at(i) = (path_boundary[i].l_lower.l + path_boundary[i].l_upper.l) / 2.0;
-      weight_ref_l->at(i) = weight;
+      weight_ref_l->at(i) = weight;                     //  100(LK)
+      
+      AINFO << " i : " << i << "   l : " << ref_l->at(i);
     } else {
       weight_ref_l->at(i) = 0;
     }
@@ -199,8 +207,12 @@ void PathOptimizerUtil::CalculateAccBound(const PathBoundary& path_boundary,
                                           const ReferenceLine& reference_line,
                                           std::vector<std::pair<double, double>>* ddl_bounds) {
   const auto& veh_param = common::VehicleConfigHelper::GetConfig().vehicle_param();
+  
+  // k_max = tan(α_max)/L
   const double lat_acc_bound = std::tan(veh_param.max_steer_angle() / veh_param.steer_ratio()) /
                                veh_param.wheel_base();  // 0.197868
+  
+  // [-k_max - k_ref,  k_max - k_ref]
   size_t path_boundary_size = path_boundary.boundary().size();
   for (size_t i = 0; i < path_boundary_size; ++i) {
     double s = static_cast<double>(i) * path_boundary.delta_s() + path_boundary.start_s();

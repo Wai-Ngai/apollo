@@ -702,14 +702,12 @@ bool HybridAStar::GetTemporalProfile(HybridAStartResult* result) {
   return true;
 }
 
-bool HybridAStar::Plan(
-    double sx, double sy, double sphi, double ex, double ey, double ephi,
-    const std::vector<double>& XYbounds,
-    const std::vector<std::vector<common::math::Vec2d>>& obstacles_vertices_vec,
-    HybridAStartResult* result,
-    const std::vector<std::vector<common::math::Vec2d>>&
-        soft_boundary_vertices_vec,
-    bool reeds_sheep_last_straight) {
+bool HybridAStar::Plan(double sx, double sy, double sphi, double ex, double ey, double ephi,
+                       const std::vector<double>& XYbounds,
+                       const std::vector<std::vector<common::math::Vec2d>>& obstacles_vertices_vec,
+                       HybridAStartResult* result,
+                       const std::vector<std::vector<common::math::Vec2d>>& soft_boundary_vertices_vec,
+                       bool reeds_sheep_last_straight) {
   reed_shepp_generator_->reeds_sheep_last_straight_ = reeds_sheep_last_straight;
   // clear containers
   open_set_.clear();
@@ -717,15 +715,14 @@ bool HybridAStar::Plan(
   open_pq_ = decltype(open_pq_)();
   final_node_ = nullptr;
   PrintCurves print_curves;
-  std::vector<std::vector<common::math::LineSegment2d>>
-      obstacles_linesegments_vec;
+  std::vector<std::vector<common::math::LineSegment2d>> obstacles_linesegments_vec;
+
   for (const auto& obstacle_vertices : obstacles_vertices_vec) {
     size_t vertices_num = obstacle_vertices.size();
     std::vector<common::math::LineSegment2d> obstacle_linesegments;
     for (size_t i = 0; i < vertices_num - 1; ++i) {
-      common::math::LineSegment2d line_segment =
-          common::math::LineSegment2d(
-              obstacle_vertices[i], obstacle_vertices[i + 1]);
+      common::math::LineSegment2d line_segment = common::math::LineSegment2d(obstacle_vertices[i], 
+                                                                             obstacle_vertices[i + 1]);
       obstacle_linesegments.emplace_back(line_segment);
     }
     obstacles_linesegments_vec.emplace_back(obstacle_linesegments);
@@ -785,6 +782,7 @@ bool HybridAStar::Plan(
   // load open set, pq
   open_set_.insert(start_node_->GetIndex());
   open_pq_.emplace(start_node_, start_node_->GetCost());
+
   // Hybrid A* begins
   size_t explored_node_num = 0;
   size_t available_result_num = 0;
@@ -795,11 +793,9 @@ bool HybridAStar::Plan(
   double rs_time = 0.0;
   double node_generator_time = 0.0;
   double validity_check_time = 0.0;
-  size_t max_explored_num =
-      planner_open_space_config_.warm_start_config().max_explored_num();
-  size_t desired_explored_num = std::min(
-      planner_open_space_config_.warm_start_config().desired_explored_num(),
-      planner_open_space_config_.warm_start_config().max_explored_num());
+  size_t max_explored_num = planner_open_space_config_.warm_start_config().max_explored_num();
+  size_t desired_explored_num = std::min(planner_open_space_config_.warm_start_config().desired_explored_num(),
+                                         planner_open_space_config_.warm_start_config().max_explored_num());
   static constexpr int kMaxNodeNum = 200000;
   std::vector<std::shared_ptr<Node3d>> candidate_final_nodes;
   while (!open_pq_.empty() &&
@@ -810,6 +806,7 @@ bool HybridAStar::Plan(
     open_pq_.pop();
     const double rs_start_time = Clock::NowInSeconds();
     std::shared_ptr<Node3d> final_node = nullptr;
+    
     if (AnalyticExpansion(current_node, &final_node)) {
       if (final_node_ == nullptr ||
           final_node_->GetTrajCost() > final_node->GetTrajCost()) {

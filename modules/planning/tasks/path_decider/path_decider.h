@@ -38,6 +38,10 @@ class PathDecider : public Task {
   apollo::common::Status Execute(Frame *frame, ReferenceLineInfo *reference_line_info) override;
 
  private:
+  /**
+   * @brief 给静态障碍物打标签：忽略，绕过，停车等等
+   * 
+   */
   apollo::common::Status Process(const ReferenceLineInfo *reference_line_info,
                                  const PathData &path_data,
                                  PathDecision *const path_decision);

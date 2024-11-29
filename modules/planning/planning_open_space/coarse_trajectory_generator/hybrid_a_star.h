@@ -60,41 +60,46 @@ class HybridAStar {
  public:
   explicit HybridAStar(const PlannerOpenSpaceConfig& open_space_conf);
   virtual ~HybridAStar() = default;
-  bool TrajectoryPartition(
-          const HybridAStartResult& result,
-          std::vector<HybridAStartResult>* partitioned_result);
+
+  bool TrajectoryPartition(const HybridAStartResult& result,
+                           std::vector<HybridAStartResult>* partitioned_result);
 
  private:
-  bool AnalyticExpansion(
-          std::shared_ptr<Node3d> current_node,
-          std::shared_ptr<Node3d>* candidate_final_node);
+  bool AnalyticExpansion(std::shared_ptr<Node3d> current_node,
+                         std::shared_ptr<Node3d>* candidate_final_node);
+
   // check collision and validity
   bool ValidityCheck(std::shared_ptr<Node3d> node);
+
   // check Reeds Shepp path collision and validity
   bool RSPCheck(const std::shared_ptr<ReedSheppPath> reeds_shepp_to_end);
+
   // load the whole RSP as nodes and add to the close set
-  std::shared_ptr<Node3d> LoadRSPinCS(
-          const std::shared_ptr<ReedSheppPath> reeds_shepp_to_end,
-          std::shared_ptr<Node3d> current_node);
-  std::shared_ptr<Node3d> Next_node_generator(
-          std::shared_ptr<Node3d> current_node,
-          size_t next_node_index);
-  void CalculateNodeCost(
-          std::shared_ptr<Node3d> current_node,
-          std::shared_ptr<Node3d> next_node);
-  double TrajCost(
-          std::shared_ptr<Node3d> current_node,
-          std::shared_ptr<Node3d> next_node);
+  std::shared_ptr<Node3d> LoadRSPinCS(const std::shared_ptr<ReedSheppPath> reeds_shepp_to_end,
+                                      std::shared_ptr<Node3d> current_node);
+
+  std::shared_ptr<Node3d> Next_node_generator(std::shared_ptr<Node3d> current_node,
+                                              size_t next_node_index);
+
+  void CalculateNodeCost(std::shared_ptr<Node3d> current_node,
+                         std::shared_ptr<Node3d> next_node);
+
+  double TrajCost(std::shared_ptr<Node3d> current_node,
+                  std::shared_ptr<Node3d> next_node);
+
   double HoloObstacleHeuristic(std::shared_ptr<Node3d> next_node);
+
   bool GetResult(HybridAStartResult* result);
+
   bool GetTemporalProfile(HybridAStartResult* result);
+
   bool GenerateSpeedAcceleration(HybridAStartResult* result);
+
   bool GenerateSCurveSpeedAcceleration(HybridAStartResult* result);
 
  private:
   PlannerOpenSpaceConfig planner_open_space_config_;
-  common::VehicleParam vehicle_param_ =
-      common::VehicleConfigHelper::GetConfig().vehicle_param();
+  common::VehicleParam vehicle_param_ = common::VehicleConfigHelper::GetConfig().vehicle_param();
   size_t next_node_num_ = 0;
   double max_steer_angle_ = 0.0;
   double max_kappa_ = 0.0;
@@ -127,8 +132,7 @@ class HybridAStar {
   std::shared_ptr<Node3d> start_node_;
   std::shared_ptr<Node3d> end_node_;
   std::shared_ptr<Node3d> final_node_;
-  std::vector<std::vector<common::math::LineSegment2d>>
-      obstacles_linesegments_vec_;
+  std::vector<std::vector<common::math::LineSegment2d>> obstacles_linesegments_vec_;
 
   struct cmp {
       bool operator()(
@@ -137,11 +141,9 @@ class HybridAStar {
           return left.second >= right.second;
       }
   };
-  std::priority_queue<
-          std::pair<std::shared_ptr<Node3d>, double>,
-          std::vector<std::pair<std::shared_ptr<Node3d>, double>>,
-          cmp>
-          open_pq_;
+  std::priority_queue<std::pair<std::shared_ptr<Node3d>, double>,
+                      std::vector<std::pair<std::shared_ptr<Node3d>, double>>,
+                      cmp> open_pq_;
   std::unordered_set<std::string> open_set_;
   std::unordered_set<std::string> close_set_;
   std::unique_ptr<ReedShepp> reed_shepp_generator_;
@@ -151,29 +153,24 @@ class HybridAStar {
  public:
   explicit HybridAStar(const WarmStartConfig& open_space_conf);
 
-  bool Plan(
-          double sx,
-          double sy,
-          double sphi,
-          double ex,
-          double ey,
-          double ephi,
-          const std::vector<double>& XYbounds,
-          const std::vector<std::vector<common::math::Vec2d>>&
-              obstacles_vertices_vec,
-          HybridAStartResult* result,
-          const std::vector<std::vector<common::math::Vec2d>>&
-              soft_boundary_vertices_vec = {},
-          bool reeds_sheep_last_straight = false);
+  bool Plan(double sx,
+            double sy,
+            double sphi,
+            double ex,
+            double ey,
+            double ephi,
+            const std::vector<double>& XYbounds,
+            const std::vector<std::vector<common::math::Vec2d>>& obstacles_vertices_vec,
+            HybridAStartResult* result,
+            const std::vector<std::vector<common::math::Vec2d>>& soft_boundary_vertices_vec = {},
+            bool reeds_sheep_last_straight = false);
 
  private:
-  double GetSoftBoundaryCost(
-          const std::shared_ptr<ReedSheppPath>& reeds_shepp_to_end);
+  double GetSoftBoundaryCost(const std::shared_ptr<ReedSheppPath>& reeds_shepp_to_end);
   bool RSPLengthCheck(const std::shared_ptr<ReedSheppPath> reeds_shepp_path);
 
   WarmStartConfig planner_warm_start_config_;
-  std::vector<std::vector<common::math::LineSegment2d>>
-      soft_boundary_linesegments_vec_;
+  std::vector<std::vector<common::math::LineSegment2d>> soft_boundary_linesegments_vec_;
   double traj_expected_shortest_length_ = 0.0;
   double traj_short_length_penalty_ = 0.0;
 };

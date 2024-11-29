@@ -86,7 +86,7 @@ class GriddedPathTimeGraph {
 
   std::vector<double> speed_limit_by_index_;
 
-  std::vector<double> spatial_distance_by_index_;
+  std::vector<double> spatial_distance_by_index_; // 空间离散点 s-index
 
   // dp st configuration
   DpStSpeedOptimizerConfig gridded_path_time_graph_config_;

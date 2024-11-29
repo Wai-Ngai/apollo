@@ -42,21 +42,29 @@ bool FallbackPath::Init(const std::string& config_dir, const std::string& name,
 
 apollo::common::Status FallbackPath::Process(Frame* frame, 
                                              ReferenceLineInfo* reference_line_info) {
-  // 前置task未生成路径时，生成备用路径。
+  // 前置task未生成路径时，生成备用路径。只根据车道、车辆位姿生成路径，不考虑道路障碍物信息
   if (!reference_line_info->path_data().Empty() ||
-      reference_line_info->IsChangeLanePath()) {
+      reference_line_info->IsChangeLanePath()) { // ? 如果Lane Change, Lane Fellow路径没有生成?这里是否合理
     return Status::OK();
   }
+
   std::vector<PathBoundary> candidate_path_boundaries;
   std::vector<PathData> candidate_path_data;
 
+  // 规划起点cartesian转换为frenet坐标。如果使用前轴中心作为规划起点，将规划起点平移。（代码上看，默认后轴作为规划起点）
   GetStartPointSLState();
+
+  // 通过对周围车道、车辆位置的分析，来决定车辆行驶的路径边界
   if (!DecidePathBounds(&candidate_path_boundaries)) {
     return Status::OK();
   }
+
+  // 优化路径
   if (!OptimizePath(candidate_path_boundaries, &candidate_path_data)) {
     return Status::OK();
   }
+
+  // 评估候选路径数据，并选择一个最终路径
   if (!AssessPath(&candidate_path_data,
                   reference_line_info->mutable_path_data())) {
     AERROR << "Path assessment failed";
@@ -68,6 +76,7 @@ apollo::common::Status FallbackPath::Process(Frame* frame,
 bool FallbackPath::DecidePathBounds(std::vector<PathBoundary>* boundary) {
   boundary->emplace_back();
   auto& path_bound = boundary->back();
+
   // 1. Initialize the path boundaries to be an indefinitely large area.
   if (!PathBoundsDeciderUtil::InitPathBoundary(*reference_line_info_,
                                                &path_bound, init_sl_state_)) {
@@ -75,6 +84,7 @@ bool FallbackPath::DecidePathBounds(std::vector<PathBoundary>* boundary) {
     AERROR << msg;
     return false;
   }
+
   // 2. Decide a rough boundary based on lane info and ADC's position
   if (!PathBoundsDeciderUtil::GetBoundaryFromSelfLane(*reference_line_info_, 
                                                       init_sl_state_, &path_bound)) {
@@ -87,7 +97,8 @@ bool FallbackPath::DecidePathBounds(std::vector<PathBoundary>* boundary) {
     AERROR << "Failed to decide a rough boundary based on adc.";
     return false;
   }
-  path_bound.set_label(absl::StrCat("fallback/", "self"));
+
+  path_bound.set_label(absl::StrCat("fallback/", "self"));   // fallback/self
   RecordDebugInfo(path_bound, path_bound.label(), reference_line_info_);
   return true;
 }
@@ -105,6 +116,7 @@ bool FallbackPath::OptimizePath(const std::vector<PathBoundary>& path_boundaries
       AERROR << "Get invalid path boundary with size: " << path_boundary_size;
       return false;
     }
+    
     std::vector<double> opt_l, opt_dl, opt_ddl;
     std::vector<std::pair<double, double>> ddl_bounds;
     PathOptimizerUtil::CalculateAccBound(path_boundary, reference_line,
@@ -132,9 +144,11 @@ bool FallbackPath::OptimizePath(const std::vector<PathBoundary>& path_boundaries
         auto discretized_path = DiscretizedPath(PathOptimizerUtil::ConvertPathPointRefFromFrontAxeToRearAxe(path_data));
         path_data.SetDiscretizedPath(discretized_path);
       }
-      path_data.set_path_label(path_boundary.label());
+      path_data.set_path_label(path_boundary.label());  // fallback/self
       path_data.set_blocking_obstacle_id(path_boundary.blocking_obstacle_id());
       candidate_path_data->push_back(std::move(path_data));
+
+      AINFO << " path_label : " << path_boundary.label() ;
     }
   }
   if (candidate_path_data->empty()) {
@@ -148,6 +162,7 @@ bool FallbackPath::AssessPath(std::vector<PathData>* candidate_path_data,
   PathData curr_path_data = candidate_path_data->back();
   RecordDebugInfo(curr_path_data, curr_path_data.path_label(),
                   reference_line_info_);
+                  
   if (curr_path_data.Empty()) {
     ADEBUG << "Fallback Path: path data is empty.";
     return false;

@@ -42,7 +42,6 @@ SpeedLimitDecider::SpeedLimitDecider(const SpeedBoundsDeciderConfig& config,
       vehicle_param_(common::VehicleConfigHelper::GetConfig().vehicle_param()) {
 }
 
-// 计算规划路径中每个点所在位置的速度限制
 Status SpeedLimitDecider::GetSpeedLimits(const IndexedList<std::string, Obstacle>& obstacles,
                                          SpeedLimit* const speed_limit_data) const {
   CHECK_NOTNULL(speed_limit_data);
@@ -50,6 +49,8 @@ Status SpeedLimitDecider::GetSpeedLimits(const IndexedList<std::string, Obstacle
   const auto& discretized_path = path_data_.discretized_path();
   const auto& frenet_path = path_data_.frenet_frame_path();
   PrintCurves print_curve;
+
+  // 计算规划路径中每个点所在位置的速度限制
   for (uint32_t i = 0; i < discretized_path.size(); ++i) {
     const double path_s = discretized_path.at(i).s();
     const double reference_line_s = frenet_path.at(i).s();
@@ -60,7 +61,7 @@ Status SpeedLimitDecider::GetSpeedLimits(const IndexedList<std::string, Obstacle
       break;
     }
 
-    // (1) speed limit from map 车道限速
+    // (1) speed limit from map 地图车道限速
     double speed_limit_from_reference_line = reference_line_.GetSpeedLimitFromS(reference_line_s);
     print_curve.AddPoint("speed_limit_from_ref", path_s,
                          speed_limit_from_reference_line);
@@ -73,7 +74,7 @@ Status SpeedLimitDecider::GetSpeedLimits(const IndexedList<std::string, Obstacle
     print_curve.AddPoint("speed_limit_from_centripetal_acc", path_s,
                          speed_limit_from_centripetal_acc);
 
-    // (3) speed limit from nudge obstacles 无人车微调限制
+    // (3) speed limit from nudge obstacles 无人车微调限速
     // TODO(all): in future, expand the speed limit not only to obstacles with nudge decisions.
     double speed_limit_from_nearby_obstacles = std::numeric_limits<double>::max();
     const double collision_safety_range = speed_bounds_config_.collision_safety_range();
@@ -100,7 +101,7 @@ Status SpeedLimitDecider::GetSpeedLimits(const IndexedList<std::string, Obstacle
       const double obstacle_back_s = ptr_obstacle->PerceptionSLBoundary().start_s();
 
       if (vehicle_front_s < obstacle_back_s ||
-          vehicle_back_s > obstacle_front_s) {
+          vehicle_back_s > obstacle_front_s) { // 若车辆与障碍物在s方向上没有发生重合,跳过
         continue;
       }
 
@@ -116,7 +117,6 @@ Status SpeedLimitDecider::GetSpeedLimits(const IndexedList<std::string, Obstacle
                                ptr_obstacle->PerceptionSLBoundary().end_l());
 
       // obstacle is on the left of ego vehicle (at path point i)
-      // 障碍物标签为向右微调ObjectNudge::RIGHT_NUDGE，并且无人车确实被障碍物阻挡
       bool is_close_on_right = (nudge_decision.type() == ObjectNudge::RIGHT_NUDGE) &&
                                (ptr_obstacle->PerceptionSLBoundary().start_l() - collision_safety_range <
                                 frenet_point_l + vehicle_param_.left_edge_to_center());

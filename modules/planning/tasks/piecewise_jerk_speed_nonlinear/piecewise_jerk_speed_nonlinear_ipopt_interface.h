@@ -50,7 +50,8 @@ class PiecewiseJerkSpeedNonlinearIpoptInterface : public Ipopt::TNLP {
                                 std::vector<double> *ptr_opt_v,
                                 std::vector<double> *ptr_opt_a);
 
-  void set_end_state_target(const double s_target, const double v_target,
+  void set_end_state_target(const double s_target, 
+                            const double v_target,
                             const double a_target);
 
   void set_reference_speed(const double s_dot_ref);
@@ -63,7 +64,8 @@ class PiecewiseJerkSpeedNonlinearIpoptInterface : public Ipopt::TNLP {
 
   void set_soft_safety_bounds(const std::vector<std::pair<double, double>> &soft_safety_bounds);
 
-  void set_w_target_state(const double w_target_s, const double w_target_v,
+  void set_w_target_state(const double w_target_s, 
+                          const double w_target_v,
                           const double w_target_a);
 
   void set_w_overall_a(const double w_overall_a);
@@ -108,17 +110,16 @@ class PiecewiseJerkSpeedNonlinearIpoptInterface : public Ipopt::TNLP {
                   int *iRow, int *jCol, double *values) override;
 
   /** Method to return:
-   *   1) The structure of the hessian of the lagrangian (if "values" is
-   * nullptr) 2) The values of the hessian of the lagrangian (if "values" is not
-   * nullptr)
+   *   1) The structure of the hessian of the lagrangian (if "values" is nullptr) 
+   *   2) The values of the hessian of the lagrangian (if "values" is not nullptr) 
    */
   bool eval_h(int n, const double *x, bool new_x, double obj_factor, int m,
               const double *lambda, bool new_lambda, int nele_hess, int *iRow,
               int *jCol, double *values) override;
 
   /** @name Solution Methods */
-  /** This method is called when the algorithm is complete so the TNLP can
-   * store/write the solution */
+  /** This method is called when the algorithm is complete so the TNLP can store/write the solution 
+   */
   void finalize_solution(Ipopt::SolverReturn status, int n, const double *x,
                          const double *z_L, const double *z_U, int m,
                          const double *g, const double *lambda,
@@ -131,90 +132,66 @@ class PiecewiseJerkSpeedNonlinearIpoptInterface : public Ipopt::TNLP {
   std::unordered_map<int, int> hessian_mapper_;
 
   PiecewiseJerkTrajectory1d curvature_curve_;
-
-  bool use_v_bound_ = false;
-
-  bool use_soft_safety_bound_ = false;
-
   PiecewiseJerkTrajectory1d v_bound_func_;
 
+  bool use_v_bound_ = false;
+  bool use_soft_safety_bound_ = false;
+
   const double s_init_;
-
   const double s_dot_init_;
-
   const double s_ddot_init_;
 
   const double delta_t_;
-
   const int num_of_points_;
 
   const double s_max_;
-
   const double s_dot_max_;
-
   const double s_ddot_min_;
-
   const double s_ddot_max_;
-
   const double s_dddot_min_;
-
   const double s_dddot_max_;
 
   const int v_offset_;
-
   const int a_offset_;
 
   int lower_s_slack_offset_ = 0;
-
   int upper_s_slack_offset_ = 0;
 
   int num_of_variables_ = 0;
-
   int num_of_constraints_ = 0;
 
   double w_target_s_ = 10000.0;
-
   double w_target_v_ = 10000.0;
-
   double w_target_a_ = 10000.0;
 
   double w_ref_v_ = 1.0;
-
   double w_ref_s_ = 1.0;
-
   double w_overall_a_ = 100.0;
-
   double w_overall_j_ = 10.0;
-
   double w_overall_centripetal_acc_ = 500.0;
-
   double w_soft_s_bound_ = 0.0;
 
   double v_max_ = 0.0;
 
   double s_target_ = 0.0;
-
   double v_target_ = 0.0;
-
   double a_target_ = 0.0;
 
   double v_ref_ = 0.0;
 
   std::vector<std::pair<double, double>> safety_bounds_;
-
   std::vector<std::pair<double, double>> soft_safety_bounds_;
 
   bool has_end_state_target_ = false;
 
   std::vector<double> opt_s_;
-
   std::vector<double> opt_v_;
-
   std::vector<double> opt_a_;
 
   std::vector<std::vector<double>> x_warm_start_;
 
   std::vector<double> s_ref_;
 };
+
 }  // namespace planning
 }  // namespace apollo

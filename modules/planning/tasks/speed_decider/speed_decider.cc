@@ -231,7 +231,7 @@ Status SpeedDecider::MakeObjectDecision(const SpeedData& speed_profile,
       continue;
     }
     if (obstacle->HasLongitudinalDecision()) {
-      AppendIgnoreDecision(mutable_obstacle);  // 已经存在纵向决策，为啥添加忽略决策？？
+      AppendIgnoreDecision(mutable_obstacle);  // 已经存在纵向决策，如果没有横向决策，添加忽略决策。否则，里面什么也不做
       continue;
     }
 
@@ -342,6 +342,7 @@ Status SpeedDecider::MakeObjectDecision(const SpeedData& speed_profile,
 void SpeedDecider::AppendIgnoreDecision(Obstacle* obstacle) const {
   ObjectDecisionType ignore_decision;
   ignore_decision.mutable_ignore();
+
   if (!obstacle->HasLongitudinalDecision()) {
     obstacle->AddLongitudinalDecision("dp_st_graph", ignore_decision);
   }
@@ -362,8 +363,7 @@ bool SpeedDecider::CreateStopDecision(const Obstacle& obstacle,
   if (boundary.boundary_type() == STBoundary::BoundaryType::KEEP_CLEAR) {
     fence_s = obstacle.PerceptionSLBoundary().start_s();
   }
-  const double main_stop_s =
-      reference_line_info_->path_decision()->stop_reference_line_s();
+  const double main_stop_s = reference_line_info_->path_decision()->stop_reference_line_s();
   if (main_stop_s < fence_s) {
     ADEBUG << "Stop fence is further away, ignore.";
     return false;
@@ -530,7 +530,7 @@ bool SpeedDecider::CheckStopForPedestrian(const Obstacle& obstacle) const {
                                                 ->mutable_planning_status()
                                                 ->mutable_speed_decider();
   std::unordered_map<std::string, double> stop_time_map;
-  for (const auto& pedestrian_stop_time : mutable_speed_decider_status->pedestrian_stop_time()) {
+  for (const auto& pedestrian_stop_time : mutable_speed_decider_status->pedestrian_stop_time()) { // Time of stopping at pedestrian
     stop_time_map[pedestrian_stop_time.obstacle_id()] = pedestrian_stop_time.stop_timestamp_sec();
   }
 

@@ -63,11 +63,9 @@ class SpeedDecider : public Task {
                              const Obstacle& keep_clear_obstacle) const;
 
   /**
-   * @brief check if the ADC should follow an obstacle by examing the
-   *StBoundary of the obstacle.
+   * @brief check if the ADC should follow an obstacle by examing the StBoundary of the obstacle.
    * @param boundary The boundary of the obstacle.
-   * @return true if the ADC believe it should follow the obstacle, and
-   *         false otherwise.
+   * @return true if the ADC believe it should follow the obstacle, and false otherwise.
    **/
   bool CheckIsFollow(const Obstacle& obstacle,
                      const STBoundary& boundary) const;

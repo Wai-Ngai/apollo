@@ -48,7 +48,7 @@ apollo::common::Status LaneFollowPath::Process(Frame* frame,
   // 已经生成变道路径 或 路径重用，不执行车道保持路径规划
   if (!reference_line_info->path_data().Empty() ||
       reference_line_info->path_reusable()) {
-    ADEBUG << "Skip this time path empty:"
+    AINFO << "Skip this time path empty:"
            << reference_line_info->path_data().Empty()
            << "path reusable: " << reference_line_info->path_reusable();
     return Status::OK();
@@ -96,10 +96,12 @@ bool LaneFollowPath::DecidePathBounds(std::vector<PathBoundary>* boundary) {
     AERROR << msg;
     return false;
   }
+
   std::string borrow_lane_type;
   bool is_include_adc = config_.is_extend_lane_bounds_to_include_adc() &&
                         !injector_->planning_context()->planning_status()
                                    .path_decider().is_in_path_lane_borrow_scenario();
+  AINFO << " is_include_adc : "<< is_include_adc;
   
   // 2. Decide a rough boundary based on lane info and ADC's position
   if (!PathBoundsDeciderUtil::GetBoundaryFromSelfLane(*reference_line_info_, 
@@ -173,6 +175,8 @@ bool LaneFollowPath::DecidePathBounds(std::vector<PathBoundary>* boundary) {
     CHECK_LE(init_sl_state_.second[0], path_bound[0].l_upper.l);
     CHECK_GE(init_sl_state_.second[0], path_bound[0].l_lower.l);
   }
+
+  // 自车距离目标车道中心太远, 非lane follow, 不进行lane follow轨迹规划
   if (init_sl_state_.second[0] > path_bound[0].l_upper.l ||
       init_sl_state_.second[0] < path_bound[0].l_lower.l) {
     AINFO << "not in self lane maybe lane borrow , init l : "
@@ -204,6 +208,8 @@ bool LaneFollowPath::OptimizePath(const std::vector<PathBoundary>& path_boundari
       AERROR << "Get invalid path boundary with size: " << path_boundary_size;
       return false;
     }
+    AINFO << "path_boundary_size: " << path_boundary_size;
+    
 
     std::vector<double> opt_l, opt_dl, opt_ddl;
     std::vector<std::pair<double, double>> ddl_bounds;
@@ -247,9 +253,11 @@ bool LaneFollowPath::OptimizePath(const std::vector<PathBoundary>& path_boundari
         auto discretized_path = DiscretizedPath(PathOptimizerUtil::ConvertPathPointRefFromFrontAxeToRearAxe(path_data));
         path_data.SetDiscretizedPath(discretized_path);
       }
-      path_data.set_path_label(path_boundary.label());
+      path_data.set_path_label(path_boundary.label());  // regular/self
       path_data.set_blocking_obstacle_id(path_boundary.blocking_obstacle_id());
       candidate_path_data->push_back(std::move(path_data));
+      
+      AINFO << " path_label : " << path_boundary.label() ;
     }
   }
   if (candidate_path_data->empty()) {
@@ -263,6 +271,8 @@ bool LaneFollowPath::AssessPath(std::vector<PathData>* candidate_path_data,
   PathData& curr_path_data = candidate_path_data->back();
   RecordDebugInfo(curr_path_data, curr_path_data.path_label(),
                   reference_line_info_);
+  
+  // 检查路径是否有效。其中会判断路径是否为空、路径是否远离参考线、路径是否远离道路、路径是否与静态障碍物碰撞、路径终点是否在逆向的临近车道上。
   if (!PathAssessmentDeciderUtil::IsValidRegularPath(*reference_line_info_,
                                                      curr_path_data)) {
     AINFO << "Lane follow path is invalid";
@@ -270,7 +280,9 @@ bool LaneFollowPath::AssessPath(std::vector<PathData>* candidate_path_data,
   }
 
   std::vector<PathPointDecision> path_decision;
-  PathAssessmentDeciderUtil::InitPathPointDecision(curr_path_data, PathData::PathPointType::IN_LANE, &path_decision);
+  PathAssessmentDeciderUtil::InitPathPointDecision(curr_path_data, 
+                                                   PathData::PathPointType::IN_LANE, 
+                                                   &path_decision);
   curr_path_data.SetPathPointDecisionGuide(std::move(path_decision));
 
   if (curr_path_data.Empty()) {

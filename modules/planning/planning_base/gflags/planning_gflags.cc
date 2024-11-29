@@ -352,8 +352,7 @@ DEFINE_bool(use_st_drivable_boundary, false,
             "True to use st_drivable boundary in speed planning");
 
 DEFINE_bool(use_front_axe_center_in_path_planning, false,
-            "If using front axe center in path planning, the path can be "
-            "more agile.");
+            "If using front axe center in path planning, the path can be more agile.");
 
 DEFINE_bool(planning_offline_learning, false,
             "offline learning. read record files and dump learning_data");

@@ -521,8 +521,7 @@ RSSInfo* ReferenceLineInfo::mutable_rss_info() { return &rss_info_; }
 bool ReferenceLineInfo::CombinePathAndSpeedProfile(const double relative_time, const double start_s,
                                                    DiscretizedTrajectory* ptr_discretized_trajectory) {
   ACHECK(ptr_discretized_trajectory != nullptr);
-  // use varied resolution to reduce data load but also provide enough data
-  // point for control module
+  // use varied resolution to reduce data load but also provide enough data point for control module
   const double kDenseTimeResoltuion = FLAGS_trajectory_time_min_interval;
   const double kSparseTimeResolution = FLAGS_trajectory_time_max_interval;
   const double kDenseTimeSec = FLAGS_trajectory_time_high_density_period;
@@ -540,6 +539,8 @@ bool ReferenceLineInfo::CombinePathAndSpeedProfile(const double relative_time, c
   for (double cur_rel_time = 0.0; cur_rel_time < speed_data_.TotalTime();
        cur_rel_time += (cur_rel_time < kDenseTimeSec ? kDenseTimeResoltuion
                                                      : kSparseTimeResolution)) {
+    AINFO << " cur_rel_time : " << cur_rel_time;
+    
     common::SpeedPoint speed_point;
     if (!speed_data_.EvaluateByTime(cur_rel_time, &speed_point)) {
       AERROR << "Fail to get speed point with relative time " << cur_rel_time;
@@ -559,6 +560,8 @@ bool ReferenceLineInfo::CombinePathAndSpeedProfile(const double relative_time, c
     trajectory_point.set_relative_time(speed_point.t() + relative_time);
     ptr_discretized_trajectory->AppendTrajectoryPoint(trajectory_point);
   }
+
+  // 倒车轨迹，速度、加速度取反
   if (path_data_.is_reverse_path()) {
     std::for_each(ptr_discretized_trajectory->begin(),
                   ptr_discretized_trajectory->end(),

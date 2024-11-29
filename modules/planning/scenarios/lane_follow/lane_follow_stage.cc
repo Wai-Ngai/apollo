@@ -86,21 +86,22 @@ StageResult LaneFollowStage::Process(const TrajectoryPoint& planning_start_point
 
   bool has_drivable_reference_line = false;
 
-  ADEBUG << "Number of reference lines:\t"
+  AINFO << "Number of reference lines:\t"
          << frame->mutable_reference_line_info()->size();
 
   unsigned int count = 0;
   StageResult result;
 
-  // 遍历所有参考线，基于每条参考线分别进行轨迹规划
+  // 遍历所有参考线, 基于每条参考线分别进行轨迹规划（path and speed）
   for (auto& reference_line_info : *frame->mutable_reference_line_info()) {
     // TODO(SHU): need refactor
     if (count++ == frame->mutable_reference_line_info()->size()) {
       break;
     }
-    ADEBUG << "No: [" << count << "] Reference Line.";
-    ADEBUG << "IsChangeLanePath: " << reference_line_info.IsChangeLanePath();
+    AINFO << "No: [" << count << "] Reference Line.";
+    AINFO << "IsChangeLanePath: " << reference_line_info.IsChangeLanePath();
 
+    // 已经规划出一条轨迹了, 就不再在后面的参考线上再规划
     if (has_drivable_reference_line) {
       reference_line_info.SetDrivable(false);
       break;
@@ -109,19 +110,22 @@ StageResult LaneFollowStage::Process(const TrajectoryPoint& planning_start_point
     result = PlanOnReferenceLine(planning_start_point, frame, &reference_line_info);
 
     if (!result.HasError()) {
-      if (!reference_line_info.IsChangeLanePath()) { // 非变道参考线
-        ADEBUG << "reference line is NOT lane change ref.";
-        has_drivable_reference_line = true;          // 将把这条参考线路标记为可驾驶，并继续处理下一条参考线路
+      // 非变道参考线
+      if (!reference_line_info.IsChangeLanePath()) { 
+        AINFO << "reference line is NOT lane change ref.";
+        has_drivable_reference_line = true;          // 将把这条参考线路标记为可驾驶, 并继续处理下一条参考线路
         continue;
       }
-      // 检查这条参考线路的代价（Cost）是否小于不进行车道变更的代价
+
+      // 变道参考线, 检查这条参考线路的代价（Cost）是否小于不进行车道变更的代价 10
       if (reference_line_info.Cost() < kStraightForwardLineCost) { 
         // If the path and speed optimization succeed on target lane while
         // under smart lane-change or IsClearToChangeLane under older version
         has_drivable_reference_line = true;
         reference_line_info.SetDrivable(true);
+        AINFO << "reference line is lane change ref.";
       } else {
-        reference_line_info.SetDrivable(false);
+        reference_line_info.SetDrivable(false);       // 变道代价太大
         ADEBUG << "\tlane change failed";
       }
     } else {
@@ -138,12 +142,12 @@ StageResult LaneFollowStage::PlanOnReferenceLine(const TrajectoryPoint& planning
                                                  Frame* frame,
                                                  ReferenceLineInfo* reference_line_info) {
   
-  // 是否变换车道。如果不是，增加一个路径成本
+  // 是否变道。如果不是, 增加一个路径成本
   if (!reference_line_info->IsChangeLanePath()) {
     reference_line_info->AddCost(kStraightForwardLineCost);
   }
-  ADEBUG << "planning start point:" << planning_start_point.DebugString();
-  ADEBUG << "Current reference_line_info is IsChangeLanePath: "
+  AINFO << "planning start point:" << planning_start_point.DebugString();
+  AINFO << "Current reference_line_info is IsChangeLanePath: "
          << reference_line_info->IsChangeLanePath();
   
   // 顺序执行每一个task任务
@@ -153,7 +157,8 @@ StageResult LaneFollowStage::PlanOnReferenceLine(const TrajectoryPoint& planning
     const auto start_planning_perf_timestamp = std::chrono::duration<double>(
                                                std::chrono::system_clock::now().time_since_epoch()).count();
 
-    // 执行每一个任务，调用task的执行函数
+    AINFO << "=================== task [ " << task->Name() << " ] start ===================";
+    // 执行每一个任务, 调用task的执行函数
     ret.SetTaskStatus(task->Execute(frame, reference_line_info));
 
     const double end_timestamp = Clock::NowInSeconds();
@@ -206,10 +211,11 @@ StageResult LaneFollowStage::PlanOnReferenceLine(const TrajectoryPoint& planning
   for (const auto* obstacle : reference_line_info->path_decision()->obstacles().Items()) {
     if (obstacle->LongitudinalDecision().has_stop() &&
         obstacle->LongitudinalDecision().stop().reason_code() == STOP_REASON_DESTINATION) {
-      // 目的地在这条参考线上，记录下目的地的位置s
+      // 目的地在这条参考线上, 记录下目的地的位置s
       SLPoint dest_sl = GetStopSL(obstacle->LongitudinalDecision().stop(),
                                   reference_line_info->reference_line());
       dest_stop_s = dest_sl.s();
+      AINFO << "dest_stop_s " << dest_stop_s;
     }
   }
 
@@ -224,7 +230,7 @@ StageResult LaneFollowStage::PlanOnReferenceLine(const TrajectoryPoint& planning
       bool add_stop_obstacle_cost = false;
       if (dest_stop_s < 0.0) {
         add_stop_obstacle_cost = true;
-      } else { // 检查这个障碍物的停止点是否在目标点之前。如果是，那增加一个障碍物成本
+      } else { // 检查这个障碍物的停止点是否在目的地之前。如果是, 那增加一个障碍物成本
         SLPoint stop_sl = GetStopSL(obstacle->LongitudinalDecision().stop(),
                                     reference_line_info->reference_line());
         if (stop_sl.s() < dest_stop_s &&

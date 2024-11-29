@@ -26,7 +26,9 @@
 
 namespace apollo {
 namespace planning {
+
 enum BoundType { ROAD = 0, LANE = 1, OBSTACLE = 2, ADC = 3 };
+
 struct BoundEdge {
   BoundType type;
   double l = 0;
@@ -53,7 +55,9 @@ struct InterPolatedPoint {
   size_t right_index;
   double rear_axle_s;
 };
+
 using InterPolatedPointVec = std::vector<InterPolatedPoint>;
+
 class ADCVertexConstraints : public std::vector<InterPolatedPoint> {
  public:
   double front_edge_to_center;
@@ -71,7 +75,9 @@ struct PathBoundPoint {
   BoundEdge l_lower;
   BoundEdge l_upper;
 };
+
 using PathBound = std::vector<PathBoundPoint>;
+
 class PathBoundary : public std::vector<PathBoundPoint> {
  public:
   PathBoundary() {}

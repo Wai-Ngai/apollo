@@ -51,6 +51,7 @@ PiecewiseJerkSpeedNonlinearIpoptInterface::PiecewiseJerkSpeedNonlinearIpoptInter
 bool PiecewiseJerkSpeedNonlinearIpoptInterface::get_nlp_info(int &n, int &m, 
                                                              int &nnz_jac_g, int &nnz_h_lag,
                                                              IndexStyleEnum &index_style) {
+  // 优化变量数量 (n)
   num_of_variables_ = num_of_points_ * 3;
 
   if (use_soft_safety_bound_) {
@@ -58,13 +59,14 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::get_nlp_info(int &n, int &m,
     num_of_variables_ += num_of_points_ * 2;
 
     lower_s_slack_offset_ = num_of_points_ * 3;
-
     upper_s_slack_offset_ = num_of_points_ * 4;
   }
 
   n = num_of_variables_;
 
-  // s monotone constraints s_i+1 - s_i >= 0.0
+  // 约束数量 (m)
+  // s monotone constraints  
+  // s_i+1 - s_i >= 0.0
   num_of_constraints_ = num_of_points_ - 1;
 
   // jerk bound constraint
@@ -72,22 +74,21 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::get_nlp_info(int &n, int &m,
   num_of_constraints_ += num_of_points_ - 1;
 
   // position equality constraints
-  // s_i+1 - s_i - s_dot_i * delta_t - 1/3 * s_ddot_i * delta_t^2 - 1/6 *
-  // s_ddot_i+1 * delta_t^2
+  // s_i+1 - s_i - s_dot_i * delta_t - 1/3 * s_ddot_i * delta_t^2 - 1/6 * s_ddot_i+1 * delta_t^2
   num_of_constraints_ += num_of_points_ - 1;
 
   // velocity equality constraints
   // s_dot_i+1 - s_dot_i - 0.5 * delta_t * s_ddot_i - 0.5 * delta_t * s_ddot_i+1
   num_of_constraints_ += num_of_points_ - 1;
 
+  // speed limit constraints
   if (use_v_bound_) {
-    // speed limit constraints
     // s_dot_i - v_bound_func_(s_i) <= 0.0
     num_of_constraints_ += num_of_points_;
   }
 
+  // soft safety boundary constraints
   if (use_soft_safety_bound_) {
-    // soft safety boundary constraints
     // s_i - soft_lower_s_i + lower_slack_i >= 0.0
     num_of_constraints_ += num_of_points_;
 
@@ -97,6 +98,7 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::get_nlp_info(int &n, int &m,
 
   m = num_of_constraints_;
 
+  // 雅可比矩阵中的非零元素数量 (nnz_jac_g)
   nnz_jac_g = 0;
   // s_i+1 - s_i
   nnz_jac_g += (num_of_points_ - 1) * 2;
@@ -104,21 +106,20 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::get_nlp_info(int &n, int &m,
   // (s_ddot_i+1 - s_ddot_i) / delta_t
   nnz_jac_g += (num_of_points_ - 1) * 2;
 
-  // s_i+1 - s_i - s_dot_i * delta_t - 1/3 * s_ddot_i * delta_t^2 - 1/6 *
-  // s_ddot_i+1 * delta_t^2
+  // s_i+1 - s_i - s_dot_i * delta_t - 1/3 * s_ddot_i * delta_t^2 - 1/6 * s_ddot_i+1 * delta_t^2
   nnz_jac_g += (num_of_points_ - 1) * 5;
 
   // s_dot_i+1 - s_dot_i - 0.5 * s_ddot_i * delta_t - 0.5 * s_ddot_i+1 * delta_t
   nnz_jac_g += (num_of_points_ - 1) * 4;
 
+  // speed limit constraints
   if (use_v_bound_) {
-    // speed limit constraints
     // s_dot_i - v_bound_func_(s_i) <= 0.0
     nnz_jac_g += num_of_points_ * 2;
   }
 
+  // soft safety boundary constraints
   if (use_soft_safety_bound_) {
-    // soft safety boundary constraints
     // s_i - soft_lower_s_i + lower_slack_i >= 0.0
     nnz_jac_g += num_of_points_ * 2;
 
@@ -126,8 +127,10 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::get_nlp_info(int &n, int &m,
     nnz_jac_g += num_of_points_ * 2;
   }
 
+  // 海塞矩阵中的非零元素数量 (nnz_h_lag)
   nnz_h_lag = num_of_points_ * 5 - 1;
 
+  // 索引风格
   index_style = IndexStyleEnum::C_STYLE;
 
   return true;
@@ -179,10 +182,10 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::get_bounds_info(int n, double *x
   }
 
   // bounds for constraints
-  // s monotone constraints s_i+1 - s_i
+  // s  s_i+1 - s_i
   for (int i = 0; i + 1 < num_of_points_; ++i) {
     g_l[i] = 0.0;
-    g_u[i] = LARGE_VELOCITY_VALUE * delta_t_;
+    g_u[i] = LARGE_VELOCITY_VALUE * delta_t_; // 0.1
   }
 
   // jerk bound constraint
@@ -194,8 +197,7 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::get_bounds_info(int n, double *x
   }
 
   // position equality constraints,
-  // s_i+1 - s_i - s_dot_i * delta_t - 1/3 * s_ddot_i * delta_t^2 - 1/6 *
-  // s_ddot_i+1 * delta_t^2
+  // s_i+1 - s_i - s_dot_i * delta_t - 1/3 * s_ddot_i * delta_t^2 - 1/6 * s_ddot_i+1 * delta_t^2
   offset += num_of_points_ - 1;
   for (int i = 0; i + 1 < num_of_points_; ++i) {
     g_l[offset + i] = 0.0;
@@ -203,16 +205,15 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::get_bounds_info(int n, double *x
   }
 
   // velocity equality constraints,
-  // s_dot_i+1 - s_dot_i - 0.5 * delta_t * s_ddot_i - 0.5 * delta_t *
-  // s_ddot_i+1
+  // s_dot_i+1 - s_dot_i - 0.5 * delta_t * s_ddot_i - 0.5 * delta_t^2 * s_ddot_i+1
   offset += num_of_points_ - 1;
   for (int i = 0; i + 1 < num_of_points_; ++i) {
     g_l[offset + i] = 0.0;
     g_u[offset + i] = 0.0;
   }
 
+  // speed limit constraints
   if (use_v_bound_) {
-    // speed limit constraints
     // s_dot_i - v_bound_func_(s_i) <= 0.0
     offset += num_of_points_ - 1;
     for (int i = 0; i < num_of_points_; ++i) {
@@ -221,8 +222,8 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::get_bounds_info(int n, double *x
     }
   }
 
+  // soft_s_bound constraints
   if (use_soft_safety_bound_) {
-    // soft_s_bound constraints
     // s_i - soft_lower_s_i + lower_slack_i >= 0.0
     offset += num_of_points_;
     for (int i = 0; i < num_of_points_; ++i) {
@@ -367,12 +368,9 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::eval_grad_f(int n,
   double c = 2.0 / (delta_t_ * delta_t_) * w_overall_j_;
   grad_f[a_offset_] += -c * (x[a_offset_ + 1] - x[a_offset_]);
   for (int i = 1; i + 1 < num_of_points_; ++i) {
-    grad_f[a_offset_ + i] += c * (2.0 * x[a_offset_ + i] -
-                                  x[a_offset_ + i + 1] - x[a_offset_ + i - 1]);
+    grad_f[a_offset_ + i] += c * (2.0 * x[a_offset_ + i] - x[a_offset_ + i + 1] - x[a_offset_ + i - 1]);
   }
-  grad_f[a_offset_ + num_of_points_ - 1] +=
-      c *
-      (x[a_offset_ + num_of_points_ - 1] - x[a_offset_ + num_of_points_ - 2]);
+  grad_f[a_offset_ + num_of_points_ - 1] += c * (x[a_offset_ + num_of_points_ - 1] - x[a_offset_ + num_of_points_ - 2]);
 
   // acceleration objective
   for (int i = 0; i < num_of_points_; ++i) {
@@ -427,10 +425,10 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::eval_g(int n, const double *x,
 
   offset += num_of_points_ - 1;
 
-  // jerk bound constraint, |s_ddot_i+1 - s_ddot_i| <= s_dddot_max
-  // position equality constraints,
-  // s_i+1 - s_i - s_dot_i * delta_t - 1/3 * s_ddot_i * delta_t^2 - 1/6 *
-  // s_ddot_i+1 * delta_t^2
+  // jerk bound constraint
+  // |s_ddot_i+1 - s_ddot_i| <= s_dddot_max
+  // position equality constraints
+  // s_i+1 - s_i - s_dot_i * delta_t - 1/3 * s_ddot_i * delta_t^2 - 1/6 * s_ddot_i+1 * delta_t^2
   // velocity equality constraints
   // s_dot_i+1 - s_dot_i - 0.5 * delta_t * (s_ddot_i + s_ddot_i+1)
   int coffset_jerk = offset;
@@ -501,6 +499,7 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::eval_g(int n, const double *x,
 bool PiecewiseJerkSpeedNonlinearIpoptInterface::eval_jac_g(int n, const double *x, 
                                                            bool new_x, int m, int nele_jac, int *iRow,
                                                            int *jCol, double *values) {
+  // 只需要返回雅可比矩阵的稀疏结构，而不计算实际的值
   if (values == nullptr) {
     int non_zero_index = 0;
     int constraint_index = 0;
@@ -643,7 +642,7 @@ bool PiecewiseJerkSpeedNonlinearIpoptInterface::eval_jac_g(int n, const double *
 
   } else {
     int non_zero_index = 0;
-    // s monotone constraints s_i+1 - s_i
+    // s monotone constraints,  s_i+1 - s_i
     for (int i = 0; i + 1 < num_of_points_; ++i) {
       // s_i
       values[non_zero_index] = -1.0;
@@ -915,6 +914,7 @@ void PiecewiseJerkSpeedNonlinearIpoptInterface::finalize_solution(Ipopt::SolverR
                                                                   const double *z_U, int m, const double *g, const double *lambda,
                                                                   double obj_value, const Ipopt::IpoptData *ip_data,
                                                                   Ipopt::IpoptCalculatedQuantities *ip_cq) {
+  // 提取优化结果
   opt_s_.clear();
   opt_v_.clear();
   opt_a_.clear();
@@ -945,6 +945,7 @@ void PiecewiseJerkSpeedNonlinearIpoptInterface::finalize_solution(Ipopt::SolverR
       lower_s_mean_intrusion += lower_s_slack;
       upper_s_mean_intrusion += upper_s_slack;
 
+      // 记录下侵入量最大的时刻和该时刻的侵入量
       if (lower_s_highest_intrusion < lower_s_slack) {
         lower_s_highest_intrusion = lower_s_slack;
         lower_s_highest_intrustion_index = i;
@@ -956,6 +957,7 @@ void PiecewiseJerkSpeedNonlinearIpoptInterface::finalize_solution(Ipopt::SolverR
       }
     }
 
+    // 计算平均侵入量
     lower_s_mean_intrusion /= static_cast<double>(num_of_points_);
     upper_s_mean_intrusion /= static_cast<double>(num_of_points_);
 
@@ -1047,5 +1049,6 @@ void PiecewiseJerkSpeedNonlinearIpoptInterface::set_warm_start(const std::vector
 void PiecewiseJerkSpeedNonlinearIpoptInterface::set_reference_spatial_distance(const std::vector<double> &s_ref) {
   s_ref_ = s_ref;
 }
+
 }  // namespace planning
 }  // namespace apollo

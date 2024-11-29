@@ -34,7 +34,7 @@ namespace hdmap {
 // class LaneInfoConstPtr;
 // class OverlapInfoConstPtr;
 
-// 描述了车道上的点,它是hdmap中直接拿取的道路点，包含道路信息以及s和l信息
+// 描述了车道上的点, 它是hdmap中直接拿取的道路点，包含道路信息以及s和l信息
 struct LaneWaypoint {
   LaneWaypoint() = default;
   LaneWaypoint(LaneInfoConstPtr lane, const double s)
@@ -163,8 +163,11 @@ class PathApproximation {
       : max_error_(max_error), max_sqr_error_(max_error * max_error) {
     Init(path);
   }
+
   double max_error() const { return max_error_; }
+
   const std::vector<int>& original_ids() const { return original_ids_; }
+
   const std::vector<common::math::LineSegment2d>& segments() const {
     return segments_;
   }
@@ -178,10 +181,13 @@ class PathApproximation {
 
  protected:
   void Init(const Path& path);
+
   bool is_within_max_error(const Path& path, const int s, const int t);
+
   double compute_max_error(const Path& path, const int s, const int t);
 
   void InitDilute(const Path& path);
+
   void InitProjections(const Path& path);
 
  protected:
@@ -256,6 +262,7 @@ class Path {
                        double* lateral) const;
   bool GetNearestPoint(const common::math::Vec2d& point, double* accumulate_s,
                        double* lateral, double* distance) const;
+  
   bool GetProjectionWithHueristicParams(const common::math::Vec2d& point,
                                         const double hueristic_start_s,
                                         const double hueristic_end_s,

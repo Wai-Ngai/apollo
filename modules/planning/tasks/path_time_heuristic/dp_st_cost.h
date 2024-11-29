@@ -83,6 +83,7 @@ class DpStCost {
   static void SortAndMergeRange(std::vector<std::pair<double, double>>* keep_clear_range_);
   bool InKeepClearRange(double s) const;
 
+ private:
   const DpStSpeedOptimizerConfig& config_;
   const std::vector<const Obstacle*>& obstacles_;
 

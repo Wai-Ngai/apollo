@@ -38,8 +38,7 @@ class IndexedList {
    * @brief copy object into the container. If the id is already exist,
    * overwrite the object in the container.
    * @param id the id of the object
-   * @param object the const reference of the objected to be copied to the
-   * container.
+   * @param object the const reference of the objected to be copied to the container.
    * @return The pointer to the object in the container.
    */
   T* Add(const I id, const T& object) {

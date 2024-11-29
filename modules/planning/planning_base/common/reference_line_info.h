@@ -295,8 +295,8 @@ class ReferenceLineInfo {
   ReferenceLine reference_line_;
 
   /**
-   * @brief this is the number that measures the goodness of this reference
-   * line. The lower the better.
+   * @brief this is the number that measures the goodness of this reference line.
+   *  The lower the better.
    */
   double cost_ = 0.0;
 
@@ -343,8 +343,8 @@ class ReferenceLineInfo {
   ADCTrajectory::TrajectoryType trajectory_type_ = ADCTrajectory::UNKNOWN;
 
   /**
-   * Overlaps encountered in the first time along the reference line in front of
-   * the vehicle
+   * Overlaps encountered in the first time along the reference line in front of the vehicle
+   * 
    */
   std::vector<std::pair<OverlapType, hdmap::PathOverlap>> first_encounter_overlaps_;
 

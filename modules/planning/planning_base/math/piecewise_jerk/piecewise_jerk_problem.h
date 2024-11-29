@@ -46,7 +46,7 @@ namespace planning {
  * which makes the line P(start), P0, P(1) ... P(k-1) "smooth".
  * 
  *  二次规划 (1/2) * x' * P * x + q' * x
- * s.t.   Ax <= ub
+ *          s.t.   Ax <= ub
  * 
  */
 
@@ -64,8 +64,7 @@ class PiecewiseJerkProblem {
   void set_dx_bounds(const double dx_lower_bound, const double dx_upper_bound);
 
   void set_ddx_bounds(std::vector<std::pair<double, double>> ddx_bounds);
-  void set_ddx_bounds(const double ddx_lower_bound,
-                      const double ddx_upper_bound);
+  void set_ddx_bounds(const double ddx_lower_bound, const double ddx_upper_bound);
 
   void set_dddx_bound(const double dddx_bound) {
     set_dddx_bound(-dddx_bound, dddx_bound);
@@ -173,8 +172,7 @@ class PiecewiseJerkProblem {
   bool has_x_ref_ = false;
   double weight_x_ref_ = 0.0;
   std::vector<double> x_ref_;
-  // un-uniformed weighting
-  std::vector<double> weight_x_ref_vec_;
+  std::vector<double> weight_x_ref_vec_;  // un-uniformed weighting
 
   bool has_end_state_ref_ = false;
   std::array<double, 3> weight_end_state_ = {{0.0, 0.0, 0.0}};

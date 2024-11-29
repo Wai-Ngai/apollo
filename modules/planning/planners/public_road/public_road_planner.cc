@@ -26,9 +26,12 @@ using apollo::common::Status;
 using apollo::common::TrajectoryPoint;
 
 Status PublicRoadPlanner::Init(const std::shared_ptr<DependencyInjector>& injector,
-                               const std::string& config_path) {
+                               const std::string& config_path) {  // "modules/planning/planning_component/conf/public_road_planner_config.pb.txt"
   Planner::Init(injector, config_path);
-  LoadConfig<PlannerPublicRoadConfig>(config_path, &config_); // "modules/planning/planning_component/conf/public_road_planner_config.pb.txt"
+
+  LoadConfig<PlannerPublicRoadConfig>(config_path, &config_);
+
+  // 根据配置文件初始化PublicRoadPlanner的场景列表scenario_list
   scenario_manager_.Init(injector, config_);
   return Status::OK();
 }
@@ -44,6 +47,7 @@ Status PublicRoadPlanner::Plan(const TrajectoryPoint& planning_start_point,
     return Status(apollo::common::ErrorCode::PLANNING_ERROR,
                   "Unknown Scenario");
   }
+  AINFO << " Current Scenario : " << scenario_->Name();
 
   // 每个场景都调用父类的Scenario::Process()，然后根据场景所处的stage，调用该stage的Process()函数
   auto result = scenario_->Process(planning_start_point, frame);

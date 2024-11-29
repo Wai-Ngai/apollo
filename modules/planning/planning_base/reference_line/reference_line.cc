@@ -178,6 +178,7 @@ bool ReferenceLine::Segment(const double s, const double look_backward,
     AERROR << "Too few reference points after shrinking.";
     return false;
   }
+  AINFO << "start_index - end_index : " << start_index << " - " << end_index;
 
   reference_points_ = std::vector<ReferencePoint>(reference_points_.begin() + start_index,
                                                   reference_points_.begin() + end_index);
