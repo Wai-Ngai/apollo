@@ -46,8 +46,8 @@ bool PlanningComponent::Init() {
     planning_base_ = std::make_unique<OnLanePlanning>(injector_);
   }
 
-  // 解析ProtoBuf PlanningConfig
-  ACHECK(ComponentBase::GetProtoConfig(&config_))
+  // 解析ProtoBuffer 
+  ACHECK(ComponentBase::GetProtoConfig(&config_)) // PlanningConfig  根据dag文件里面 config_file_path:  "/apollo/modules/planning/planning_component/conf/planning_config.pb.txt" 填充config_对象
       << "failed to load planning config file "
       << ComponentBase::ConfigFilePath();
 
@@ -59,7 +59,8 @@ bool PlanningComponent::Init() {
     }
   }
 
-  planning_base_->Init(config_); // OnLanePlanning的init，初始化参考线线程，加载各种配置文件和场景
+  // OnLanePlanning的init，初始化参考线线程，加载各种配置文件和场景
+  planning_base_->Init(config_); 
 
   // 创建reader，传入topic和回调函数，当收到相应消息的时候，会调用回调函数
   planning_command_reader_ = node_->CreateReader<PlanningCommand>(

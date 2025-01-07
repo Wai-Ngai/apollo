@@ -133,7 +133,7 @@ Status OnLanePlanning::Init(const PlanningConfig& config) {
   // instantiate reference line provider
   const ReferenceLineConfig* reference_line_config = nullptr;
   if (config_.has_reference_line_config()) {
-    reference_line_config = &config_.reference_line_config();
+    reference_line_config = &config_.reference_line_config(); // pnc_map_class: "apollo::planning::LaneFollowMap"
   }
   reference_line_provider_ = std::make_unique<ReferenceLineProvider>(injector_->vehicle_state(), 
                                                                      reference_line_config);
@@ -259,15 +259,16 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
   const double start_timestamp = Clock::NowInSeconds();
   const double start_system_timestamp = std::chrono::duration<double>(
                                         std::chrono::system_clock::now().time_since_epoch()).count();
-
+  AINFO << "start_timestamp: " << start_timestamp;
+  AINFO << "start_system_timestamp: " << start_system_timestamp;
+  
   // localization
   ADEBUG << "Get localization:"
          << local_view_.localization_estimate->DebugString();
-
   // chassis
   ADEBUG << "Get chassis:" << local_view_.chassis->DebugString();
 
-  // step1：跟新车辆状态
+  // Step 1：跟新车辆状态
   Status status = injector_->vehicle_state()->Update(*local_view_.localization_estimate, 
                                                      *local_view_.chassis);
 
@@ -320,7 +321,7 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
   // planning is triggered by prediction data, but we can still use an estimated cycle time for stitching
   const double planning_cycle_time = 1.0 / static_cast<double>(FLAGS_planning_loop_rate); // 1/10 = 100ms
 
-  // step2：计算拼接轨迹
+  // Step 2：计算拼接轨迹
   std::string replan_reason;
   std::vector<TrajectoryPoint> stitching_trajectory = TrajectoryStitcher::ComputeStitchingTrajectory(
                                                       *(local_view_.chassis), vehicle_state, start_timestamp,
@@ -332,7 +333,7 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
   const uint32_t frame_num = static_cast<uint32_t>(seq_num_++);
   AINFO << "Planning start frame sequence id = [" << frame_num << "]";
 
-  // step3：更新本周期计算所需的所有信息，获取新的参考线。
+  // Step 3：更新本周期计算所需的所有信息，获取新的参考线。
   status = InitFrame(frame_num, stitching_trajectory.back(), vehicle_state);
   if (status.ok()) {
     injector_->ego_info()->CalculateFrontObstacleClearDistance(frame_->obstacles());
@@ -372,7 +373,7 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
     return;
   }
 
-  // step4：交规决策，将决策结果附加在参考线上
+  // Step 4：对每条参考线进行交规决策，将决策结果附加在参考线上
   for (auto& ref_line_info : *frame_->mutable_reference_line_info()) {
     auto traffic_status = traffic_decider_.Execute(frame_.get(), &ref_line_info);
     if (!traffic_status.ok() || !ref_line_info.IsDrivable()) {
@@ -382,7 +383,7 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
     }
   }
 
-  // step5：计算规划轨迹
+  // Step 5：计算规划轨迹
   status = Plan(start_timestamp, stitching_trajectory, ptr_trajectory_pb);
 
   // print trajxy

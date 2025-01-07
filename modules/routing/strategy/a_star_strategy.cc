@@ -64,8 +64,7 @@ const TopoNode* GetLargestNode(const std::vector<const TopoNode*>& nodes) {
   return largest;
 }
 
-bool AdjustLaneChangeBackward(
-    std::vector<const TopoNode*>* const result_node_vec) {
+bool AdjustLaneChangeBackward(std::vector<const TopoNode*>* const result_node_vec) {
   for (int i = static_cast<int>(result_node_vec->size()) - 2; i > 0; --i) {
     const auto* from_node = result_node_vec->at(i);
     const auto* to_node = result_node_vec->at(i + 1);
@@ -112,8 +111,7 @@ bool AdjustLaneChangeBackward(
   return true;
 }
 
-bool AdjustLaneChangeForward(
-    std::vector<const TopoNode*>* const result_node_vec) {
+bool AdjustLaneChangeForward(std::vector<const TopoNode*>* const result_node_vec) {
   for (size_t i = 1; i < result_node_vec->size() - 1; ++i) {
     const auto* from_node = result_node_vec->at(i - 1);
     const auto* to_node = result_node_vec->at(i);
@@ -175,9 +173,8 @@ bool AdjustLaneChange(std::vector<const TopoNode*>* const result_node_vec) {
   return true;
 }
 
-bool Reconstruct(
-    const std::unordered_map<const TopoNode*, const TopoNode*>& came_from,
-    const TopoNode* dest_node, std::vector<NodeWithRange>* result_nodes) {
+bool Reconstruct(const std::unordered_map<const TopoNode*, const TopoNode*>& came_from,
+                 const TopoNode* dest_node, std::vector<NodeWithRange>* result_nodes) {
   std::vector<const TopoNode*> result_node_vec;
   result_node_vec.push_back(dest_node);
 
@@ -200,6 +197,7 @@ bool Reconstruct(
 }
 
 }  // namespace
+
 
 AStarStrategy::AStarStrategy(bool enable_change)
     : change_lane_enabled_(enable_change) {}
@@ -262,15 +260,15 @@ bool AStarStrategy::Search(const TopoGraph* graph,
 
     // if residual_s is less than FLAGS_min_length_for_lane_change, only move
     // forward
-    const auto& neighbor_edges =
-        (GetResidualS(from_node) > FLAGS_min_length_for_lane_change &&
-         change_lane_enabled_)
-            ? from_node->OutToAllEdge()
-            : from_node->OutToSucEdge();
+    const auto& neighbor_edges = (GetResidualS(from_node) > FLAGS_min_length_for_lane_change &&
+                                  change_lane_enabled_)
+                                 ? from_node->OutToAllEdge()
+                                 : from_node->OutToSucEdge();
     double tentative_g_score = 0.0;
     next_edge_set.clear();
     for (const auto* edge : neighbor_edges) {
       sub_edge_set.clear();
+      
       sub_graph->GetSubInEdgesIntoSubGraph(edge, &sub_edge_set);
       next_edge_set.insert(sub_edge_set.begin(), sub_edge_set.end());
     }
@@ -283,11 +281,9 @@ bool AStarStrategy::Search(const TopoGraph* graph,
       if (GetResidualS(edge, to_node) < FLAGS_min_length_for_lane_change) {
         continue;
       }
-      tentative_g_score =
-          g_score_[current_node.topo_node] + GetCostToNeighbor(edge);
+      tentative_g_score = g_score_[current_node.topo_node] + GetCostToNeighbor(edge);
       if (edge->Type() != TopoEdgeType::TET_FORWARD) {
-        tentative_g_score -=
-            (edge->FromNode()->Cost() + edge->ToNode()->Cost()) / 2;
+        tentative_g_score -= (edge->FromNode()->Cost() + edge->ToNode()->Cost()) / 2;
       }
       double f = tentative_g_score + HeuristicCost(to_node, dest_node);
       if (open_set_.count(to_node) != 0 && f >= g_score_[to_node]) {
@@ -298,9 +294,8 @@ bool AStarStrategy::Search(const TopoGraph* graph,
         enter_s_[to_node] = to_node->StartS();
       } else {
         // else, add enter_s with FLAGS_min_length_for_lane_change
-        double to_node_enter_s =
-            (enter_s_[from_node] + FLAGS_min_length_for_lane_change) /
-            from_node->Length() * to_node->Length();
+        double to_node_enter_s = (enter_s_[from_node] + FLAGS_min_length_for_lane_change) /
+                                 from_node->Length() * to_node->Length();
         // enter s could be larger than end_s but should be less than length
         to_node_enter_s = std::min(to_node_enter_s, to_node->Length());
         // if enter_s is larger than end_s and to_node is dest_node

@@ -144,6 +144,7 @@ class HybridAStar {
   std::priority_queue<std::pair<std::shared_ptr<Node3d>, double>,
                       std::vector<std::pair<std::shared_ptr<Node3d>, double>>,
                       cmp> open_pq_;
+  
   std::unordered_set<std::string> open_set_;
   std::unordered_set<std::string> close_set_;
   std::unique_ptr<ReedShepp> reed_shepp_generator_;

@@ -39,27 +39,19 @@ bool RoutingComponent::Init() {
   attr.set_channel_name(routing_conf.topic_config().routing_response_topic());
   auto qos = attr.mutable_qos_profile();
   qos->set_history(apollo::cyber::proto::QosHistoryPolicy::HISTORY_KEEP_LAST);
-  qos->set_reliability(
-      apollo::cyber::proto::QosReliabilityPolicy::RELIABILITY_RELIABLE);
-  qos->set_durability(
-      apollo::cyber::proto::QosDurabilityPolicy::DURABILITY_TRANSIENT_LOCAL);
+  qos->set_reliability(apollo::cyber::proto::QosReliabilityPolicy::RELIABILITY_RELIABLE);
+  qos->set_durability(apollo::cyber::proto::QosDurabilityPolicy::DURABILITY_TRANSIENT_LOCAL);
   response_writer_ = node_->CreateWriter<routing::RoutingResponse>(attr);
 
   apollo::cyber::proto::RoleAttributes attr_history;
-  attr_history.set_channel_name(
-      routing_conf.topic_config().routing_response_history_topic());
+  attr_history.set_channel_name(routing_conf.topic_config().routing_response_history_topic());
   auto qos_history = attr_history.mutable_qos_profile();
-  qos_history->set_history(
-      apollo::cyber::proto::QosHistoryPolicy::HISTORY_KEEP_LAST);
-  qos_history->set_reliability(
-      apollo::cyber::proto::QosReliabilityPolicy::RELIABILITY_RELIABLE);
-  qos_history->set_durability(
-      apollo::cyber::proto::QosDurabilityPolicy::DURABILITY_TRANSIENT_LOCAL);
+  qos_history->set_history(apollo::cyber::proto::QosHistoryPolicy::HISTORY_KEEP_LAST);
+  qos_history->set_reliability(apollo::cyber::proto::QosReliabilityPolicy::RELIABILITY_RELIABLE);
+  qos_history->set_durability(apollo::cyber::proto::QosDurabilityPolicy::DURABILITY_TRANSIENT_LOCAL);
 
-  response_history_writer_ =
-      node_->CreateWriter<routing::RoutingResponse>(attr_history);
-  std::weak_ptr<RoutingComponent> self =
-      std::dynamic_pointer_cast<RoutingComponent>(shared_from_this());
+  response_history_writer_ = node_->CreateWriter<routing::RoutingResponse>(attr_history);
+  std::weak_ptr<RoutingComponent> self = std::dynamic_pointer_cast<RoutingComponent>(shared_from_this());
   timer_.reset(new ::apollo::cyber::Timer(
       FLAGS_routing_response_history_interval_ms,
       [self, this]() {
@@ -79,8 +71,7 @@ bool RoutingComponent::Init() {
   return routing_.Init().ok() && routing_.Start().ok();
 }
 
-bool RoutingComponent::Proc(
-    const std::shared_ptr<routing::RoutingRequest>& request) {
+bool RoutingComponent::Proc(const std::shared_ptr<routing::RoutingRequest>& request) {
   auto response = std::make_shared<routing::RoutingResponse>();
   if (!routing_.Process(request, response.get())) {
     return false;

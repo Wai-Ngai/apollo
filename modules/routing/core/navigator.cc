@@ -133,9 +133,8 @@ bool Navigator::Init(const routing::RoutingRequest& request,
   return true;
 }
 
-bool Navigator::MergeRoute(
-    const std::vector<NodeWithRange>& node_vec,
-    std::vector<NodeWithRange>* const result_node_vec) const {
+bool Navigator::MergeRoute(const std::vector<NodeWithRange>& node_vec,
+                           std::vector<NodeWithRange>* const result_node_vec) const {
   for (const auto& node : node_vec) {
     if (result_node_vec->empty() ||
         result_node_vec->back().GetTopoNode() != node.GetTopoNode()) {
@@ -151,10 +150,10 @@ bool Navigator::MergeRoute(
   return true;
 }
 
-bool Navigator::SearchRouteByStrategy(
-    const TopoGraph* graph, const std::vector<const TopoNode*>& way_nodes,
-    const std::vector<double>& way_s,
-    std::vector<NodeWithRange>* const result_nodes) const {
+bool Navigator::SearchRouteByStrategy(const TopoGraph* graph, 
+                                      const std::vector<const TopoNode*>& way_nodes,
+                                      const std::vector<double>& way_s,
+                                      std::vector<NodeWithRange>* const result_nodes) const {
   std::unique_ptr<Strategy> strategy_ptr;
   strategy_ptr.reset(new AStarStrategy(FLAGS_enable_change_lane_in_result));
 
@@ -167,8 +166,9 @@ bool Navigator::SearchRouteByStrategy(
     double way_end_s = way_s[i];
 
     TopoRangeManager full_range_manager = topo_range_manager_;
-    black_list_generator_->AddBlackMapFromTerminal(
-        way_start, way_end, way_start_s, way_end_s, &full_range_manager);
+    black_list_generator_->AddBlackMapFromTerminal(way_start, way_end, 
+                                                   way_start_s, way_end_s, 
+                                                   &full_range_manager);
 
     SubTopoGraph sub_graph(full_range_manager.RangeMap());
     const auto* start = sub_graph.GetSubNodeWithS(way_start, way_start_s);
@@ -240,9 +240,8 @@ bool Navigator::SearchRoute(const routing::RoutingRequest& request,
   result_nodes.front().SetStartS(request.waypoint().begin()->s());
   result_nodes.back().SetEndS(request.waypoint().rbegin()->s());
 
-  if (!result_generator_->GeneratePassageRegion(
-          graph_->MapVersion(), request, result_nodes, topo_range_manager_,
-          response)) {
+  if (!result_generator_->GeneratePassageRegion(graph_->MapVersion(), request, 
+                                                result_nodes, topo_range_manager_, response)) {
     SetErrorCode(ErrorCode::ROUTING_ERROR_RESPONSE,
                  "Failed to generate passage regions based on result lanes",
                  response->mutable_status());

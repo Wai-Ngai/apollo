@@ -97,15 +97,11 @@ void PlanningBase::FillPlanningPb(const double timestamp,
                                   ADCTrajectory* const trajectory_pb) {
   trajectory_pb->mutable_header()->set_timestamp_sec(timestamp);
   if (local_view_.prediction_obstacles->has_header()) {
-    trajectory_pb->mutable_header()->set_lidar_timestamp(
-        local_view_.prediction_obstacles->header().lidar_timestamp());
-    trajectory_pb->mutable_header()->set_camera_timestamp(
-        local_view_.prediction_obstacles->header().camera_timestamp());
-    trajectory_pb->mutable_header()->set_radar_timestamp(
-        local_view_.prediction_obstacles->header().radar_timestamp());
+    trajectory_pb->mutable_header()->set_lidar_timestamp(local_view_.prediction_obstacles->header().lidar_timestamp());
+    trajectory_pb->mutable_header()->set_camera_timestamp(local_view_.prediction_obstacles->header().camera_timestamp());
+    trajectory_pb->mutable_header()->set_radar_timestamp(local_view_.prediction_obstacles->header().radar_timestamp());
   }
-  trajectory_pb->mutable_routing_header()->CopyFrom(
-      local_view_.planning_command->header());
+  trajectory_pb->mutable_routing_header()->CopyFrom(local_view_.planning_command->header());
 }
 
 void PlanningBase::LoadPlanner() {

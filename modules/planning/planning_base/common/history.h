@@ -59,8 +59,7 @@ class HistoryFrame {
   std::vector<const HistoryObjectDecision*> GetObjectDecisions() const;
   std::vector<const HistoryObjectDecision*> GetStopObjectDecisions() const;
 
-  const HistoryObjectDecision* GetObjectDecisionsById(
-      const std::string& id) const;
+  const HistoryObjectDecision* GetObjectDecisionsById(const std::string& id) const;
 
  private:
   int seq_num_;

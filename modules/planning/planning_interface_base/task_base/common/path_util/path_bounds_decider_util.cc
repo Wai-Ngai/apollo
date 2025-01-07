@@ -558,7 +558,7 @@ bool PathBoundsDeciderUtil::ExtendBoundaryByADC(const ReferenceLineInfo& referen
                             init_sl_state.second[1] * init_sl_state.second[1] /
                             kMaxLateralAccelerations / 2.0; // 向左变道，为正
   double adc_half_width = VehicleConfigHelper::GetConfig().vehicle_param().width() / 2.0;
-
+  // ADC_speed_buffer过小，所以在left_bound_adc上额外添加了半个车身，留多一些空间
   double left_bound_adc = std::fmax(adc_l_to_lane_center, adc_l_to_lane_center + ADC_speed_buffer) +
                           adc_half_width + extend_buffer;   // 随着变道，左右边界逐渐收缩
   double right_bound_adc = std::fmin(adc_l_to_lane_center, adc_l_to_lane_center + ADC_speed_buffer) -

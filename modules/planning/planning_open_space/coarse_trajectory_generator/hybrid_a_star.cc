@@ -37,21 +37,16 @@ using apollo::cyber::Clock;
 
 HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf) {
   planner_open_space_config_.CopyFrom(open_space_conf);
-  reed_shepp_generator_ =
-      std::make_unique<ReedShepp>(vehicle_param_, planner_open_space_config_);
-  grid_a_star_heuristic_generator_ =
-      std::make_unique<GridSearch>(planner_open_space_config_);
-  next_node_num_ =
-      planner_open_space_config_.warm_start_config().next_node_num();
+  reed_shepp_generator_ = std::make_unique<ReedShepp>(vehicle_param_, planner_open_space_config_);
+  grid_a_star_heuristic_generator_ = std::make_unique<GridSearch>(planner_open_space_config_);
+  next_node_num_ = planner_open_space_config_.warm_start_config().next_node_num();
   max_steer_angle_ = vehicle_param_.max_steer_angle() /
                      vehicle_param_.steer_ratio() *
                      planner_open_space_config_.warm_start_config()
                          .traj_kappa_contraint_ratio();
   step_size_ = planner_open_space_config_.warm_start_config().step_size();
-  xy_grid_resolution_ =
-      planner_open_space_config_.warm_start_config().xy_grid_resolution();
-  arc_length_ =
-      planner_open_space_config_.warm_start_config().phi_grid_resolution() *
+  xy_grid_resolution_ = planner_open_space_config_.warm_start_config().xy_grid_resolution();
+  arc_length_ = planner_open_space_config_.warm_start_config().phi_grid_resolution() *
       vehicle_param_.wheel_base() /
       std::tan(max_steer_angle_ * 2 / (next_node_num_ / 2 - 1));
   if (arc_length_ < std::sqrt(2) * xy_grid_resolution_) {
@@ -59,57 +54,43 @@ HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf) {
   }
   AINFO << "arc_length" << arc_length_;
   delta_t_ = planner_open_space_config_.delta_t();
-  traj_forward_penalty_ =
-      planner_open_space_config_.warm_start_config().traj_forward_penalty();
-  traj_back_penalty_ =
-      planner_open_space_config_.warm_start_config().traj_back_penalty();
-  traj_gear_switch_penalty_ =
-      planner_open_space_config_.warm_start_config().traj_gear_switch_penalty();
-  traj_steer_penalty_ =
-      planner_open_space_config_.warm_start_config().traj_steer_penalty();
+  traj_forward_penalty_ = planner_open_space_config_.warm_start_config().traj_forward_penalty();
+  traj_back_penalty_ = planner_open_space_config_.warm_start_config().traj_back_penalty();
+  traj_gear_switch_penalty_ = planner_open_space_config_.warm_start_config().traj_gear_switch_penalty();
+  traj_steer_penalty_ = planner_open_space_config_.warm_start_config().traj_steer_penalty();
   traj_steer_change_penalty_ = planner_open_space_config_.warm_start_config()
                                    .traj_steer_change_penalty();
+  
   acc_weight_ = planner_open_space_config_.iterative_anchoring_smoother_config()
                     .s_curve_config()
                     .acc_weight();
-  jerk_weight_ =
-      planner_open_space_config_.iterative_anchoring_smoother_config()
-          .s_curve_config()
-          .jerk_weight();
-  kappa_penalty_weight_ =
-      planner_open_space_config_.iterative_anchoring_smoother_config()
-          .s_curve_config()
-          .kappa_penalty_weight();
-  ref_s_weight_ =
-      planner_open_space_config_.iterative_anchoring_smoother_config()
-          .s_curve_config()
-          .ref_s_weight();
-  ref_v_weight_ =
-      planner_open_space_config_.iterative_anchoring_smoother_config()
-          .s_curve_config()
-          .ref_v_weight();
-  max_forward_v_ =
-      planner_open_space_config_.iterative_anchoring_smoother_config()
-          .max_forward_v();
-  max_reverse_v_ =
-      planner_open_space_config_.iterative_anchoring_smoother_config()
-          .max_reverse_v();
-  max_forward_acc_ =
-      planner_open_space_config_.iterative_anchoring_smoother_config()
-          .max_forward_acc();
-  max_reverse_acc_ =
-      planner_open_space_config_.iterative_anchoring_smoother_config()
-          .max_reverse_acc();
-  max_acc_jerk_ =
-      planner_open_space_config_.iterative_anchoring_smoother_config()
-          .max_acc_jerk();
+  jerk_weight_ = planner_open_space_config_.iterative_anchoring_smoother_config()
+                 .s_curve_config()
+                 .jerk_weight();
+  kappa_penalty_weight_ = planner_open_space_config_.iterative_anchoring_smoother_config()
+                         .s_curve_config()
+                         .kappa_penalty_weight();
+  ref_s_weight_ = planner_open_space_config_.iterative_anchoring_smoother_config()
+                  .s_curve_config()
+                  .ref_s_weight();
+  ref_v_weight_ = planner_open_space_config_.iterative_anchoring_smoother_config()
+                  .s_curve_config()
+                  .ref_v_weight();
+  max_forward_v_ = planner_open_space_config_.iterative_anchoring_smoother_config()
+                  .max_forward_v();
+  max_reverse_v_ = planner_open_space_config_.iterative_anchoring_smoother_config()
+                  .max_reverse_v();
+  max_forward_acc_ = planner_open_space_config_.iterative_anchoring_smoother_config()
+                     .max_forward_acc();
+  max_reverse_acc_ = planner_open_space_config_.iterative_anchoring_smoother_config()
+                     .max_reverse_acc();
+  max_acc_jerk_ = planner_open_space_config_.iterative_anchoring_smoother_config()
+                  .max_acc_jerk();
 }
 
-bool HybridAStar::AnalyticExpansion(
-    std::shared_ptr<Node3d> current_node,
-    std::shared_ptr<Node3d>* candidate_final_node) {
-  std::shared_ptr<ReedSheppPath> reeds_shepp_to_check =
-      std::make_shared<ReedSheppPath>();
+bool HybridAStar::AnalyticExpansion(std::shared_ptr<Node3d> current_node,
+                                    std::shared_ptr<Node3d>* candidate_final_node) {
+  std::shared_ptr<ReedSheppPath> reeds_shepp_to_check = std::make_shared<ReedSheppPath>();
   if (!reed_shepp_generator_->ShortestRSP(current_node, end_node_,
                                           reeds_shepp_to_check)) {
     return false;
@@ -122,11 +103,12 @@ bool HybridAStar::AnalyticExpansion(
   return true;
 }
 
-bool HybridAStar::RSPCheck(
-    const std::shared_ptr<ReedSheppPath> reeds_shepp_to_end) {
-  std::shared_ptr<Node3d> node = std::shared_ptr<Node3d>(new Node3d(
-      reeds_shepp_to_end->x, reeds_shepp_to_end->y, reeds_shepp_to_end->phi,
-      XYbounds_, planner_open_space_config_));
+bool HybridAStar::RSPCheck(const std::shared_ptr<ReedSheppPath> reeds_shepp_to_end) {
+  std::shared_ptr<Node3d> node = std::shared_ptr<Node3d>(new Node3d(reeds_shepp_to_end->x, 
+                                                                    reeds_shepp_to_end->y, 
+                                                                    reeds_shepp_to_end->phi,
+                                                                    XYbounds_, 
+                                                                    planner_open_space_config_));
   return ValidityCheck(node);
 }
 
@@ -175,19 +157,20 @@ bool HybridAStar::ValidityCheck(std::shared_ptr<Node3d> node) {
   return true;
 }
 
-std::shared_ptr<Node3d> HybridAStar::LoadRSPinCS(
-    const std::shared_ptr<ReedSheppPath> reeds_shepp_to_end,
-    std::shared_ptr<Node3d> current_node) {
-  std::shared_ptr<Node3d> end_node = std::shared_ptr<Node3d>(new Node3d(
-      reeds_shepp_to_end->x, reeds_shepp_to_end->y, reeds_shepp_to_end->phi,
-      XYbounds_, planner_open_space_config_));
+std::shared_ptr<Node3d> HybridAStar::LoadRSPinCS(const std::shared_ptr<ReedSheppPath> reeds_shepp_to_end,
+                                                 std::shared_ptr<Node3d> current_node) {
+  std::shared_ptr<Node3d> end_node = std::shared_ptr<Node3d>(new Node3d(reeds_shepp_to_end->x, 
+                                                                        reeds_shepp_to_end->y, 
+                                                                        reeds_shepp_to_end->phi,
+                                                                        XYbounds_, 
+                                                                        planner_open_space_config_));
   end_node->SetPre(current_node);
   end_node->SetTrajCost(current_node->GetTrajCost() + reeds_shepp_to_end->cost);
   return end_node;
 }
 
-std::shared_ptr<Node3d> HybridAStar::Next_node_generator(
-    std::shared_ptr<Node3d> current_node, size_t next_node_index) {
+std::shared_ptr<Node3d> HybridAStar::Next_node_generator(std::shared_ptr<Node3d> current_node, 
+                                                         size_t next_node_index) {
   double steering = 0.0;
   double traveled_distance = 0.0;
   if (next_node_index < static_cast<double>(next_node_num_) / 2) {
@@ -249,10 +232,9 @@ std::shared_ptr<Node3d> HybridAStar::Next_node_generator(
   return next_node;
 }
 
-void HybridAStar::CalculateNodeCost(
-    std::shared_ptr<Node3d> current_node, std::shared_ptr<Node3d> next_node) {
-  next_node->SetTrajCost(
-      current_node->GetTrajCost() + TrajCost(current_node, next_node));
+void HybridAStar::CalculateNodeCost(std::shared_ptr<Node3d> current_node, 
+                                    std::shared_ptr<Node3d> next_node) {
+  next_node->SetTrajCost(current_node->GetTrajCost() + TrajCost(current_node, next_node));
   // evaluate heuristic cost
   double optimal_path_cost = 0.0;
   optimal_path_cost += HoloObstacleHeuristic(next_node);
@@ -359,8 +341,7 @@ bool HybridAStar::GetResult(HybridAStartResult* result) {
   return true;
 }
 
-bool HybridAStar::GenerateSpeedAcceleration(
-    HybridAStartResult* result) {
+bool HybridAStar::GenerateSpeedAcceleration(HybridAStartResult* result) {
   AINFO << "GenerateSpeedAcceleration";
   // Sanity Check
   if (result->x.size() < 2 || result->y.size() < 2 || result->phi.size() < 2) {
@@ -603,9 +584,8 @@ bool HybridAStar::GenerateSCurveSpeedAcceleration(HybridAStartResult* result) {
   return true;
 }
 
-bool HybridAStar::TrajectoryPartition(
-        const HybridAStartResult& result,
-        std::vector<HybridAStartResult>* partitioned_result) {
+bool HybridAStar::TrajectoryPartition(const HybridAStartResult& result,
+                                      std::vector<HybridAStartResult>* partitioned_result) {
   const auto& x = result.x;
   const auto& y = result.y;
   const auto& phi = result.phi;
@@ -622,17 +602,13 @@ bool HybridAStar::TrajectoryPartition(
   double heading_angle = phi.front();
   const Vec2d init_tracking_vector(x[1] - x[0], y[1] - y[0]);
   double tracking_angle = init_tracking_vector.Angle();
-  bool current_gear =
-      std::abs(common::math::NormalizeAngle(tracking_angle - heading_angle))
-      <
-      (M_PI_2);
+  bool current_gear = std::abs(common::math::NormalizeAngle(tracking_angle - heading_angle)) < (M_PI_2);
+  
   for (size_t i = 0; i < horizon - 1; ++i) {
     heading_angle = phi[i];
     const Vec2d tracking_vector(x[i + 1] - x[i], y[i + 1] - y[i]);
     tracking_angle = tracking_vector.Angle();
-    bool gear =
-        std::abs(common::math::NormalizeAngle(tracking_angle - heading_angle)) <
-        (M_PI_2);
+    bool gear = std::abs(common::math::NormalizeAngle(tracking_angle - heading_angle)) < (M_PI_2);
     if (gear != current_gear) {
       current_traj->x.push_back(x[i]);
       current_traj->y.push_back(y[i]);

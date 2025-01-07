@@ -62,17 +62,16 @@ struct RSPParam {
 
 class ReedShepp {
  public:
-  ReedShepp(
-          const common::VehicleParam& vehicle_param,
-          const PlannerOpenSpaceConfig& open_space_conf);
+  ReedShepp(const common::VehicleParam& vehicle_param,
+            const PlannerOpenSpaceConfig& open_space_conf);
+  
   virtual ~ReedShepp() = default;
+
   // Pick the shortest path from all possible
-  // combination of movement primitives
-  // by Reed Shepp
-  bool ShortestRSP(
-          const std::shared_ptr<Node3d> start_node,
-          const std::shared_ptr<Node3d> end_node,
-          std::shared_ptr<ReedSheppPath> optimal_path);
+  // combination of movement primitives by Reed Shepp
+  bool ShortestRSP(const std::shared_ptr<Node3d> start_node,
+                   const std::shared_ptr<Node3d> end_node,
+                   std::shared_ptr<ReedSheppPath> optimal_path);
 
  protected:
   // Generate all possible combination of
