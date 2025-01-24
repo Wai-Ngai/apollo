@@ -105,8 +105,7 @@ class ReferenceLineProvider {
   /**
    * @brief Use LaneFollowMap to create reference line and the corresponding
    * segments based on routing and current position. This is a thread safe function.
-   * @return true if !reference_lines.empty() && reference_lines.size() ==
-   *                 segments.size();
+   * @return true if !reference_lines.empty() && reference_lines.size() == segments.size();
    **/
   bool CreateReferenceLine(std::list<ReferenceLine>* reference_lines,
                            std::list<hdmap::RouteSegments>* segments);

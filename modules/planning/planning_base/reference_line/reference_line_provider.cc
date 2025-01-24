@@ -153,8 +153,7 @@ std::vector<routing::LaneWaypoint> ReferenceLineProvider::FutureRouteWaypoints()
   return std::vector<routing::LaneWaypoint>();
 }
 
-void ReferenceLineProvider::GetEndLaneWayPoint(
-    std::shared_ptr<routing::LaneWaypoint> &end_point) const {
+void ReferenceLineProvider::GetEndLaneWayPoint(std::shared_ptr<routing::LaneWaypoint> &end_point) const {
   if (nullptr == current_pnc_map_) {
     end_point = nullptr;
     return;
@@ -162,16 +161,14 @@ void ReferenceLineProvider::GetEndLaneWayPoint(
   current_pnc_map_->GetEndLaneWayPoint(end_point);
 }
 
-hdmap::LaneInfoConstPtr ReferenceLineProvider::GetLaneById(
-    const hdmap::Id &id) const {
+hdmap::LaneInfoConstPtr ReferenceLineProvider::GetLaneById(const hdmap::Id &id) const {
   if (nullptr == current_pnc_map_) {
     return nullptr;
   }
   return current_pnc_map_->GetLaneById(id);
 }
 
-void ReferenceLineProvider::UpdateVehicleState(
-    const VehicleState &vehicle_state) {
+void ReferenceLineProvider::UpdateVehicleState(const VehicleState &vehicle_state) {
   std::lock_guard<std::mutex> lock(vehicle_state_mutex_);
   vehicle_state_ = vehicle_state;
 }
@@ -363,8 +360,7 @@ bool ReferenceLineProvider::GetReferenceLines(std::list<ReferenceLine> *referenc
   return true;
 }
 
-void ReferenceLineProvider::PrioritizeChangeLane(
-    std::list<hdmap::RouteSegments> *route_segments) {
+void ReferenceLineProvider::PrioritizeChangeLane(std::list<hdmap::RouteSegments> *route_segments) {
   CHECK_NOTNULL(route_segments);
   auto iter = route_segments->begin();
   while (iter != route_segments->end()) {
@@ -376,9 +372,8 @@ void ReferenceLineProvider::PrioritizeChangeLane(
   }
 }
 
-bool ReferenceLineProvider::GetReferenceLinesFromRelativeMap(
-    std::list<ReferenceLine> *reference_lines,
-    std::list<hdmap::RouteSegments> *segments) {
+bool ReferenceLineProvider::GetReferenceLinesFromRelativeMap(std::list<ReferenceLine> *reference_lines,
+                                                             std::list<hdmap::RouteSegments> *segments) {
   CHECK_GE(relative_map_->navigation_path_size(), 0);
   CHECK_NOTNULL(reference_lines);
   CHECK_NOTNULL(segments);
@@ -623,9 +618,8 @@ bool ReferenceLineProvider::GetNearestWayPointFromNavigationPath(const common::V
   return waypoint->lane != nullptr;
 }
 
-bool ReferenceLineProvider::CreateRouteSegments(
-    const common::VehicleState &vehicle_state,
-    std::list<hdmap::RouteSegments> *segments) {
+bool ReferenceLineProvider::CreateRouteSegments(const common::VehicleState &vehicle_state,
+                                                std::list<hdmap::RouteSegments> *segments) {
   {
     std::lock_guard<std::mutex> lock(pnc_map_mutex_);
     if (!current_pnc_map_->GetRouteSegments(vehicle_state, segments)) {

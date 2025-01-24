@@ -41,30 +41,27 @@ bool ExternalCommandProcessComponent::Init() {
   }
   const auto& plugin_manager = cyber::plugin_manager::PluginManager::Instance();
   for (const auto& processor_class_name : config.processor()) {
-    command_processors_.emplace_back(
-        plugin_manager->CreateInstance<CommandProcessorBase>(
-            processor_class_name));
+    command_processors_.emplace_back(plugin_manager->CreateInstance<CommandProcessorBase>(processor_class_name));
     command_processors_.back()->Init(node_);
   }
-  command_status_service_ =
-      node_->CreateService<CommandStatusRequest, CommandStatus>(
-          config.output_command_status_name(),
-          [this](const std::shared_ptr<CommandStatusRequest>& request,
-                 std::shared_ptr<CommandStatus>& response) {
-            bool is_get_status = false;
-            // Get the command status from command processors.
-            for (const auto& processor : command_processors_) {
-              if (processor->GetCommandStatus(request->command_id(),
-                                              response.get())) {
-                is_get_status = true;
-                break;
-              }
-            }
-            if (!is_get_status) {
-              response->set_status(CommandStatusType::UNKNOWN);
-              response->set_message("Cannot get the status of command.");
-            }
-          });
+  command_status_service_ = node_->CreateService<CommandStatusRequest, CommandStatus>(
+                            config.output_command_status_name(),
+                            [this](const std::shared_ptr<CommandStatusRequest>& request,
+                                  std::shared_ptr<CommandStatus>& response) {
+                              bool is_get_status = false;
+                              // Get the command status from command processors.
+                              for (const auto& processor : command_processors_) {
+                                if (processor->GetCommandStatus(request->command_id(),
+                                                                response.get())) {
+                                  is_get_status = true;
+                                  break;
+                                }
+                              }
+                              if (!is_get_status) {
+                                response->set_status(CommandStatusType::UNKNOWN);
+                                response->set_message("Cannot get the status of command.");
+                              }
+                            });
   AINFO << "ExternalCommandProcessComponent init finished.";
   return true;
 }

@@ -34,9 +34,8 @@ bool LaneFollowCommandProcessor::ProcessSpecialCommand(
   return true;
 }
 
-bool LaneFollowCommandProcessor::Convert(
-    const std::shared_ptr<LaneFollowCommand>& command,
-    std::shared_ptr<apollo::routing::RoutingRequest>& routing_request) const {
+bool LaneFollowCommandProcessor::Convert(const std::shared_ptr<LaneFollowCommand>& command,
+                                         std::shared_ptr<apollo::routing::RoutingRequest>& routing_request) const {
   routing_request = std::make_shared<apollo::routing::RoutingRequest>();
   std::vector<apollo::routing::LaneWaypoint> lane_way_points;
   auto lane_way_tool = GetLaneWayTool();
@@ -50,8 +49,7 @@ bool LaneFollowCommandProcessor::Convert(
       double min_distance = std::numeric_limits<double>::max();
       AINFO << "lane_way_points.size()" << lane_way_points.size();
       for (const auto& lane_way_point : lane_way_points) {
-        auto tmp_routing_request =
-            std::make_shared<apollo::routing::RoutingRequest>();
+        auto tmp_routing_request = std::make_shared<apollo::routing::RoutingRequest>();
         tmp_routing_request->CopyFrom(*routing_request);
         tmp_routing_request->add_waypoint()->CopyFrom(lane_way_point);
         for (const auto& way_point : command->way_point()) {
