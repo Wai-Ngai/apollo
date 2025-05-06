@@ -27,9 +27,9 @@ namespace control {
 class CheckPit {
  public:
   static bool CheckInPit(SimpleLongitudinalDebug* debug,
-                          const LonBasedPidControllerConf* conf,
-                          double speed,
-                          bool replan);
+                         const LonBasedPidControllerConf* conf,
+                         double speed,
+                         bool replan);
 };
 
 }  // namespace control

@@ -38,11 +38,11 @@ double LeadlagController::Control(const double error, const double dt) {
     AWARN << "dt <= 0, will use the last output, dt: " << dt;
     return previous_output_;
   }
+  
   double output = 0.0;
 
-  innerstate_ = (error - previous_innerstate_ * kd0_) / kd1_;  // calculate
-  // the inner (intermedia) state under the Direct form II for the Lead / Lag
-  // compensator factorization
+  // calculate the inner (intermedia) state under the Direct form II for the Lead / Lag compensator factorization
+  innerstate_ = (error - previous_innerstate_ * kd0_) / kd1_;  
   if (innerstate_ > innerstate_saturation_high_) {
     innerstate_ = innerstate_saturation_high_;
     innerstate_saturation_status_ = 1;
@@ -70,10 +70,8 @@ void LeadlagController::Init(const LeadlagConf &leadlag_conf, const double dt) {
   previous_output_ = 0.0;
   previous_innerstate_ = 0.0;
   innerstate_ = 0.0;
-  innerstate_saturation_high_ =
-      std::fabs(leadlag_conf.innerstate_saturation_level());
-  innerstate_saturation_low_ =
-      -std::fabs(leadlag_conf.innerstate_saturation_level());
+  innerstate_saturation_high_ = std::fabs(leadlag_conf.innerstate_saturation_level());
+  innerstate_saturation_low_ = -std::fabs(leadlag_conf.innerstate_saturation_level());
   innerstate_saturation_status_ = 0;
   SetLeadlag(leadlag_conf);
   TransformC2d(dt);

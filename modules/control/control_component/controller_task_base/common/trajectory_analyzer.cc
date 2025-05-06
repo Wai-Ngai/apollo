@@ -81,8 +81,7 @@ PathPoint TrajectoryAnalyzer::QueryMatchedPathPoint(const double x,
   }
 
   size_t index_start = index_min == 0 ? index_min : index_min - 1;
-  size_t index_end =
-      index_min + 1 == trajectory_points_.size() ? index_min : index_min + 1;
+  size_t index_end = index_min + 1 == trajectory_points_.size() ? index_min : index_min + 1;
 
   const double kEpsilon = 0.001;
   if (index_start == index_end ||
@@ -95,13 +94,10 @@ PathPoint TrajectoryAnalyzer::QueryMatchedPathPoint(const double x,
                               trajectory_points_[index_end], x, y);
 }
 
-// reference: Optimal trajectory generation for dynamic street scenarios in a
-// Frenét Frame,
+// reference: Optimal trajectory generation for dynamic street scenarios in a Frenét Frame,
 // Moritz Werling, Julius Ziegler, Sören Kammel and Sebastian Thrun, ICRA 2010
-// similar to the method in this paper without the assumption the "normal"
-// vector
-// (from vehicle position to ref_point position) and reference heading are
-// perpendicular.
+// similar to the method in this paper without the assumption the "normal" vector
+// (from vehicle position to ref_point position) and reference heading are perpendicular.
 void TrajectoryAnalyzer::ToTrajectoryFrame(const double x, const double y,
                                            const double theta, const double v,
                                            const PathPoint &ref_point,
@@ -114,13 +110,11 @@ void TrajectoryAnalyzer::ToTrajectoryFrame(const double x, const double y,
   double cos_ref_theta = std::cos(ref_point.theta());
   double sin_ref_theta = std::sin(ref_point.theta());
 
-  // the sin of diff angle between vector (cos_ref_theta, sin_ref_theta) and
-  // (dx, dy)
+  // the sin of diff angle between vector (cos_ref_theta, sin_ref_theta) and (dx, dy)
   double cross_rd_nd = cos_ref_theta * dy - sin_ref_theta * dx;
   *ptr_d = cross_rd_nd;
 
-  // the cos of diff angle between vector (cos_ref_theta, sin_ref_theta) and
-  // (dx, dy)
+  // the cos of diff angle between vector (cos_ref_theta, sin_ref_theta) and (dx, dy)
   double dot_rd_nd = dx * cos_ref_theta + dy * sin_ref_theta;
   *ptr_s = ref_point.s() + dot_rd_nd;
 
@@ -218,20 +212,22 @@ PathPoint TrajectoryAnalyzer::FindMinDistancePoint(const TrajectoryPoint &p0,
   };
 
   PathPoint p = p0.path_point();
+
+  // 黄金分割搜索
   double s = common::math::GoldenSectionSearch(dist_square, p0.path_point().s(),
                                                p1.path_point().s());
+  
+  // 插值计算最近点
   p.set_s(s);
   p.set_x(common::math::lerp(p0.path_point().x(), p0.path_point().s(),
                              p1.path_point().x(), p1.path_point().s(), s));
   p.set_y(common::math::lerp(p0.path_point().y(), p0.path_point().s(),
                              p1.path_point().y(), p1.path_point().s(), s));
   p.set_theta(common::math::slerp(p0.path_point().theta(), p0.path_point().s(),
-                                  p1.path_point().theta(), p1.path_point().s(),
-                                  s));
+                                  p1.path_point().theta(), p1.path_point().s(), s));
   // approximate the curvature at the intermediate point
   p.set_kappa(common::math::lerp(p0.path_point().kappa(), p0.path_point().s(),
-                                 p1.path_point().kappa(), p1.path_point().s(),
-                                 s));
+                                 p1.path_point().kappa(), p1.path_point().s(), s));
   return p;
 }
 

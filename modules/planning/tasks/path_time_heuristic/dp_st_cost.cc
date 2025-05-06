@@ -187,7 +187,7 @@ double DpStCost::GetObstacleCost(const StGraphPoint& st_graph_point) {
       }
     }
   }
-  return cost * unit_t_;  // unit_t_ = 7 / 8
+  return cost * unit_t_;  // unit_t_ = 1
 }
 
 double DpStCost::GetSpatialPotentialCost(const StGraphPoint& point) {

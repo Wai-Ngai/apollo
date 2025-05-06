@@ -129,7 +129,7 @@ bool LatController::LoadControlConf() {
   lqr_eps_ = lat_based_lqr_controller_conf_.eps();                     // LQR优化的最小精度0.01，停止条件1
   lqr_max_iteration_ = lat_based_lqr_controller_conf_.max_iteration(); // LQR最大迭代次数，停止条件2
 
-  query_relative_time_ = lat_based_lqr_controller_conf_.query_relative_time();          // 相对时间  机构延时，一般来说发出指令到底盘响应会有500ms延时
+  query_relative_time_ = lat_based_lqr_controller_conf_.query_relative_time(); // 相对时间  机构延时，一般来说发出指令到底盘响应会有500ms延时
 
   minimum_speed_protection_ = FLAGS_minimum_speed_protection;
 

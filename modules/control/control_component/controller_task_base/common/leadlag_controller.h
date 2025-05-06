@@ -32,8 +32,7 @@ namespace control {
 
 /**
 * @class LeadlagController
-* @brief A lead/lag controller for speed and steering
-using defualt integral hold
+* @brief A lead/lag controller for speed and steering using defualt integral hold
 */
 class LeadlagController {
  public:
@@ -64,8 +63,7 @@ class LeadlagController {
 
   /**
    * @brief compute control value based on the error
-   * @param error error value, the difference between
-   * a desired value and a measured value
+   * @param error error value, the difference between a desired value and a measured value
    * @param dt sampling time interval
    * @return control value based on Lead/Lag terms
    */

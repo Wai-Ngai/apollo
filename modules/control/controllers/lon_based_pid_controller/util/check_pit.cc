@@ -43,10 +43,9 @@ bool CheckPit::CheckInPit(SimpleLongitudinalDebug* debug,
     }
   }
 
-  const auto& vehicle_param =
-      common::VehicleConfigHelper::GetConfig().vehicle_param();
+  const auto& vehicle_param = common::VehicleConfigHelper::GetConfig().vehicle_param();
   if (replan_count.second >= conf->pit_replan_check_count() &&
-        abs(speed) < vehicle_param.max_abs_speed_when_stopped()) {
+      abs(speed) < vehicle_param.max_abs_speed_when_stopped()) {
     return true;
   } else {
     return false;

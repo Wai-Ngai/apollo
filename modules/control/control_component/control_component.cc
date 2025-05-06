@@ -65,17 +65,16 @@ bool ControlComponent::Init() {
     }
   }
   control_pipeline_.controller();
+
   cyber::ReaderConfig chassis_reader_config;
   chassis_reader_config.channel_name = FLAGS_chassis_topic;
   chassis_reader_config.pending_queue_size = FLAGS_chassis_pending_queue_size;
-
   chassis_reader_ = node_->CreateReader<Chassis>(chassis_reader_config, nullptr);
   ACHECK(chassis_reader_ != nullptr);
 
   cyber::ReaderConfig planning_reader_config;
   planning_reader_config.channel_name = FLAGS_planning_trajectory_topic;
   planning_reader_config.pending_queue_size = FLAGS_planning_pending_queue_size;
-
   trajectory_reader_ = node_->CreateReader<ADCTrajectory>(planning_reader_config, nullptr);
   ACHECK(trajectory_reader_ != nullptr);
 
@@ -88,14 +87,12 @@ bool ControlComponent::Init() {
   cyber::ReaderConfig localization_reader_config;
   localization_reader_config.channel_name = FLAGS_localization_topic;
   localization_reader_config.pending_queue_size = FLAGS_localization_pending_queue_size;
-
   localization_reader_ = node_->CreateReader<LocalizationEstimate>(localization_reader_config, nullptr);
   ACHECK(localization_reader_ != nullptr);
 
   cyber::ReaderConfig pad_msg_reader_config;
   pad_msg_reader_config.channel_name = FLAGS_pad_topic;
   pad_msg_reader_config.pending_queue_size = FLAGS_pad_msg_pending_queue_size;
-
   pad_msg_reader_ = node_->CreateReader<PadMessage>(pad_msg_reader_config, nullptr);
   ACHECK(pad_msg_reader_ != nullptr);
 
@@ -107,14 +104,13 @@ bool ControlComponent::Init() {
     ACHECK(local_view_writer_ != nullptr);
   }
 
-  // set initial vehicle state by cmd
-  // need to sleep, because advertised channel is not ready immediately
+  // set initial vehicle state by cmd need to sleep,
+  // because advertised channel is not ready immediately
   // simple test shows a short delay of 80 ms or so
   AINFO << "Control resetting vehicle state, sleeping for 1000 ms ...";
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-  // should init_vehicle first, let car enter work status, then use status msg
-  // trigger control
+  // should init_vehicle first, let car enter work status, then use status msg trigger control
 
   AINFO << "Control default driving action is "
         << DrivingAction_Name((enum DrivingAction)FLAGS_action);
@@ -179,8 +175,7 @@ Status ControlComponent::ProduceControlCommand(ControlCommand *control_command) 
     Status status_ts = CheckTimestamp(local_view_);
     if (!status_ts.ok()) {
       AERROR << "Input messages timeout";
-      // Clear trajectory data to make control stop if no data received again
-      // next cycle.
+      // Clear trajectory data to make control stop if no data received again next cycle.
       // keep the history trajectory for control compute.
       // latest_trajectory_.Clear();
       estop_ = true;

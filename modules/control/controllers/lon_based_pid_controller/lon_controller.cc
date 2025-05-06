@@ -119,9 +119,11 @@ Status LonController::Init(std::shared_ptr<DependencyInjector> injector) {
   double ts = lon_based_pidcontroller_conf_.ts();
   bool enable_leadlag = lon_based_pidcontroller_conf_.enable_reverse_leadlag_compensation();
 
+  // 位置、速度PID控制器初始化
   station_pid_controller_.Init(lon_based_pidcontroller_conf_.station_pid_conf());
   speed_pid_controller_.Init(lon_based_pidcontroller_conf_.low_speed_pid_conf());
 
+  // 位置、速度超前/滞后控制器初始化
   if (enable_leadlag) {
     station_leadlag_controller_.Init(lon_based_pidcontroller_conf_.reverse_station_leadlag_conf(), ts);
     speed_leadlag_controller_.Init(lon_based_pidcontroller_conf_.reverse_speed_leadlag_conf(), ts);
@@ -188,7 +190,7 @@ Status LonController::ComputeControlCommand(const localization::LocalizationEsti
   double brake_cmd = 0.0;
   double throttle_cmd = 0.0;
   double ts = lon_based_pidcontroller_conf_.ts();
-  double preview_time = lon_based_pidcontroller_conf_.preview_window() * ts;
+  double preview_time = lon_based_pidcontroller_conf_.preview_window() * ts;      // 20 * 0.01
   bool enable_leadlag = lon_based_pidcontroller_conf_.enable_reverse_leadlag_compensation();
 
   if (preview_time < 0.0) {
@@ -197,7 +199,7 @@ Status LonController::ComputeControlCommand(const localization::LocalizationEsti
     return Status(ErrorCode::CONTROL_COMPUTE_ERROR, error_msg);
   }
 
-	//根据当前车（x，y）转化到sl系，对比匹配点计算纵向误差s s' d d'，输入参数：
+	//根据当前车（x，y）转化到sl系，对比匹配点计算纵向误差，输入参数：
 	//trajectory_analyzer_.get()获得轨迹信息指针用于提供轨迹点的速度加速度，匹配点参考点等信息
 	//preview_time预览时间
 	//ts采样周期
@@ -302,7 +304,7 @@ Status LonController::ComputeControlCommand(const localization::LocalizationEsti
   // when vehicle move uphill
   // Resume: uphill: + , downhill: -
 
-    //定义斜坡补偿加速度 = (重力加速度 * 车辆俯仰角的正弦值)再经过数字滤波器滤波得到斜坡加速度补偿
+  //定义斜坡补偿加速度 = (重力加速度 * 车辆俯仰角的正弦值)再经过数字滤波器滤波得到斜坡加速度补偿
   double slope_offset_compensation = lon_based_pidcontroller_conf_.use_opposite_slope_compensation() *
                                      GRA_ACC * std::sin(vehicle_pitch_rad + FLAGS_pitch_offset_deg * M_PI / 180);
 
@@ -475,6 +477,7 @@ Status LonController::ComputeControlCommand(const localization::LocalizationEsti
     }
   }
 
+  // 油门/刹车命令处理
   if (acceleration_lookup >= 0) {
     if (calibration_value >= 0) {
        //设置油门控制百分数，为油门下边界和查表得到的控制百分数之间的较大值
@@ -594,10 +597,10 @@ void LonController::ComputeLongitudinalErrors(const TrajectoryAnalyzer *trajecto
   auto vehicle_state = injector_->vehicle_state();
   auto matched_point = trajectory_analyzer->QueryMatchedPathPoint(vehicle_state->x(), vehicle_state->y());
 
-	//轨迹信息将当前点x,y,theta,v以及参考点信息输入，输出当前点的s,d,s',d'
-	//简而言之就是将大地坐标系转化为Frenet坐标
-	//d是横向偏差，s是累积的弧长即纵向上走过的距离
-	//函数参数最后几个都带&，熟悉的套路，引用变量传值，最后带&的几个变量都是待填充函数结果的变量
+	// 轨迹信息将当前点x,y,theta,v以及参考点信息输入，输出当前点的s,d,s',d'
+	// 简而言之就是将大地坐标系转化为Frenet坐标
+	// d是横向偏差，s是累积的弧长即纵向上走过的距离
+	// 函数参数最后几个都带&，熟悉的套路，引用变量传值，最后带&的几个变量都是待填充函数结果的变量
   trajectory_analyzer->ToTrajectoryFrame(vehicle_state->x(), vehicle_state->y(), 
                                          vehicle_state->heading(), vehicle_state->linear_velocity(), matched_point, 
                                          &s_matched, &s_dot_matched, &d_matched, &d_dot_matched);

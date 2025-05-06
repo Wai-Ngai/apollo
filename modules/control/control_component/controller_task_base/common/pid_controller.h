@@ -32,8 +32,7 @@ namespace control {
 
 /**
  * @class PIDController
- * @brief A proportional-integral-derivative controller for speed and steering
- using defualt integral hold
+ * @brief A proportional-integral-derivative controller for speed and steering using defualt integral hold
  */
 class PIDController {
  public:
@@ -44,8 +43,7 @@ class PIDController {
   void Init(const PidConf &pid_conf);
 
   /**
-   * @brief set pid controller coefficients for the proportional,
-   * integral, and derivative
+   * @brief set pid controller coefficients for the proportional, integral, and derivative
    * @param pid_conf configuration for pid controller
    */
   void SetPID(const PidConf &pid_conf);
@@ -62,8 +60,7 @@ class PIDController {
 
   /**
    * @brief compute control value based on the error
-   * @param error error value, the difference between
-   * a desired value and a measured value
+   * @param error error value, the difference between a desired value and a measured value
    * @param dt sampling time interval
    * @return control value based on PID terms
    */

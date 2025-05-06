@@ -54,6 +54,7 @@ class ControlComponent final : public apollo::cyber::TimerComponent {
 
  public:
   ControlComponent();
+
   bool Init() override;
 
   bool Proc() override;
@@ -74,9 +75,11 @@ class ControlComponent final : public apollo::cyber::TimerComponent {
   void OnMonitor(const apollo::common::monitor::MonitorMessage &monitor_message);
 
   common::Status ProduceControlCommand(ControlCommand *control_command);
+
   common::Status CheckInput(LocalView *local_view);
   common::Status CheckTimestamp(const LocalView &local_view);
   common::Status CheckPad();
+  
   void ResetAndProduceZeroControlCommand(ControlCommand *control_command);
   void GetVehiclePitchAngle(ControlCommand *control_command);
 

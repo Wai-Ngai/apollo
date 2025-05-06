@@ -175,7 +175,8 @@ Status GriddedPathTimeGraph::InitCostTable() {
                        ? dense_dimension_s_
                        : static_cast<uint32_t>(std::ceil(total_length_s_ / dense_unit_s_)) + 1;
   dimension_s_ = dense_dimension_s_ + sparse_dimension_s_;
-  AINFO << "dimension_t_  " <<dimension_t_ << " sparse_length_s " << sparse_length_s<< " dense_dimension_s_ " <<dense_dimension_s_ << " dimension_s_" << dimension_s_;
+  AINFO << "dimension_t_  " << dimension_t_ << " sparse_length_s " << sparse_length_s 
+        << " dense_dimension_s_ " << dense_dimension_s_ << " dimension_s_" << dimension_s_;
 
   PrintCurves debug;
   // Sanity Check
@@ -185,7 +186,7 @@ Status GriddedPathTimeGraph::InitCostTable() {
     return Status(ErrorCode::PLANNING_ERROR, msg);
   }
 
-  // 定义dp代价表，注意这个表：常规ST图顺时针旋转90°，一共t行，每行s列
+  // 定义dp代价表，注意这个表：常规ST图顺时针旋转90°，一共t行，每行s列 , total_cost_默认无穷大
   cost_table_ = std::vector<std::vector<StGraphPoint>>(dimension_t_, 
                                                        std::vector<StGraphPoint>(dimension_s_, StGraphPoint()));
 
@@ -196,7 +197,7 @@ Status GriddedPathTimeGraph::InitCostTable() {
 
     // 稠密
     for (uint32_t j = 0; j < dense_dimension_s_; ++j, curr_s += dense_unit_s_) {  // S
-      cost_table_i[j].Init(i, j, STPoint(curr_s, curr_t));    // total_cost_默认无穷大
+      cost_table_i[j].Init(i, j, STPoint(curr_s, curr_t));
       debug.AddPoint("dp_node_points", curr_t, curr_s);
     }
 
@@ -236,7 +237,7 @@ Status GriddedPathTimeGraph::CalculateTotalCost() {
   size_t next_highest_row = 0;
   size_t next_lowest_row = 0;
 
-  for (size_t c = 0; c < cost_table_.size(); ++c) {   // 循环遍历cost_table_的行数, T。
+  for (size_t c = 0; c < cost_table_.size(); ++c) {     // 循环遍历cost_table_的行数, T。
     size_t highest_row = 0;
     size_t lowest_row = cost_table_.back().size() - 1;  // 最大s的index
 
