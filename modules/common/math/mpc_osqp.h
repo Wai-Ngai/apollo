@@ -69,28 +69,28 @@ class MpcOsqp {
   void FreeData(OSQPData *data);
 
   template <typename T>
-  T *CopyData(const std::vector<T> &vec) {
+  T *CopyData(const std::vector<T> &vec) {  // 用于将std::vector的数据复制到新分配的堆内存中
     T *data = new T[vec.size()];
     memcpy(data, vec.data(), sizeof(T) * vec.size());
     return data;
   }
 
  private:
-  Eigen::MatrixXd matrix_a_;
-  Eigen::MatrixXd matrix_b_;
-  Eigen::MatrixXd matrix_q_;
-  Eigen::MatrixXd matrix_r_;
-  Eigen::MatrixXd matrix_initial_x_;
-  const Eigen::MatrixXd matrix_u_lower_;
-  const Eigen::MatrixXd matrix_u_upper_;
-  const Eigen::MatrixXd matrix_x_lower_;
-  const Eigen::MatrixXd matrix_x_upper_;
-  const Eigen::MatrixXd matrix_x_ref_;
+  Eigen::MatrixXd matrix_a_;     // 系统矩阵 A (状态转移)
+  Eigen::MatrixXd matrix_b_;     // 输入矩阵 B (控制输入)
+  Eigen::MatrixXd matrix_q_;     // 状态权重矩阵 Q
+  Eigen::MatrixXd matrix_r_;     // 控制权重矩阵 R
+  Eigen::MatrixXd matrix_initial_x_; // 初始状态 x(0)
+  const Eigen::MatrixXd matrix_u_lower_;   // 控制量下界 u_min
+  const Eigen::MatrixXd matrix_u_upper_;   // 控制量上界 u_max
+  const Eigen::MatrixXd matrix_x_lower_;   // 状态量下界 x_min
+  const Eigen::MatrixXd matrix_x_upper_;   // 状态量上界 x_max
+  const Eigen::MatrixXd matrix_x_ref_;     // 参考状态序列
   int max_iteration_;
-  size_t horizon_;
+  size_t horizon_;                  // 预测时域长度
   double eps_abs_;
-  size_t state_dim_;
-  size_t control_dim_;
+  size_t state_dim_;    // 状态维度 6
+  size_t control_dim_;  // 控制维度 2
   size_t num_param_;
   int num_constraint_;
   Eigen::VectorXd gradient_;
